@@ -15,6 +15,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/agendamento")
+@CrossOrigin(origins = "*")
 public class AgendamentoController {
 
     private final AgendamentoRepository agendamentoRepository;

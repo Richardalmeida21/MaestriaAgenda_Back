@@ -10,7 +10,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Optional;
 
+@RestController
 @RequestMapping("/cliente")
+@CrossOrigin(origins = "*")
 public class ClienteController {
 
     private final ClienteRepository clienteRepository;

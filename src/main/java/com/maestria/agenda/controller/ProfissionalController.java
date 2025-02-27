@@ -10,6 +10,7 @@ import java.util.Optional;
 
 @RestController 
 @RequestMapping("/profissional")
+@CrossOrigin(origins = "*")
 public class ProfissionalController {
 
     private final ProfissionalRepository profissionalRepository;
