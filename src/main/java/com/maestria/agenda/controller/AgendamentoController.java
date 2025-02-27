@@ -7,6 +7,8 @@ import com.maestria.agenda.cliente.Cliente;
 import com.maestria.agenda.cliente.ClienteRepository;
 import com.maestria.agenda.profissional.Profissional;
 import com.maestria.agenda.profissional.ProfissionalRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,6 +19,8 @@ import java.util.Optional;
 @RequestMapping("/agendamento")
 @CrossOrigin(origins = "*")
 public class AgendamentoController {
+
+    private static final Logger logger = LoggerFactory.getLogger(AgendamentoController.class);
 
     private final AgendamentoRepository agendamentoRepository;
     private final ClienteRepository clienteRepository;
@@ -30,35 +34,40 @@ public class AgendamentoController {
 
     @PostMapping
     public ResponseEntity<?> cadastrar(@RequestBody DadosCadastroAgendamento dados) {
-        // 1. Salva o Cliente
-        Cliente cliente = new Cliente();
-        cliente.setNome(dados.cliente().nome());
-        cliente.setEmail(dados.cliente().email());
-        cliente.setTelefone(dados.cliente().telefone());
-        clienteRepository.save(cliente);
+        try {
+            // 1. Salva o Cliente
+            Cliente cliente = new Cliente();
+            cliente.setNome(dados.cliente().nome());
+            cliente.setEmail(dados.cliente().email());
+            cliente.setTelefone(dados.cliente().telefone());
+            clienteRepository.save(cliente);
 
-        // 2. Busca o Profissional pelo nome (retorna uma lista de profissionais)
-        String nomeProfissional = dados.profissional().nome();
-        List<Profissional> profissionais = profissionalRepository.findAllByNome(nomeProfissional);
+            // 2. Busca o Profissional pelo nome (retorna uma lista de profissionais)
+            String nomeProfissional = dados.profissional().nome();
+            List<Profissional> profissionais = profissionalRepository.findAllByNome(nomeProfissional);
 
-        Profissional profissional;
-        if (profissionais.isEmpty()) {
-            // Se não encontrar, cria um novo
-            profissional = new Profissional();
-            profissional.setNome(nomeProfissional);
-            profissional.setLogin("defaultLogin"); // Defina um valor padrão ou obtenha de `dados`
-            profissional.setSenha("defaultSenha"); // Defina um valor padrão ou obtenha de `dados`
-            profissionalRepository.save(profissional);
-        } else {
-            // Se encontrar, escolhe o primeiro da lista
-            profissional = profissionais.get(0);
+            Profissional profissional;
+            if (profissionais.isEmpty()) {
+                // Se não encontrar, cria um novo
+                profissional = new Profissional();
+                profissional.setNome(nomeProfissional);
+                profissional.setLogin("defaultLogin"); // Defina um valor padrão ou obtenha de `dados`
+                profissional.setSenha("defaultSenha"); // Defina um valor padrão ou obtenha de `dados`
+                profissionalRepository.save(profissional);
+            } else {
+                // Se encontrar, escolhe o primeiro da lista
+                profissional = profissionais.get(0);
+            }
+
+            // 3. Salva o Agendamento com o Cliente e o Profissional
+            Agendamento agendamento = new Agendamento(dados, cliente, profissional);
+            agendamentoRepository.save(agendamento);
+
+            return ResponseEntity.ok("Agendamento criado com sucesso");
+        } catch (Exception e) {
+            logger.error("Erro ao criar agendamento", e);
+            return ResponseEntity.status(500).body("Erro ao criar agendamento");
         }
-
-        // 3. Salva o Agendamento com o Cliente e o Profissional
-        Agendamento agendamento = new Agendamento(dados, cliente, profissional);
-        agendamentoRepository.save(agendamento);
-
-        return ResponseEntity.ok("Agendamento criado com sucesso");
     }
 
     @GetMapping
