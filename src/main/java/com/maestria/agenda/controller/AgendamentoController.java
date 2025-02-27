@@ -29,7 +29,7 @@ public class AgendamentoController {
     }
 
     @PostMapping
-    public void cadastrar(@RequestBody DadosCadastroAgendamento dados) {
+    public ResponseEntity<?> cadastrar(@RequestBody DadosCadastroAgendamento dados) {
         // 1. Salva o Cliente
         Cliente cliente = new Cliente();
         cliente.setNome(dados.cliente().nome());
@@ -57,6 +57,8 @@ public class AgendamentoController {
         // 3. Salva o Agendamento com o Cliente e o Profissional
         Agendamento agendamento = new Agendamento(dados, cliente, profissional);
         agendamentoRepository.save(agendamento);
+
+        return ResponseEntity.ok("Agendamento criado com sucesso");
     }
 
     @GetMapping

@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.UUID;
+
 @RestController
 @CrossOrigin(origins = "*")
 public class RegistrationController {
@@ -25,10 +27,11 @@ public class RegistrationController {
         }
 
         Profissional profissional = new Profissional();
-        profissional.setLogin(registrationRequest.getUsername());
+        String defaultLogin = "defaultLogin_" + UUID.randomUUID().toString(); // Define um login padrão único
+        profissional.setLogin(defaultLogin);
         profissional.setSenha(passwordEncoder.encode(registrationRequest.getPassword()));
         profissionalRepository.save(profissional);
 
-        return ResponseEntity.ok("User registered successfully");
+        return ResponseEntity.ok("User registered successfully with default login: " + defaultLogin);
     }
 }
