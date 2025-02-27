@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Optional;
 
+@RestController 
 @RequestMapping("/profissional")
 public class ProfissionalController {
 
@@ -23,7 +24,6 @@ public class ProfissionalController {
         return profissionalRepository.save(profissional);
     }
 
-
     @GetMapping
     public List<Profissional> listarProfissionais() {
         return profissionalRepository.findAll();
@@ -34,7 +34,6 @@ public class ProfissionalController {
         Optional<Profissional> profissional = profissionalRepository.findById(id);
         return profissional.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
-
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletarProfissional(@PathVariable Long id) {

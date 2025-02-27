@@ -11,4 +11,8 @@ public record DadosCadastroAgendamento(
         String data,
         String hora
 ) {
+    // Construtor padrão
+    public DadosCadastroAgendamento() {
+        this(null, null, null, null, null);
+    }
 }

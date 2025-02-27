@@ -5,4 +5,8 @@ public record DadosCliente(
         String email,
         String telefone
 ) {
+    // Construtor padrão
+    public DadosCliente() {
+        this(null, null, null);
+    }
 }

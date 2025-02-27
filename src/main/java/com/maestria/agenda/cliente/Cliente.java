@@ -6,7 +6,6 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "Cliente")
-
 public class Cliente {
 
     @Id
@@ -14,6 +13,11 @@ public class Cliente {
     private long id;
 
     private String nome;
+    private String email;
+    private String telefone;
+
+    // Construtor padrão
+    public Cliente() {}
 
     public long getId() {
         return id;
@@ -43,6 +47,10 @@ public class Cliente {
         return telefone;
     }
 
+    public void setTelefone(String telefone) {
+        this.telefone = telefone;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
@@ -54,11 +62,4 @@ public class Cliente {
     public int hashCode() {
         return Objects.hash(id, nome, email, telefone);
     }
-
-    public void setTelefone(String telefone) {
-        this.telefone = telefone;
-    }
-
-    private String email;
-    private String telefone;
 }

@@ -4,6 +4,9 @@ public class RegistrationRequest {
     private String username;
     private String password;
 
+    // Construtor padrão
+    public RegistrationRequest() {}
+
     // Getters and setters
     public String getUsername() {
         return username;
