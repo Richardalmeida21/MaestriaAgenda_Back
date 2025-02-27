@@ -1,15 +1,14 @@
 package com.maestria.agenda.agendamento;
 
+import java.util.Objects;
+
 import com.maestria.agenda.cliente.Cliente;
 import com.maestria.agenda.profissional.Profissional;
 import com.maestria.agenda.servicos.Servicos;
 import jakarta.persistence.*;
 
-import java.util.Objects;
-
 @Entity
 @Table(name = "Agendamento")
-
 public class Agendamento {
 
     @Id
@@ -40,7 +39,16 @@ public class Agendamento {
     }
 
     public Agendamento() {
+    }
 
+    // Getters e setters
+
+    public long getId() {
+        return id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
     }
 
     public Cliente getCliente() {
@@ -85,6 +93,7 @@ public class Agendamento {
 
     @Override
     public boolean equals(Object o) {
+        if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Agendamento that = (Agendamento) o;
         return id == that.id && Objects.equals(cliente, that.cliente) && Objects.equals(profissional, that.profissional) && servico == that.servico && Objects.equals(data, that.data) && Objects.equals(hora, that.hora);
@@ -95,4 +104,3 @@ public class Agendamento {
         return Objects.hash(id, cliente, profissional, servico, data, hora);
     }
 }
-

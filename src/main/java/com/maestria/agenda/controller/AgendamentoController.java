@@ -35,12 +35,15 @@ public class AgendamentoController {
     @PostMapping
     public ResponseEntity<?> cadastrar(@RequestBody DadosCadastroAgendamento dados) {
         try {
+            logger.info("Iniciando cadastro de agendamento");
+
             // 1. Salva o Cliente
             Cliente cliente = new Cliente();
             cliente.setNome(dados.cliente().nome());
             cliente.setEmail(dados.cliente().email());
             cliente.setTelefone(dados.cliente().telefone());
             clienteRepository.save(cliente);
+            logger.info("Cliente salvo com sucesso: {}", cliente);
 
             // 2. Busca o Profissional pelo nome (retorna uma lista de profissionais)
             String nomeProfissional = dados.profissional().nome();
@@ -54,14 +57,17 @@ public class AgendamentoController {
                 profissional.setLogin("defaultLogin"); // Defina um valor padrão ou obtenha de `dados`
                 profissional.setSenha("defaultSenha"); // Defina um valor padrão ou obtenha de `dados`
                 profissionalRepository.save(profissional);
+                logger.info("Profissional criado e salvo com sucesso: {}", profissional);
             } else {
                 // Se encontrar, escolhe o primeiro da lista
                 profissional = profissionais.get(0);
+                logger.info("Profissional encontrado: {}", profissional);
             }
 
             // 3. Salva o Agendamento com o Cliente e o Profissional
             Agendamento agendamento = new Agendamento(dados, cliente, profissional);
             agendamentoRepository.save(agendamento);
+            logger.info("Agendamento salvo com sucesso: {}", agendamento);
 
             return ResponseEntity.ok("Agendamento criado com sucesso");
         } catch (Exception e) {
