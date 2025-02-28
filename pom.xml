@@ -90,19 +90,12 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Dependência para corrigir erros de javax.servlet -->
+        <!-- Dependência para corrigir erros de jakarta.servlet -->
         <dependency>
-            <groupId>javax.servlet</groupId>
-            <artifactId>javax.servlet-api</artifactId>
-            <version>4.0.1</version>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <version>5.0.0</version> <!-- Versão compatível com Spring Boot 3.x -->
             <scope>provided</scope>
-        </dependency>
-
-        <!-- Dependência para Spring Web -->
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-web</artifactId>
-            <version>5.3.16</version> <!-- A versão mais recente -->
         </dependency>
 
     </dependencies>
