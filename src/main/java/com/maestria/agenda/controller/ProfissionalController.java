@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Optional;
 
-@RestController 
+@RestController
 @RequestMapping("/profissional")
 @CrossOrigin(origins = "*")
 public class ProfissionalController {
@@ -21,6 +21,10 @@ public class ProfissionalController {
 
     @PostMapping
     public Profissional cadastrarProfissional(@RequestBody Profissional profissional) {
+        // Gerar login único antes de salvar o profissional
+        String generatedLogin = "defaultLogin";  // Pode ser qualquer valor padrão
+        profissional.setLogin(generateUniqueLogin(generatedLogin));
+
         // O JPA gerará o ID automaticamente, não é necessário passar o 'id' na requisição
         return profissionalRepository.save(profissional);
     }
@@ -43,5 +47,19 @@ public class ProfissionalController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.notFound().build();
+    }
+
+    // Método para gerar um login único
+    private String generateUniqueLogin(String baseLogin) {
+        String newLogin = baseLogin;
+        int counter = 1;
+
+        // Verificando se o login já existe no banco de dados
+        while (profissionalRepository.existsByLogin(newLogin)) {
+            newLogin = baseLogin + counter;
+            counter++;
+        }
+
+        return newLogin;
     }
 }

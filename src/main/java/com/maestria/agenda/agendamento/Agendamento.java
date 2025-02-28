@@ -1,7 +1,6 @@
 package com.maestria.agenda.agendamento;
 
 import java.util.Objects;
-
 import com.maestria.agenda.cliente.Cliente;
 import com.maestria.agenda.profissional.Profissional;
 import com.maestria.agenda.servicos.Servicos;
@@ -34,8 +33,8 @@ public class Agendamento {
         this.cliente = cliente;
         this.profissional = profissional;
         this.servico = dados.servico();
-        this.data = dados.data();
-        this.hora = dados.hora();
+        this.data = dados.data().toString();
+        this.hora = dados.hora().toString();
     }
 
     public Agendamento() {

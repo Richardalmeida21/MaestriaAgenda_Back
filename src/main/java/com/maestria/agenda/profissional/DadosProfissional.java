@@ -1,7 +1,9 @@
 package com.maestria.agenda.profissional;
 
+import jakarta.validation.constraints.NotBlank;
+
 public record DadosProfissional(
-        String nome
+        @NotBlank String nome
 ) {
     // Construtor padrão
     public DadosProfissional() {

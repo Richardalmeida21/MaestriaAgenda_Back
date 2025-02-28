@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/agendamento")
@@ -54,7 +55,7 @@ public class AgendamentoController {
                 // Se não encontrar, cria um novo
                 profissional = new Profissional();
                 profissional.setNome(nomeProfissional);
-                profissional.setLogin("defaultLogin"); // Defina um valor padrão ou obtenha de `dados`
+                profissional.setLogin(generateUniqueLogin("defaultLogin")); // Gera um login único
                 profissional.setSenha("defaultSenha"); // Defina um valor padrão ou obtenha de `dados`
                 profissionalRepository.save(profissional);
                 logger.info("Profissional criado e salvo com sucesso: {}", profissional);
@@ -116,7 +117,7 @@ public class AgendamentoController {
                 // Se não encontrar, cria um novo
                 profissional = new Profissional();
                 profissional.setNome(nomeProfissional);
-                profissional.setLogin("defaultLogin"); // Defina um valor padrão ou obtenha de `dados`
+                profissional.setLogin(generateUniqueLogin("defaultLogin")); // Gera um login único
                 profissional.setSenha("defaultSenha"); // Defina um valor padrão ou obtenha de `dados`
                 profissionalRepository.save(profissional);
             } else {
@@ -128,8 +129,8 @@ public class AgendamentoController {
             agendamento.setCliente(cliente);  // Atualiza o cliente
             agendamento.setProfissional(profissional);  // Atualiza o profissional
             agendamento.setServico(dados.servico());  // Atualiza o serviço
-            agendamento.setData(dados.data());  // Atualiza a data
-            agendamento.setHora(dados.hora());  // Atualiza a hora
+            agendamento.setData(dados.data().toString());  // Atualiza a data
+            agendamento.setHora(dados.hora().toString());  // Atualiza a hora
 
             // Salva o agendamento atualizado
             agendamentoRepository.save(agendamento);
@@ -150,5 +151,19 @@ public class AgendamentoController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.notFound().build(); // Se não encontrar o agendamento
+    }
+
+    // Método para gerar um login único
+    private String generateUniqueLogin(String baseLogin) {
+        String newLogin = baseLogin;
+        int counter = 1;
+
+        // Verificando se o login já existe no banco de dados
+        while (profissionalRepository.existsByLogin(newLogin)) {
+            newLogin = baseLogin + counter;
+            counter++;
+        }
+
+        return newLogin;
     }
 }
