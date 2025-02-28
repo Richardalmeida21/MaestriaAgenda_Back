@@ -19,15 +19,20 @@ public class CustomUserDetailsService implements UserDetailsService {
     private PasswordEncoder passwordEncoder;  // Injeção do PasswordEncoder
 
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Profissional profissional = profissionalRepository.findByLogin(username);
-        if (profissional == null) {
-            throw new UsernameNotFoundException("Profissional não encontrado");
-        }
-
-        UserBuilder builder = User.withUsername(username);
-        builder.password(profissional.getSenha());  // A senha já está criptografada
-        builder.roles("PROFISSIONAL");
-        return builder.build();
+public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+    Profissional profissional = profissionalRepository.findByLogin(username);
+    if (profissional == null) {
+        throw new UsernameNotFoundException("Profissional não encontrado");
     }
+
+    if (!passwordEncoder.matches(profissional.getSenha(), profissional.getSenha())) {
+        throw new UsernameNotFoundException("Senha inválida");
+    }
+
+    UserBuilder builder = User.withUsername(username);
+    builder.password(profissional.getSenha());  // A senha já está criptografada
+    builder.roles("PROFISSIONAL");
+    return builder.build();
+}
+
 }
