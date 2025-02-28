@@ -1,20 +1,3 @@
-package com.maestria.agenda.config;
-
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.Arrays;
-
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -45,19 +28,13 @@ public class SecurityConfig {
     // Configuração de CORS para permitir origens externas
     private UrlBasedCorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.setAllowedOrigins(Arrays.asList("http://localhost", "https://mastriaagenda-production.up.railway.app")); // Configura as origens permitidas
-        corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS")); // Configura os métodos permitidos
-        corsConfig.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type")); // Configura os cabeçalhos permitidos
+        corsConfig.setAllowedOrigins(Arrays.asList("https://maestria-agenda.netlify.app")); // Origem do frontend
+        corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS")); // Métodos permitidos
+        corsConfig.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type")); // Cabeçalhos permitidos
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", corsConfig); // Aplica a configuração para todas as rotas
 
         return source;
-    }
-
-    // Criando o PasswordEncoder para ser injetado
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(); // Usando o BCryptPasswordEncoder para segurança das senhas
     }
 }
