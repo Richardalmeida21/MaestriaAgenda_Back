@@ -90,6 +90,21 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Dependência para corrigir erros de javax.servlet -->
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <version>4.0.1</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Dependência para Spring Web -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+            <version>5.3.16</version> <!-- A versão mais recente -->
+        </dependency>
+
     </dependencies>
 
     <build>
