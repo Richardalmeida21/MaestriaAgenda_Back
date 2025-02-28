@@ -1,16 +1,16 @@
 package com.maestria.agenda.profissional;
 
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Date;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -21,22 +21,15 @@ public class LoginController {
     @Autowired
     private AuthenticationManager authenticationManager;
 
-    private final String SECRET_KEY = "seuSegredoSuperSeguro"; // 🔐 Mantenha isso seguro!
-
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         try {
-            Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getSenha())
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getSenha())
             );
 
-            // Gerando um token JWT válido
-            String token = Jwts.builder()
-                .setSubject(loginRequest.getUsername())
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 86400000)) // 1 dia
-                .signWith(SignatureAlgorithm.HS256, SECRET_KEY)
-                .compact();
+            // Criando um token simples (substitua por JWT se necessário)
+            String token = Base64.getEncoder().encodeToString((loginRequest.getUsername() + ":secret").getBytes());
 
             Map<String, String> response = new HashMap<>();
             response.put("token", token);
