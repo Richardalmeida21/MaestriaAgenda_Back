@@ -2,12 +2,20 @@ package com.maestria.agenda.profissional;
 
 public class RegistrationRequest {
     private String username;
-    private String password;
+    private String senha;
+    private String nome;
 
     // Construtor padrão
     public RegistrationRequest() {}
 
-    // Getters and setters
+    // Construtor com argumentos
+    public RegistrationRequest(final String username, final String senha, final String nome) {
+        this.username = username;
+        this.senha = senha;
+        this.nome = nome;
+    }
+
+    // Getters e Setters
     public String getUsername() {
         return username;
     }
@@ -16,11 +24,19 @@ public class RegistrationRequest {
         this.username = username;
     }
 
-    public String getPassword() {
-        return password;
+    public String getSenha() {
+        return senha;
     }
 
-    public void setPassword(String password) {
-        this.password = password;
+    public void setSenha(String senha) {
+        this.senha = senha;
+    }
+
+    public String getNome() {
+        return nome;
+    }
+
+    public void setNome(String nome) {
+        this.nome = nome;
     }
 }

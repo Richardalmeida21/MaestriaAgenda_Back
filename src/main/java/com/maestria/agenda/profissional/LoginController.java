@@ -21,9 +21,8 @@ public class LoginController {
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         try {
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword())
+                    new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getSenha())
             );
-            // You can add additional logic here if needed, such as generating a JWT token
             return ResponseEntity.ok("Login successful");
         } catch (AuthenticationException e) {
             return ResponseEntity.status(401).body("Login failed");

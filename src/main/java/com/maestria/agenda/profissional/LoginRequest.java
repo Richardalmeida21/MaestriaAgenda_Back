@@ -1,19 +1,19 @@
 package com.maestria.agenda.profissional;
 
 public class LoginRequest {
-    private String username;
-    private String password;
+    private String username; // Alterado de "login" para "username"
+    private String senha;
 
     // Construtor padrão
     public LoginRequest() {}
 
     // Construtor com argumentos
-    public LoginRequest(String username, String password) {
+    public LoginRequest(String username, String senha) {
         this.username = username;
-        this.password = password;
+        this.senha = senha;
     }
 
-    // Getters and setters
+    // Getters e setters
     public String getUsername() {
         return username;
     }
@@ -22,11 +22,11 @@ public class LoginRequest {
         this.username = username;
     }
 
-    public String getPassword() {
-        return password;
+    public String getSenha() {
+        return senha;
     }
 
-    public void setPassword(String password) {
-        this.password = password;
+    public void setSenha(String senha) {
+        this.senha = senha;
     }
 }

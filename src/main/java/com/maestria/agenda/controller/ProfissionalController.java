@@ -3,6 +3,7 @@ package com.maestria.agenda.controller;
 import com.maestria.agenda.profissional.Profissional;
 import com.maestria.agenda.profissional.ProfissionalRepository;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,9 +15,12 @@ import java.util.Optional;
 public class ProfissionalController {
 
     private final ProfissionalRepository profissionalRepository;
+    private final PasswordEncoder passwordEncoder;  // Injeção do PasswordEncoder
 
-    public ProfissionalController(ProfissionalRepository profissionalRepository) {
+    
+    public ProfissionalController(ProfissionalRepository profissionalRepository, PasswordEncoder passwordEncoder) {
         this.profissionalRepository = profissionalRepository;
+        this.passwordEncoder = passwordEncoder;  // Inicializa o PasswordEncoder
     }
 
     @PostMapping
@@ -24,6 +28,10 @@ public class ProfissionalController {
         // Gerar login único antes de salvar o profissional
         String generatedLogin = "defaultLogin";  // Pode ser qualquer valor padrão
         profissional.setLogin(generateUniqueLogin(generatedLogin));
+
+        // Criptografar a senha antes de salvar no banco
+        String senhaCriptografada = passwordEncoder.encode(profissional.getSenha());
+        profissional.setSenha(senhaCriptografada);
 
         // O JPA gerará o ID automaticamente, não é necessário passar o 'id' na requisição
         return profissionalRepository.save(profissional);
