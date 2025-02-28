@@ -10,6 +10,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
+
 @RestController
 @CrossOrigin(origins = "*")
 public class LoginController {
@@ -23,7 +27,14 @@ public class LoginController {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getSenha())
             );
-            return ResponseEntity.ok("Login successful");
+
+            // Criando um token simples (substitua por JWT se necessário)
+            String token = Base64.getEncoder().encodeToString((loginRequest.getUsername() + ":secret").getBytes());
+
+            Map<String, String> response = new HashMap<>();
+            response.put("token", token);
+
+            return ResponseEntity.ok(response);
         } catch (AuthenticationException e) {
             return ResponseEntity.status(401).body("Login failed");
         }
