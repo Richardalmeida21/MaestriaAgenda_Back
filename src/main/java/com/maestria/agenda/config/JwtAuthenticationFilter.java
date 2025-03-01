@@ -2,6 +2,7 @@ package com.maestria.agenda.config;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,14 +34,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String token = request.getHeader("Authorization");
+
         if (token != null && token.startsWith("Bearer ")) {
             token = token.substring(7);
+
             try {
                 Claims claims = Jwts.parser()
-                        .setSigningKey(SECRET_KEY)
+                        .setSigningKey(SECRET_KEY.getBytes()) // Usa bytes para evitar erros de compatibilidade
                         .parseClaimsJws(token)
                         .getBody();
-                
+
                 String username = claims.getSubject();
                 if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                     UserDetails userDetails = userDetailsService.loadUserByUsername(username);
@@ -50,9 +53,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(auth);
                 }
             } catch (Exception e) {
-                System.out.println("Token inválido: " + e.getMessage());
+                System.out.println("❌ Token inválido: " + e.getMessage());
             }
         }
+
         chain.doFilter(request, response);
     }
 }
