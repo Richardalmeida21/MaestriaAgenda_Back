@@ -1,22 +1,33 @@
+package com.maestria.agenda.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-
         http
-            .cors().configurationSource(corsConfigurationSource()) // Ativa a configuração de CORS
-            .and()
-            .addFilterBefore(new JwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class) // Filtra a autenticação com JWT
-            .csrf().disable()  // Desabilitar CSRF
-            .authorizeRequests(authz -> authz
-                .requestMatchers("/public/**", "/login", "/register").permitAll()  // Permite acesso sem autenticação
-                .anyRequest().authenticated()  // Requer autenticação para outras requisições
-            )
-            .formLogin().disable()  // Desabilita o login tradicional de formulário
-            .httpBasic().disable(); // Se não for utilizar autenticação básica HTTP
-
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/public/**", "/login", "/register").permitAll()
+                .anyRequest().authenticated()
+            );
         return http.build();
     }
 
@@ -25,15 +36,15 @@ public class SecurityConfig {
         return authenticationConfiguration.getAuthenticationManager();
     }
 
-    // Configuração de CORS para permitir origens externas
-    private UrlBasedCorsConfigurationSource corsConfigurationSource() {
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.setAllowedOrigins(Arrays.asList("https://maestria-agenda.netlify.app")); // Origem do frontend
-        corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS")); // Métodos permitidos
-        corsConfig.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type")); // Cabeçalhos permitidos
+        corsConfig.setAllowedOrigins(List.of("https://maestria-agenda.netlify.app"));
+        corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", corsConfig); // Aplica a configuração para todas as rotas
+        source.registerCorsConfiguration("/**", corsConfig);
 
         return source;
     }
