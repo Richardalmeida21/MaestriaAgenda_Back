@@ -10,7 +10,7 @@ import com.maestria.agenda.profissional.ProfissionalRepository;
 import com.maestria.agenda.profissional.RegistrationRequest;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/auth") // Mantenha este caminho no SecurityConfig
 @CrossOrigin(origins = "*")
 public class RegistrationController {
 
@@ -22,10 +22,23 @@ public class RegistrationController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegistrationRequest registrationRequest) {
-        if (profissionalRepository.findByLogin(registrationRequest.getUsername()) != null) {
-            return ResponseEntity.status(400).body("Nome de usuário já existe.");
+        // 🔍 Verifica se algum campo está vazio
+        if (registrationRequest.getUsername() == null || registrationRequest.getUsername().isEmpty()) {
+            return ResponseEntity.badRequest().body("Erro: Nome de usuário não pode ser vazio.");
+        }
+        if (registrationRequest.getSenha() == null || registrationRequest.getSenha().isEmpty()) {
+            return ResponseEntity.badRequest().body("Erro: Senha não pode ser vazia.");
+        }
+        if (registrationRequest.getNome() == null || registrationRequest.getNome().isEmpty()) {
+            return ResponseEntity.badRequest().body("Erro: Nome não pode ser vazio.");
         }
 
+        // 🔍 Verifica se o login já existe no banco
+        if (profissionalRepository.findByLogin(registrationRequest.getUsername()) != null) {
+            return ResponseEntity.status(400).body("Erro: Nome de usuário já existe. Escolha outro.");
+        }
+
+        // 🔒 Criptografa a senha antes de salvar
         Profissional profissional = new Profissional();
         profissional.setLogin(registrationRequest.getUsername());
         profissional.setSenha(passwordEncoder.encode(registrationRequest.getSenha()));
