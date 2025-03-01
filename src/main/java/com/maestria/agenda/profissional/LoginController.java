@@ -1,4 +1,4 @@
-package com.maestria.agenda.controller;
+package com.maestria.agenda.profissional;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -7,10 +7,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-
-import com.maestria.agenda.profissional.Profissional;
-import com.maestria.agenda.profissional.ProfissionalRepository;
-import com.maestria.agenda.profissional.LoginRequest;
 
 import java.util.Date;
 import java.util.HashMap;

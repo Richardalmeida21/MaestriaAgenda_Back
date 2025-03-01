@@ -1,13 +1,9 @@
-package com.maestria.agenda.controller;
+package com.maestria.agenda.profissional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-
-import com.maestria.agenda.profissional.Profissional;
-import com.maestria.agenda.profissional.ProfissionalRepository;
-import com.maestria.agenda.profissional.RegistrationRequest;
 
 @RestController
 @RequestMapping("/auth") // 🔥 Certifique-se que a rota está correta no SecurityConfig
