@@ -21,7 +21,7 @@ public class AuthController {
     }
 
     @GetMapping("/user")
-    public ResponseEntity<?> getUserDetails(@AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<Object> getUserDetails(@AuthenticationPrincipal UserDetails userDetails) {
         if (userDetails == null) {
             return ResponseEntity.status(403).body("Usuário não autenticado.");
         }
@@ -29,9 +29,9 @@ public class AuthController {
         String username = userDetails.getUsername();
         Optional<Profissional> profissional = Optional.ofNullable(profissionalRepository.findByLogin(username));
 
-        // ✅ CORREÇÃO: Verifica se o profissional está presente e retorna corretamente
+        // ✅ Agora, ambos os retornos são ResponseEntity<Object>
         return profissional
-                .map(ResponseEntity::ok) // ✅ Retorna a resposta correta com o objeto Profissional
+                .<ResponseEntity<Object>>map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(404).body("Usuário não encontrado."));
     }
 }
