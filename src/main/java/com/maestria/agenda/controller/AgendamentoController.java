@@ -10,8 +10,10 @@ import com.maestria.agenda.profissional.ProfissionalRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,136 +35,98 @@ public class AgendamentoController {
     }
 
     @PostMapping
+    @PreAuthorize("isAuthenticated()") // 🔒 Exige autenticação
     public ResponseEntity<?> cadastrar(@RequestBody DadosCadastroAgendamento dados) {
         try {
-            logger.info("Iniciando cadastro de agendamento");
+            logger.info("📌 Iniciando cadastro de agendamento");
 
-            // 1. Salva o Cliente
-            Cliente cliente = new Cliente();
-            cliente.setNome(dados.cliente().nome());
-            cliente.setEmail(dados.cliente().email());
-            cliente.setTelefone(dados.cliente().telefone());
-            clienteRepository.save(cliente);
-            logger.info("Cliente salvo com sucesso: {}", cliente);
-
-            // 2. Busca o Profissional pelo nome (retorna uma lista de profissionais)
-            String nomeProfissional = dados.profissional().nome();
-            List<Profissional> profissionais = profissionalRepository.findAllByNome(nomeProfissional);
-
-            Profissional profissional;
-            if (profissionais.isEmpty()) {
-                // Se não encontrar, cria um novo
-                profissional = new Profissional();
-                profissional.setNome(nomeProfissional);
-                profissional.setLogin(generateUniqueLogin("defaultLogin")); // Gera um login único
-                profissional.setSenha("defaultSenha"); // Defina um valor padrão ou obtenha de `dados`
-                profissionalRepository.save(profissional);
-                logger.info("Profissional criado e salvo com sucesso: {}", profissional);
-            } else {
-                // Se encontrar, escolhe o primeiro da lista
-                profissional = profissionais.get(0);
-                logger.info("Profissional encontrado: {}", profissional);
+            // 🔍 1. Buscar Cliente no banco (evita duplicação)
+            Optional<Cliente> clienteOpt = clienteRepository.findById(dados.clienteId());
+            if (clienteOpt.isEmpty()) {
+                return ResponseEntity.status(400).body("❌ Cliente não encontrado.");
             }
+            Cliente cliente = clienteOpt.get();
+            logger.info("✅ Cliente encontrado: {}", cliente.getNome());
 
-            // 3. Salva o Agendamento com o Cliente e o Profissional
-            Agendamento agendamento = new Agendamento(dados, cliente, profissional);
+            // 🔍 2. Buscar Profissional no banco
+            Optional<Profissional> profissionalOpt = profissionalRepository.findById(dados.profissionalId());
+            if (profissionalOpt.isEmpty()) {
+                return ResponseEntity.status(400).body("❌ Profissional não encontrado.");
+            }
+            Profissional profissional = profissionalOpt.get();
+            logger.info("✅ Profissional encontrado: {}", profissional.getNome());
+
+            // 🔍 3. Criar o Agendamento
+            LocalDateTime dataHora = LocalDateTime.parse(dados.dataHora()); // 🕒 Converte dataHora corretamente
+            Agendamento agendamento = new Agendamento(cliente, profissional, dados.servico(), dataHora);
             agendamentoRepository.save(agendamento);
-            logger.info("Agendamento salvo com sucesso: {}", agendamento);
+            logger.info("✅ Agendamento salvo: {}", agendamento);
 
-            return ResponseEntity.ok("Agendamento criado com sucesso");
+            return ResponseEntity.ok("✅ Agendamento criado com sucesso.");
         } catch (Exception e) {
-            logger.error("Erro ao criar agendamento", e);
-            return ResponseEntity.status(500).body("Erro ao criar agendamento");
+            logger.error("❌ Erro ao criar agendamento", e);
+            return ResponseEntity.status(500).body("Erro ao criar agendamento.");
         }
     }
 
     @GetMapping
-    public List<Agendamento> listarAgendamentos() {
-        return agendamentoRepository.findAll();
+    @PreAuthorize("isAuthenticated()") // 🔒 Exige autenticação
+    public ResponseEntity<List<Agendamento>> listarAgendamentos() {
+        List<Agendamento> agendamentos = agendamentoRepository.findAll();
+        return ResponseEntity.ok(agendamentos);
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()") // 🔒 Exige autenticação
     public ResponseEntity<Agendamento> buscarAgendamentoPorId(@PathVariable Long id) {
-        Optional<Agendamento> agendamento = agendamentoRepository.findById(id);
-        return agendamento.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+        return agendamentoRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Agendamento> atualizarAgendamento(@PathVariable Long id, @RequestBody DadosCadastroAgendamento dados) {
-        Optional<Agendamento> agendamentoExistente = agendamentoRepository.findById(id);
+    @PreAuthorize("isAuthenticated()") // 🔒 Exige autenticação
+    public ResponseEntity<?> atualizarAgendamento(@PathVariable Long id, @RequestBody DadosCadastroAgendamento dados) {
+        Optional<Agendamento> agendamentoOpt = agendamentoRepository.findById(id);
 
-        if (agendamentoExistente.isPresent()) {
-            Agendamento agendamento = agendamentoExistente.get();
+        if (agendamentoOpt.isPresent()) {
+            Agendamento agendamento = agendamentoOpt.get();
 
-            // Atualiza o cliente - Se o cliente já existir, apenas atualiza seus dados
-            Cliente cliente = agendamento.getCliente(); // Obtém o cliente associado ao agendamento
-
-            // Se o cliente não existir (provavelmente nunca deveria ser o caso, mas é bom garantir)
-            if (cliente == null) {
-                cliente = new Cliente();
+            // Atualizar Cliente
+            Optional<Cliente> clienteOpt = clienteRepository.findById(dados.clienteId());
+            if (clienteOpt.isEmpty()) {
+                return ResponseEntity.status(400).body("❌ Cliente não encontrado.");
             }
+            Cliente cliente = clienteOpt.get();
 
-            cliente.setNome(dados.cliente().nome());
-            cliente.setEmail(dados.cliente().email());
-            cliente.setTelefone(dados.cliente().telefone());
-            clienteRepository.save(cliente);  // Salva ou atualiza o cliente
-
-            // Atualiza o profissional - Cria ou busca um profissional com o nome
-            String nomeProfissional = dados.profissional().nome();
-            List<Profissional> profissionais = profissionalRepository.findAllByNome(nomeProfissional);
-            Profissional profissional;
-
-            if (profissionais.isEmpty()) {
-                // Se não encontrar, cria um novo
-                profissional = new Profissional();
-                profissional.setNome(nomeProfissional);
-                profissional.setLogin(generateUniqueLogin("defaultLogin")); // Gera um login único
-                profissional.setSenha("defaultSenha"); // Defina um valor padrão ou obtenha de `dados`
-                profissionalRepository.save(profissional);
-            } else {
-                // Se encontrar, usa o primeiro da lista
-                profissional = profissionais.get(0);
+            // Atualizar Profissional
+            Optional<Profissional> profissionalOpt = profissionalRepository.findById(dados.profissionalId());
+            if (profissionalOpt.isEmpty()) {
+                return ResponseEntity.status(400).body("❌ Profissional não encontrado.");
             }
+            Profissional profissional = profissionalOpt.get();
 
-            // Atualiza os dados do agendamento
-            agendamento.setCliente(cliente);  // Atualiza o cliente
-            agendamento.setProfissional(profissional);  // Atualiza o profissional
-            agendamento.setServico(dados.servico());  // Atualiza o serviço
-            agendamento.setData(dados.data().toString());  // Atualiza a data
-            agendamento.setHora(dados.hora().toString());  // Atualiza a hora
+            // Atualizar dados do agendamento
+            LocalDateTime dataHora = LocalDateTime.parse(dados.dataHora());
+            agendamento.setCliente(cliente);
+            agendamento.setProfissional(profissional);
+            agendamento.setServico(dados.servico());
+            agendamento.setDataHora(dataHora);
 
-            // Salva o agendamento atualizado
             agendamentoRepository.save(agendamento);
-
-            // Retorna o agendamento atualizado como resposta
-            return ResponseEntity.ok(agendamento);
+            return ResponseEntity.ok("✅ Agendamento atualizado com sucesso.");
         }
 
-        // Caso não encontre o agendamento com o ID fornecido
         return ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletarAgendamento(@PathVariable Long id) {
-        Optional<Agendamento> agendamentoExistente = agendamentoRepository.findById(id);
-        if (agendamentoExistente.isPresent()) {
+    @PreAuthorize("isAuthenticated()") // 🔒 Exige autenticação
+    public ResponseEntity<?> deletarAgendamento(@PathVariable Long id) {
+        if (agendamentoRepository.existsById(id)) {
             agendamentoRepository.deleteById(id);
-            return ResponseEntity.noContent().build();
+            return ResponseEntity.ok("✅ Agendamento deletado com sucesso.");
         }
-        return ResponseEntity.notFound().build(); // Se não encontrar o agendamento
-    }
-
-    // Método para gerar um login único
-    private String generateUniqueLogin(String baseLogin) {
-        String newLogin = baseLogin;
-        int counter = 1;
-
-        // Verificando se o login já existe no banco de dados
-        while (profissionalRepository.existsByLogin(newLogin)) {
-            newLogin = baseLogin + counter;
-            counter++;
-        }
-
-        return newLogin;
+        return ResponseEntity.status(404).body("❌ Agendamento não encontrado.");
     }
 }
