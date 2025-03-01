@@ -10,7 +10,7 @@ import com.maestria.agenda.profissional.ProfissionalRepository;
 import com.maestria.agenda.profissional.RegistrationRequest;
 
 @RestController
-@RequestMapping("/auth") // Mantenha este caminho no SecurityConfig
+@RequestMapping("/auth") // 🔥 Certifique-se que a rota está correta no SecurityConfig
 @CrossOrigin(origins = "*")
 public class RegistrationController {
 
@@ -22,7 +22,7 @@ public class RegistrationController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegistrationRequest registrationRequest) {
-        // 🔍 Verifica se algum campo está vazio
+        // 🔍 Validação de campos obrigatórios
         if (registrationRequest.getUsername() == null || registrationRequest.getUsername().isEmpty()) {
             return ResponseEntity.badRequest().body("Erro: Nome de usuário não pode ser vazio.");
         }
@@ -41,7 +41,7 @@ public class RegistrationController {
         // 🔒 Criptografa a senha antes de salvar
         Profissional profissional = new Profissional();
         profissional.setLogin(registrationRequest.getUsername());
-        profissional.setSenha(passwordEncoder.encode(registrationRequest.getSenha()));
+        profissional.setSenha(passwordEncoder.encode(registrationRequest.getSenha())); // Criptografa senha
         profissional.setNome(registrationRequest.getNome());
         profissionalRepository.save(profissional);
 
