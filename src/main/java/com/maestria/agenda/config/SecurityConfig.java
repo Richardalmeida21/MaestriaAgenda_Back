@@ -23,14 +23,15 @@ import java.util.List;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf.disable()) // 🔥 CSRF desativado para evitar bloqueios
+            .cors(cors -> cors.configurationSource(corsConfigurationSource())) // ✅ CORS Ativado
+            .csrf(csrf -> csrf.disable()) // ✅ Desabilita CSRF
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/**").permitAll() // ✅ Libera todas as rotas do /auth
+                .requestMatchers("/auth/login", "/auth/register", "/public/**").permitAll() // ✅ Permite login e registro sem autenticação
                 .anyRequest().authenticated()
-            );
+            )
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -51,10 +52,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.setAllowedOrigins(List.of("*")); // 🔥 Para testes, aceite todas as origens
+        corsConfig.setAllowedOrigins(List.of("https://maestria-agenda.netlify.app")); // ✅ Garante que a origem do Netlify seja aceita
         corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-        corsConfig.setAllowCredentials(true);
+        corsConfig.setExposedHeaders(List.of("Authorization")); // ✅ Permite que o front acesse o header do token
+        corsConfig.setAllowCredentials(true); // ✅ Necessário para requisições autenticadas
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", corsConfig);
