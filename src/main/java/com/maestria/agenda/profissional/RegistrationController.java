@@ -1,14 +1,16 @@
-package com.maestria.agenda.profissional;
+package com.maestria.agenda.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import com.maestria.agenda.profissional.Profissional;
+import com.maestria.agenda.profissional.ProfissionalRepository;
+import com.maestria.agenda.profissional.RegistrationRequest;
 
 @RestController
+@RequestMapping("/auth")
 @CrossOrigin(origins = "*")
 public class RegistrationController {
 
@@ -21,15 +23,15 @@ public class RegistrationController {
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegistrationRequest registrationRequest) {
         if (profissionalRepository.findByLogin(registrationRequest.getUsername()) != null) {
-            return ResponseEntity.status(400).body("Username already exists");
+            return ResponseEntity.status(400).body("Nome de usuário já existe.");
         }
 
         Profissional profissional = new Profissional();
         profissional.setLogin(registrationRequest.getUsername());
         profissional.setSenha(passwordEncoder.encode(registrationRequest.getSenha()));
-        profissional.setNome(registrationRequest.getNome()); // Define o nome do profissional
+        profissional.setNome(registrationRequest.getNome());
         profissionalRepository.save(profissional);
 
-        return ResponseEntity.ok("User registered successfully");
+        return ResponseEntity.ok("Usuário registrado com sucesso!");
     }
 }
