@@ -1,25 +1,38 @@
 package com.maestria.agenda.controller;
 
+import com.maestria.agenda.profissional.Profissional;
+import com.maestria.agenda.profissional.ProfissionalRepository;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/auth")
 @CrossOrigin(origins = "*")
 public class AuthController {
 
-    @GetMapping("/user")
-    public ResponseEntity<?> getUserDetails() {
-        // Obtém o usuário autenticado no contexto de segurança do Spring
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    private final ProfissionalRepository profissionalRepository;
 
-        if (principal instanceof UserDetails) {
-            UserDetails userDetails = (UserDetails) principal;
-            return ResponseEntity.ok(userDetails);
-        } else {
+    public AuthController(ProfissionalRepository profissionalRepository) {
+        this.profissionalRepository = profissionalRepository;
+    }
+
+    @GetMapping("/user")
+    public ResponseEntity<?> getUserDetails(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
             return ResponseEntity.status(403).body("Usuário não autenticado.");
+        }
+
+        String username = userDetails.getUsername();
+        Optional<Profissional> profissional = Optional.ofNullable(profissionalRepository.findByLogin(username));
+
+        if (profissional.isPresent()) {
+            return ResponseEntity.ok(profissional.get());
+        } else {
+            return ResponseEntity.status(404).body("Usuário não encontrado.");
         }
     }
 }
