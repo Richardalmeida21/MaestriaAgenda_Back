@@ -1,7 +1,6 @@
 package com.maestria.agenda.profissional;
 
 import jakarta.persistence.*;
-
 import java.util.Objects;
 
 @Entity
@@ -60,11 +59,11 @@ public class Profissional {
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         Profissional that = (Profissional) o;
-        return id == that.id && Objects.equals(nome, that.nome) && Objects.equals(login, that.login) && Objects.equals(senha, that.senha);
+        return id == that.id && Objects.equals(nome, that.nome) && Objects.equals(login, that.login);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, nome, login, senha);
+        return Objects.hash(id, nome, login);
     }
 }
