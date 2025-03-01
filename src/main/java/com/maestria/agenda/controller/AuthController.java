@@ -26,13 +26,8 @@ public class AuthController {
             return ResponseEntity.status(403).body("Usuário não autenticado.");
         }
 
-        String username = userDetails.getUsername();
-        Optional<Profissional> profissional = Optional.ofNullable(profissionalRepository.findByLogin(username));
+        Optional<Profissional> profissional = Optional.ofNullable(profissionalRepository.findByLogin(userDetails.getUsername()));
 
-        if (profissional.isPresent()) {
-            return ResponseEntity.ok(profissional.get());
-        } else {
-            return ResponseEntity.status(404).body("Usuário não encontrado.");
-        }
+        return profissional.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.status(404).body("Usuário não encontrado."));
     }
 }
