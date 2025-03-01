@@ -28,7 +28,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource())) // ✅ CORS Ativado
             .csrf(csrf -> csrf.disable()) // ✅ Desabilita CSRF
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/login", "/auth/register", "/public/**").permitAll() // ✅ Permite login e registro sem autenticação
+                .requestMatchers("/auth/login", "/auth/register","/auth/register", "/public/**").permitAll() // ✅ Permite login e registro sem autenticação
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
