@@ -20,6 +20,9 @@ public class Profissional {
     @Column(nullable = false)
     private String senha;
 
+    @Column(nullable = false)
+    private String role; // Adicionado campo role
+
     // Construtor padrão
     public Profissional() {}
 
@@ -53,6 +56,14 @@ public class Profissional {
 
     public void setSenha(String senha) {
         this.senha = senha;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
     }
 
     @Override

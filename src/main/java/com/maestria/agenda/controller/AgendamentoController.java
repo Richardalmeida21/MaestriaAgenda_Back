@@ -10,6 +10,9 @@ import com.maestria.agenda.profissional.ProfissionalRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,25 +36,26 @@ public class AgendamentoController {
     }
 
     @PostMapping
-    public ResponseEntity<?> cadastrar(@RequestBody DadosCadastroAgendamento dados) {
+    public ResponseEntity<?> cadastrar(@RequestBody DadosCadastroAgendamento dados, @AuthenticationPrincipal UserDetails userDetails) {
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            return ResponseEntity.status(403).body("Acesso negado.");
+        }
+
         try {
             logger.info("Iniciando cadastro de agendamento");
 
-            // Busca Cliente
             Optional<Cliente> clienteOpt = clienteRepository.findById(dados.clienteId());
             if (clienteOpt.isEmpty()) {
                 return ResponseEntity.badRequest().body("Cliente não encontrado.");
             }
             Cliente cliente = clienteOpt.get();
 
-            // Busca Profissional
             Optional<Profissional> profissionalOpt = profissionalRepository.findById(dados.profissionalId());
             if (profissionalOpt.isEmpty()) {
                 return ResponseEntity.badRequest().body("Profissional não encontrado.");
             }
             Profissional profissional = profissionalOpt.get();
 
-            // Cria e salva o agendamento
             Agendamento agendamento = new Agendamento(dados, cliente, profissional);
             agendamentoRepository.save(agendamento);
             logger.info("Agendamento salvo com sucesso: {}", agendamento);
@@ -64,7 +68,12 @@ public class AgendamentoController {
     }
 
     @GetMapping
-    public List<Agendamento> listarAgendamentos() {
-        return agendamentoRepository.findAll();
+    public List<Agendamento> listarAgendamentos(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            return agendamentoRepository.findAll();
+        } else {
+            Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
+            return agendamentoRepository.findByProfissional(profissional);
+        }
     }
 }

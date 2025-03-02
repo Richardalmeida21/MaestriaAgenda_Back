@@ -1,8 +1,7 @@
 package com.maestria.agenda.profissional;
 
-import com.maestria.agenda.profissional.Profissional;
-import com.maestria.agenda.profissional.ProfissionalRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -27,7 +26,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         return new User(
                 profissional.getLogin(),
                 profissional.getSenha(),
-                Collections.emptyList()
+                Collections.singletonList(new SimpleGrantedAuthority(profissional.getRole()))
         );
     }
 }
