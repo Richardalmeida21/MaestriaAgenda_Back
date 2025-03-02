@@ -60,7 +60,7 @@ public class LoginController {
             // 🔹 Gerar Token JWT
             String token = Jwts.builder()
                     .setSubject(loginRequest.getUsername())
-                    .claim("role", "PROFISSIONAL")
+                    .claim("role", profissional.getRole())
                     .setIssuedAt(new Date())
                     .setExpiration(new Date(System.currentTimeMillis() + 86400000)) // Token válido por 24h
                     .signWith(SignatureAlgorithm.HS256, Base64.getEncoder().encodeToString(SECRET_KEY.getBytes()))

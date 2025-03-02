@@ -42,6 +42,15 @@ public class Agendamento {
 
     public Agendamento() {}
 
+    // Método para atualizar os dados do agendamento
+    public void atualizarDados(DadosCadastroAgendamento dados, Cliente cliente, Profissional profissional) {
+        this.cliente = cliente;
+        this.profissional = profissional;
+        this.servico = dados.servico();
+        this.data = dados.data();  // Usa LocalDate
+        this.hora = dados.hora();  // Usa LocalTime
+    }
+
     // Getters e Setters
 
     public long getId() {
