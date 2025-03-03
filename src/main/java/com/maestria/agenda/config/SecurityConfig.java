@@ -27,34 +27,34 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource())) // ✅ Ativa CORS
-            .csrf(csrf -> csrf.disable()) // ✅ Desativa CSRF para APIs REST
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // ✅ API stateless
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/login", "/auth/register").permitAll() // 🔓 Permite login e registro sem autenticação
-                .requestMatchers(HttpMethod.GET, "/auth/user", "/agendamento").authenticated() // 🔒 Apenas autenticados podem acessar GET
-                .requestMatchers(HttpMethod.POST, "/agendamento").hasAnyAuthority("ADMIN", "PROFISSIONAL") // 🔒 Criar agendamentos: ADMIN ou PROFISSIONAL
-                .requestMatchers("/cliente/**", "/profissional/**").hasAuthority("ADMIN") // 🔒 Apenas ADMIN pode gerenciar clientes/profissionais
+                .requestMatchers("/auth/login", "/auth/register").permitAll()
+                .requestMatchers(HttpMethod.GET, "/auth/user", "/agendamento").authenticated()
+                .requestMatchers(HttpMethod.POST, "/agendamento").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+                .requestMatchers("/cliente/**", "/profissional/**").hasAuthority("ADMIN")
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class); // ✅ Adiciona filtro JWT
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(); // ✅ Codifica senhas
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfig = new CorsConfiguration();
         corsConfig.setAllowedOrigins(List.of(
-            "https://maestria-agenda.netlify.app", // ✅ Frontend no Netlify
-            "https://mastriaagenda-production.up.railway.app", // ✅ Backend hospedado
-            "http://localhost:5173", // ✅ Permite testes locais (React Vite)
-            "http://localhost:3000" // ✅ Permite testes locais (React Create App)
+            "https://maestria-agenda.netlify.app",
+            "https://mastriaagenda-production.up.railway.app",
+            "http://localhost:5173",
+            "http://localhost:3000"
         ));
         corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));
@@ -62,7 +62,7 @@ public class SecurityConfig {
         corsConfig.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", corsConfig); // ✅ Aplica configuração para todos os endpoints
+        source.registerCorsConfiguration("/**", corsConfig);
         return source;
     }
 }
