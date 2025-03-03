@@ -12,14 +12,15 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "*") // Permite requisições de qualquer origem
 public class AuthController {
 
     @Autowired
     private ProfissionalRepository profissionalRepository;
 
-    @GetMapping("/user")
-    public ResponseEntity<?> getUserDetails(@AuthenticationPrincipal UserDetails userDetails) {
+    // 🔹 Retorna detalhes do usuário autenticado
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
         if (userDetails == null) {
             return ResponseEntity.status(403).body("Usuário não autenticado.");
         }
