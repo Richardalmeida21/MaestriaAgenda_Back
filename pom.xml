@@ -98,6 +98,12 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- Dependência de CORS e OAuth2 (caso necessário) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-client</artifactId>
+        </dependency>
+
     </dependencies>
 
     <build>
