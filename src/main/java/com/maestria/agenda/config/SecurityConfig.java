@@ -9,11 +9,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.List;
 
 @Configuration
 public class SecurityConfig {
@@ -34,8 +29,7 @@ public class SecurityConfig {
                 .requestMatchers("/auth/login", "/auth/register").permitAll() // ✅ Liberando login e registro
                 .requestMatchers(HttpMethod.GET, "/auth/me").authenticated() // 🔒 Apenas usuários autenticados podem acessar seus dados
                 .requestMatchers(HttpMethod.GET, "/agendamento").authenticated()
-                .requestMatchers(HttpMethod.POST, "/agendamento").hasAnyAuthority("ADMIN", "PROFISSIONAL")
-                .requestMatchers("/cliente/**", "/profissional/**").hasAuthority("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/agendamento").hasAuthority("ADMIN") // Apenas ADMIN pode criar agendamentos
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
