@@ -4,6 +4,8 @@ import com.maestria.agenda.agendamento.Agendamento;
 import com.maestria.agenda.agendamento.AgendamentoRepository;
 import com.maestria.agenda.cliente.Cliente;
 import com.maestria.agenda.cliente.ClienteRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -18,6 +20,8 @@ import java.util.Optional;
 @CrossOrigin(origins = "*")
 public class ClienteController {
 
+    private static final Logger logger = LoggerFactory.getLogger(ClienteController.class);
+
     private final ClienteRepository clienteRepository;
     private final AgendamentoRepository agendamentoRepository;
 
@@ -26,70 +30,65 @@ public class ClienteController {
         this.agendamentoRepository = agendamentoRepository;
     }
 
-    // 🔹 ADMIN pode cadastrar um novo cliente
+    // ✅ 🔓 ADMIN e PROFISSIONAL podem listar clientes
+    @GetMapping
+    public ResponseEntity<?> listarClientes(@AuthenticationPrincipal UserDetails userDetails) {
+        logger.info("🔍 Solicitando lista de clientes para: {}", userDetails.getUsername());
+        return ResponseEntity.ok(clienteRepository.findAll());
+    }
+
+    // ✅ 🔒 Apenas ADMIN pode cadastrar clientes
     @PostMapping
     public ResponseEntity<?> cadastrarCliente(@RequestBody Cliente cliente, @AuthenticationPrincipal UserDetails userDetails) {
         if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            logger.warn("❌ Tentativa de criar cliente sem permissão por {}", userDetails.getUsername());
             return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode criar clientes.");
         }
-        Cliente novoCliente = clienteRepository.save(cliente);
-        return ResponseEntity.ok(novoCliente);
+
+        clienteRepository.save(cliente);
+        logger.info("✅ Cliente cadastrado com sucesso: {}", cliente);
+        return ResponseEntity.ok("Cliente cadastrado com sucesso.");
     }
 
-    // 🔹 ADMIN e PROFISSIONAIS podem visualizar os clientes
-    @GetMapping
-    public ResponseEntity<List<Cliente>> listarClientes(@AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN")) ||
-            userDetails.getAuthorities().contains(new SimpleGrantedAuthority("PROFISSIONAL"))) {
-            return ResponseEntity.ok(clienteRepository.findAll());
-        }
-        return ResponseEntity.status(403).build();
-    }
-
-    // 🔹 ADMIN pode buscar um cliente por ID
-    @GetMapping("/{id}")
-    public ResponseEntity<?> buscarClientePorId(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
-        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-            return ResponseEntity.status(403).body("Acesso negado.");
-        }
-        Optional<Cliente> cliente = clienteRepository.findById(id);
-        return cliente.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    // 🔹 ADMIN pode editar um cliente
+    // ✅ 🔒 Apenas ADMIN pode editar clientes
     @PutMapping("/{id}")
     public ResponseEntity<?> atualizarCliente(@PathVariable Long id, @RequestBody Cliente cliente, @AuthenticationPrincipal UserDetails userDetails) {
         if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-            return ResponseEntity.status(403).body("Acesso negado.");
+            logger.warn("❌ Tentativa de editar cliente sem permissão por {}", userDetails.getUsername());
+            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode editar clientes.");
         }
-        if (clienteRepository.existsById(id)) {
-            cliente.setId(id);
-            Cliente atualizado = clienteRepository.save(cliente);
-            return ResponseEntity.ok(atualizado);
+
+        if (!clienteRepository.existsById(id)) {
+            return ResponseEntity.badRequest().body("Cliente não encontrado.");
         }
-        return ResponseEntity.notFound().build();
+
+        cliente.setId(id);
+        clienteRepository.save(cliente);
+        logger.info("✅ Cliente atualizado com sucesso: {}", cliente);
+        return ResponseEntity.ok("Cliente atualizado com sucesso.");
     }
 
-    // 🔹 ADMIN pode excluir um cliente (desde que ele não tenha agendamentos)
+    // ✅ 🔒 Apenas ADMIN pode excluir clientes
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deletarCliente(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<?> deletarCliente(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
         if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-            return ResponseEntity.status(403).body("Acesso negado.");
+            logger.warn("❌ Tentativa de deletar cliente sem permissão por {}", userDetails.getUsername());
+            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode excluir clientes.");
         }
 
         Optional<Cliente> clienteOptional = clienteRepository.findById(id);
-        if (clienteOptional.isPresent()) {
-            Cliente cliente = clienteOptional.get();
-
-            // 🔍 Verifica se o cliente tem agendamentos antes de excluir
-            List<Agendamento> agendamentos = agendamentoRepository.findByCliente(cliente);
-            if (!agendamentos.isEmpty()) {
-                return ResponseEntity.status(400).body("Não é possível excluir o cliente, pois ele tem agendamentos.");
-            }
-
-            clienteRepository.deleteById(id);
-            return ResponseEntity.ok("Cliente removido com sucesso.");
+        if (clienteOptional.isEmpty()) {
+            return ResponseEntity.badRequest().body("Cliente não encontrado.");
         }
-        return ResponseEntity.notFound().build();
+
+        Cliente cliente = clienteOptional.get();
+        List<Agendamento> agendamentos = agendamentoRepository.findByCliente(cliente);
+        if (!agendamentos.isEmpty()) {
+            return ResponseEntity.status(400).body("Erro: Cliente possui agendamentos e não pode ser excluído.");
+        }
+
+        clienteRepository.deleteById(id);
+        logger.info("✅ Cliente excluído com sucesso. ID: {}", id);
+        return ResponseEntity.ok("Cliente excluído com sucesso.");
     }
 }
