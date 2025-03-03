@@ -5,6 +5,9 @@ import com.maestria.agenda.agendamento.AgendamentoRepository;
 import com.maestria.agenda.cliente.Cliente;
 import com.maestria.agenda.cliente.ClienteRepository;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,30 +21,47 @@ public class ClienteController {
     private final ClienteRepository clienteRepository;
     private final AgendamentoRepository agendamentoRepository;
 
-    // Injeta o repositório de cliente e agendamento
     public ClienteController(ClienteRepository clienteRepository, AgendamentoRepository agendamentoRepository) {
         this.clienteRepository = clienteRepository;
         this.agendamentoRepository = agendamentoRepository;
     }
 
+    // 🔹 ADMIN pode cadastrar um novo cliente
     @PostMapping
-    public Cliente cadastrarCliente(@RequestBody Cliente cliente) {
-        return clienteRepository.save(cliente);
+    public ResponseEntity<?> cadastrarCliente(@RequestBody Cliente cliente, @AuthenticationPrincipal UserDetails userDetails) {
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode criar clientes.");
+        }
+        Cliente novoCliente = clienteRepository.save(cliente);
+        return ResponseEntity.ok(novoCliente);
     }
 
+    // 🔹 ADMIN e PROFISSIONAIS podem visualizar os clientes
     @GetMapping
-    public List<Cliente> listarClientes() {
-        return clienteRepository.findAll();
+    public ResponseEntity<List<Cliente>> listarClientes(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN")) ||
+            userDetails.getAuthorities().contains(new SimpleGrantedAuthority("PROFISSIONAL"))) {
+            return ResponseEntity.ok(clienteRepository.findAll());
+        }
+        return ResponseEntity.status(403).build();
     }
 
+    // 🔹 ADMIN pode buscar um cliente por ID
     @GetMapping("/{id}")
-    public ResponseEntity<Cliente> buscarClientePorId(@PathVariable Long id) {
+    public ResponseEntity<?> buscarClientePorId(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            return ResponseEntity.status(403).body("Acesso negado.");
+        }
         Optional<Cliente> cliente = clienteRepository.findById(id);
         return cliente.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    // 🔹 ADMIN pode editar um cliente
     @PutMapping("/{id}")
-    public ResponseEntity<Cliente> atualizarCliente(@PathVariable Long id, @RequestBody Cliente cliente) {
+    public ResponseEntity<?> atualizarCliente(@PathVariable Long id, @RequestBody Cliente cliente, @AuthenticationPrincipal UserDetails userDetails) {
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            return ResponseEntity.status(403).body("Acesso negado.");
+        }
         if (clienteRepository.existsById(id)) {
             cliente.setId(id);
             Cliente atualizado = clienteRepository.save(cliente);
@@ -50,23 +70,25 @@ public class ClienteController {
         return ResponseEntity.notFound().build();
     }
 
+    // 🔹 ADMIN pode excluir um cliente (desde que ele não tenha agendamentos)
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deletarCliente(@PathVariable Long id) {
-        Optional<Cliente> clienteOptional = clienteRepository.findById(id);
+    public ResponseEntity<String> deletarCliente(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            return ResponseEntity.status(403).body("Acesso negado.");
+        }
 
+        Optional<Cliente> clienteOptional = clienteRepository.findById(id);
         if (clienteOptional.isPresent()) {
             Cliente cliente = clienteOptional.get();
 
-            // Verifica se o cliente tem agendamentos associados
+            // 🔍 Verifica se o cliente tem agendamentos antes de excluir
             List<Agendamento> agendamentos = agendamentoRepository.findByCliente(cliente);
             if (!agendamentos.isEmpty()) {
-                // Retorna uma resposta de erro se o cliente tem agendamentos associados
-                return ResponseEntity.status(400).body("Não é possível excluir o cliente, pois ele tem agendamentos associados.");
+                return ResponseEntity.status(400).body("Não é possível excluir o cliente, pois ele tem agendamentos.");
             }
 
-            // Caso não tenha agendamentos, exclui o cliente
             clienteRepository.deleteById(id);
-            return ResponseEntity.noContent().build();
+            return ResponseEntity.ok("Cliente removido com sucesso.");
         }
         return ResponseEntity.notFound().build();
     }
