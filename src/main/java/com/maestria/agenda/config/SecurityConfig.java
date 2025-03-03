@@ -28,13 +28,13 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf.disable())
+            .csrf(csrf -> csrf.disable()) // 🔥 Desativando CSRF para evitar bloqueios de POST
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/login", "/auth/register").permitAll() // 🔓 Permitir login e registro sem autenticação
-                .requestMatchers(HttpMethod.GET, "/auth/user").authenticated() // 🔒 Apenas usuários autenticados
+                .requestMatchers("/auth/login", "/auth/register").permitAll() // ✅ Liberando login e registro
+                .requestMatchers(HttpMethod.GET, "/auth/me").authenticated() // 🔒 Apenas usuários autenticados podem acessar seus dados
                 .requestMatchers(HttpMethod.GET, "/agendamento").authenticated()
-                .requestMatchers(HttpMethod.POST, "/agendamento").hasAnyAuthority("ADMIN", "PROFISSIONAL") 
+                .requestMatchers(HttpMethod.POST, "/agendamento").hasAnyAuthority("ADMIN", "PROFISSIONAL")
                 .requestMatchers("/cliente/**", "/profissional/**").hasAuthority("ADMIN")
                 .anyRequest().authenticated()
             )
