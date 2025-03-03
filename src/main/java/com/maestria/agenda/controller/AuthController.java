@@ -6,40 +6,62 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
+import java.util.Map;  // ✅ Correção: importando Map
+import java.util.HashMap;  // ✅ Correção: importando HashMap
 
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(origins = "*") // Permite requisições de qualquer origem
+@CrossOrigin(origins = "*")
 public class AuthController {
 
+    private final ProfissionalRepository profissionalRepository;
+    private final PasswordEncoder passwordEncoder;
+
     @Autowired
-    private ProfissionalRepository profissionalRepository;
+    public AuthController(ProfissionalRepository profissionalRepository, PasswordEncoder passwordEncoder) {
+        this.profissionalRepository = profissionalRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
 
-    // 🔹 Retorna detalhes do usuário autenticado
     @GetMapping("/me")
-public ResponseEntity<?> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
-    if (userDetails == null) {
-        return ResponseEntity.status(403).body("Usuário não autenticado.");
+    public ResponseEntity<Object> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(403).body("Usuário não autenticado.");
+        }
+
+        String username = userDetails.getUsername();
+        Optional<Profissional> profissional = Optional.ofNullable(profissionalRepository.findByLogin(username));
+
+        if (profissional.isPresent()) {
+            Profissional user = profissional.get();
+            Map<String, Object> response = new HashMap<>(); // ✅ Agora Map e HashMap estão importados corretamente
+            response.put("id", user.getId());
+            response.put("nome", user.getNome());
+            response.put("login", user.getLogin());
+            response.put("role", user.getRole());
+
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.status(404).body("Usuário não encontrado.");
+        }
     }
 
-    String username = userDetails.getUsername();
-    Optional<Profissional> profissional = Optional.ofNullable(profissionalRepository.findByLogin(username));
+    @PostMapping("/register")
+    public ResponseEntity<?> registerUser(@RequestBody Profissional profissional) {
+        if (profissionalRepository.existsByLogin(profissional.getLogin())) {
+            return ResponseEntity.badRequest().body("Erro: Login já está em uso!");
+        }
 
-    if (profissional.isPresent()) {
-        Profissional user = profissional.get();
-        Map<String, Object> response = new HashMap<>();
-        response.put("id", user.getId());
-        response.put("nome", user.getNome());
-        response.put("login", user.getLogin());
-        response.put("role", user.getRole()); // ✅ Inclui a Role no retorno
+        // Criptografar a senha
+        profissional.setSenha(passwordEncoder.encode(profissional.getSenha()));
 
-        return ResponseEntity.ok(response);
-    } else {
-        return ResponseEntity.status(404).body("Usuário não encontrado.");
+        // Salvar o novo profissional
+        profissionalRepository.save(profissional);
+
+        return ResponseEntity.ok("Usuário registrado com sucesso!");
     }
-}
-
 }
