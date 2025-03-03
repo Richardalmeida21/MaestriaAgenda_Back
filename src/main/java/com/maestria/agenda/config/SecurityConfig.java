@@ -1,6 +1,5 @@
 package com.maestria.agenda.config;
 
-import com.maestria.agenda.config.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -30,11 +29,11 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))  // Habilita o CORS
             .csrf(csrf -> csrf.disable()) // Desativa CSRF para permitir requisições do frontend
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // API stateless
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/login", "/auth/register").permitAll() // 🔓 Login e Cadastro Liberados
-                .requestMatchers("/auth/user").authenticated() // 🔒 Apenas usuários autenticados podem acessar /auth/user
-                .requestMatchers("/agendamento").hasAnyAuthority("ADMIN", "PROFISSIONAL") // 🔒 Apenas admin e profissionais
-                .requestMatchers("/cliente/**", "/profissional/**").hasAuthority("ADMIN") // 🔒 Apenas ADMIN pode acessar clientes e profissionais
+            .authorizeRequests(auth -> auth
+                .antMatchers("/auth/login", "/auth/register").permitAll() // 🔓 Login e Cadastro Liberados
+                .antMatchers("/auth/user").authenticated() // 🔒 Apenas usuários autenticados podem acessar /auth/user
+                .antMatchers("/agendamento").hasAnyAuthority("ADMIN", "PROFISSIONAL") // 🔒 Apenas admin e profissionais
+                .antMatchers("/cliente/**", "/profissional/**").hasAuthority("ADMIN") // 🔒 Apenas ADMIN pode acessar clientes e profissionais
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);  // Adiciona o filtro JWT
