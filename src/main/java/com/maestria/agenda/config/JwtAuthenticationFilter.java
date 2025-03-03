@@ -40,11 +40,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             try {
                 Claims claims = Jwts.parser()
-                        .setSigningKey(SECRET_KEY.getBytes()) // Usa bytes para evitar erros de compatibilidade
+                        .setSigningKey(SECRET_KEY)
                         .parseClaimsJws(token)
                         .getBody();
 
                 String username = claims.getSubject();
+
                 if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                     UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                     UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
@@ -53,7 +54,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(auth);
                 }
             } catch (Exception e) {
-                System.out.println("❌ Token inválido: " + e.getMessage());
+                System.out.println("❌ Erro ao validar token: " + e.getMessage());
             }
         }
 
