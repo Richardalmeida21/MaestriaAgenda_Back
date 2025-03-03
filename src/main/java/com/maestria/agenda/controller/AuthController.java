@@ -20,18 +20,26 @@ public class AuthController {
 
     // 🔹 Retorna detalhes do usuário autenticado
     @GetMapping("/me")
-    public ResponseEntity<?> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails == null) {
-            return ResponseEntity.status(403).body("Usuário não autenticado.");
-        }
-
-        String username = userDetails.getUsername();
-        Optional<Profissional> profissional = Optional.ofNullable(profissionalRepository.findByLogin(username));
-
-        if (profissional.isPresent()) {
-            return ResponseEntity.ok(profissional.get());
-        } else {
-            return ResponseEntity.status(404).body("Usuário não encontrado.");
-        }
+public ResponseEntity<?> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
+    if (userDetails == null) {
+        return ResponseEntity.status(403).body("Usuário não autenticado.");
     }
+
+    String username = userDetails.getUsername();
+    Optional<Profissional> profissional = Optional.ofNullable(profissionalRepository.findByLogin(username));
+
+    if (profissional.isPresent()) {
+        Profissional user = profissional.get();
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", user.getId());
+        response.put("nome", user.getNome());
+        response.put("login", user.getLogin());
+        response.put("role", user.getRole()); // ✅ Inclui a Role no retorno
+
+        return ResponseEntity.ok(response);
+    } else {
+        return ResponseEntity.status(404).body("Usuário não encontrado.");
+    }
+}
+
 }
