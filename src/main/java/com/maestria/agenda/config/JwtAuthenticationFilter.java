@@ -3,6 +3,7 @@ package com.maestria.agenda.config;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -17,12 +18,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final String SECRET_KEY = "your_secret_key"; // Substitua pela chave secreta usada para gerar os tokens JWT.
+    @Value("${jwt.secret}")
+    private String SECRET_KEY; // Chave secreta do JWT
+
     private final UserDetailsService userDetailsService;
 
     public JwtAuthenticationFilter(UserDetailsService userDetailsService) {
