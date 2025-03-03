@@ -27,7 +27,7 @@ public class LoginController {
     private PasswordEncoder passwordEncoder;
 
     @Value("${jwt.secret}")
-    private String SECRET_KEY; // 🔒 Chave secreta do JWT
+    private String SECRET_KEY;
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
@@ -42,13 +42,13 @@ public class LoginController {
             return ResponseEntity.status(401).body("Senha incorreta.");
         }
 
-        // ✅ Gera token JWT com chave segura
+        // 🔥 Gera token JWT usando uma chave segura
         String token = Jwts.builder()
                 .setSubject(loginRequest.getUsername())
                 .claim("role", profissional.getRole())
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 86400000)) // 24h de validade
-                .signWith(Keys.hmacShaKeyFor(SECRET_KEY.getBytes(StandardCharsets.UTF_8)), SignatureAlgorithm.HS256) // 🔥 Chave Segura
+                .setExpiration(new Date(System.currentTimeMillis() + 86400000)) // Expira em 24h
+                .signWith(Keys.hmacShaKeyFor(SECRET_KEY.getBytes(StandardCharsets.UTF_8)), SignatureAlgorithm.HS256)
                 .compact();
 
         Map<String, String> response = new HashMap<>();
