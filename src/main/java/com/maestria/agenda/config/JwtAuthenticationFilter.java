@@ -42,6 +42,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             token = token.substring(7);
 
             try {
+                // 🔥 Usa a chave segura para validar o token
                 Claims claims = Jwts.parserBuilder()
                         .setSigningKey(Keys.hmacShaKeyFor(SECRET_KEY.getBytes(StandardCharsets.UTF_8)))
                         .build()
@@ -61,7 +62,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
 
             } catch (Exception e) {
-                System.out.println("Erro ao validar token JWT: " + e.getMessage());
+                System.out.println("❌ Erro ao validar token JWT: " + e.getMessage());
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401 Unauthorized
+                return;
             }
         }
 
