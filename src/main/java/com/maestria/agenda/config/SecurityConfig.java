@@ -2,6 +2,7 @@ package com.maestria.agenda.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -26,37 +27,37 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))  // Habilita o CORS
-            .csrf(csrf -> csrf.disable()) // Desativa CSRF para APIs stateless
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // API stateless
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/login", "/auth/register").permitAll() // 🔓 Login e Cadastro Liberados
-                .requestMatchers("/auth/user").authenticated() // 🔒 Apenas usuários autenticados
-                .requestMatchers("/agendamento").hasAnyAuthority("ADMIN", "PROFISSIONAL") // 🔒 Apenas admin e profissionais
-                .requestMatchers("/cliente/**", "/profissional/**").hasAuthority("ADMIN") // 🔒 Apenas ADMIN
+                .requestMatchers("/auth/login", "/auth/register").permitAll()
+                .requestMatchers(HttpMethod.GET, "/auth/user", "/agendamento").authenticated() // Liberando GET com token
+                .requestMatchers(HttpMethod.POST, "/agendamento").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+                .requestMatchers("/cliente/**", "/profissional/**").hasAuthority("ADMIN")
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);  // Adiciona o filtro JWT
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();  // Codifica senhas
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.setAllowedOrigins(List.of("https://maestriaagenda-production.up.railway.app")); // Frontend URL
-        corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));  // Métodos permitidos
-        corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));  // Cabeçalhos permitidos
-        corsConfig.setExposedHeaders(List.of("Authorization"));  // Expondo o cabeçalho Authorization
-        corsConfig.setAllowCredentials(true);  // Permite o envio de credenciais (cookies, autenticação)
+        corsConfig.setAllowedOrigins(List.of("https://maestria-agenda.netlify.app", "https://maestriaagenda-production.up.railway.app", "*"));
+        corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        corsConfig.setExposedHeaders(List.of("Authorization"));
+        corsConfig.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", corsConfig);  // Aplica configuração para todos os endpoints
+        source.registerCorsConfiguration("/**", corsConfig);
         return source;
     }
 }
