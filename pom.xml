@@ -25,10 +25,11 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- Dependência do Spring Boot Starter Security -->
+        <!-- Dependência do Spring Boot Starter Security (versão compatível com Spring Boot 3.x) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
+            <version>6.4.3</version> <!-- Versão atualizada para Spring Boot 3.x -->
         </dependency>
 
         <!-- Dependência para usar JPA (Spring Data JPA) -->
