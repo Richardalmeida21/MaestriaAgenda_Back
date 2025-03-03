@@ -3,8 +3,6 @@ package com.maestria.agenda.config;
 import com.maestria.agenda.config.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -50,14 +48,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
-        return authenticationConfiguration.getAuthenticationManager();  // Retorna o AuthenticationManager
-    }
-
-    @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.setAllowedOrigins(List.of("https://maestria-agenda.netlify.app")); // Ajuste para o seu frontend
+        corsConfig.setAllowedOrigins(List.of("https://maestria-agenda.netlify.app")); // Frontend URL
         corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));  // Métodos permitidos
         corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));  // Cabeçalhos permitidos
         corsConfig.setExposedHeaders(List.of("Authorization"));  // Expondo o cabeçalho Authorization
