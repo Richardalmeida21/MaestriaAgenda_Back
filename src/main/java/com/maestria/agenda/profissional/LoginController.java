@@ -40,7 +40,7 @@ public class LoginController {
             return ResponseEntity.status(401).body("Senha incorreta.");
         }
 
-        // Gerar Token JWT ✅ Agora sem `Base64.getEncoder()`
+        // Gerar Token JWT ✅
         String token = Jwts.builder()
                 .setSubject(loginRequest.getUsername())
                 .claim("role", profissional.getRole())
