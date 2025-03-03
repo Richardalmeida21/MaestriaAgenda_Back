@@ -2,8 +2,8 @@ package com.maestria.agenda.controller;
 
 import com.maestria.agenda.profissional.Profissional;
 import com.maestria.agenda.profissional.ProfissionalRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,22 +19,22 @@ public class AuthController {
     private final ProfissionalRepository profissionalRepository;
     private final PasswordEncoder passwordEncoder;
 
-    @Autowired
     public AuthController(ProfissionalRepository profissionalRepository, PasswordEncoder passwordEncoder) {
         this.profissionalRepository = profissionalRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
-    @GetMapping("/user")
+    // 🔒 Apenas usuários autenticados podem acessar este endpoint
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/me")
     public ResponseEntity<Object> getUserDetails(@AuthenticationPrincipal UserDetails userDetails) {
         if (userDetails == null) {
             return ResponseEntity.status(403).body("Usuário não autenticado.");
         }
 
-        String username = userDetails.getUsername();
-        Optional<Profissional> profissional = Optional.ofNullable(profissionalRepository.findByLogin(username));
+        Optional<Profissional> profissionalOpt = Optional.ofNullable(profissionalRepository.findByLogin(userDetails.getUsername()));
 
-        return profissional
+        return profissionalOpt
                 .<ResponseEntity<Object>>map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(404).body("Usuário não encontrado."));
     }
@@ -45,12 +45,12 @@ public class AuthController {
             return ResponseEntity.badRequest().body("Erro: Login já está em uso!");
         }
 
-        // Criptografar a senha
+        // 🔒 Criptografar a senha antes de salvar
         profissional.setSenha(passwordEncoder.encode(profissional.getSenha()));
 
-        // Salvar o novo profissional
+        // 💾 Salvar no banco
         profissionalRepository.save(profissional);
 
-        return ResponseEntity.ok("Usuário registrado com sucesso!");
+        return ResponseEntity.ok("✅ Usuário registrado com sucesso!");
     }
 }
