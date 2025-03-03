@@ -3,14 +3,13 @@ package com.maestria.agenda.agendamento;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Objects;
-
 import com.maestria.agenda.cliente.Cliente;
 import com.maestria.agenda.profissional.Profissional;
 import com.maestria.agenda.servicos.Servicos;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "Agendamento")
+@Table(name = "agendamento") // Corrigido para letra minúscula por convenção
 public class Agendamento {
 
     @Id
@@ -31,7 +30,7 @@ public class Agendamento {
     private LocalDate data;
     private LocalTime hora;
 
-    // 🔹 Construtor com os tipos corretos
+    // Construtor atualizado com os tipos corretos
     public Agendamento(DadosCadastroAgendamento dados, Cliente cliente, Profissional profissional) {
         this.cliente = cliente;
         this.profissional = profissional;
@@ -42,7 +41,7 @@ public class Agendamento {
 
     public Agendamento() {}
 
-    // 🔹 Método para atualizar os dados do agendamento
+    // Método para atualizar os dados do agendamento
     public void atualizarDados(DadosCadastroAgendamento dados, Cliente cliente, Profissional profissional) {
         this.cliente = cliente;
         this.profissional = profissional;
@@ -51,7 +50,7 @@ public class Agendamento {
         this.hora = dados.hora();
     }
 
-    // 🔹 Getters e Setters
+    // Getters e Setters
     public long getId() {
         return id;
     }
@@ -102,4 +101,31 @@ public class Agendamento {
 
     @Override
     public boolean equals(Object o) {
-        if (this ==
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Agendamento that = (Agendamento) o;
+        return id == that.id &&
+               Objects.equals(cliente, that.cliente) &&
+               Objects.equals(profissional, that.profissional) &&
+               servico == that.servico &&
+               Objects.equals(data, that.data) &&
+               Objects.equals(hora, that.hora);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, cliente, profissional, servico, data, hora);
+    }
+
+    @Override
+    public String toString() {
+        return "Agendamento{" +
+                "id=" + id +
+                ", cliente=" + cliente.getNome() +
+                ", profissional=" + profissional.getNome() +
+                ", servico=" + servico +
+                ", data=" + data +
+                ", hora=" + hora +
+                '}';
+    }
+}
