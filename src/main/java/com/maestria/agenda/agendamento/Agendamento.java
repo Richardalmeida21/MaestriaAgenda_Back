@@ -3,6 +3,7 @@ package com.maestria.agenda.agendamento;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Objects;
+
 import com.maestria.agenda.cliente.Cliente;
 import com.maestria.agenda.profissional.Profissional;
 import com.maestria.agenda.servicos.Servicos;
@@ -30,7 +31,7 @@ public class Agendamento {
     private LocalDate data;
     private LocalTime hora;
 
-    // 🔹 Construtor atualizado
+    // 🔹 Construtor com os tipos corretos
     public Agendamento(DadosCadastroAgendamento dados, Cliente cliente, Profissional profissional) {
         this.cliente = cliente;
         this.profissional = profissional;
@@ -41,10 +42,64 @@ public class Agendamento {
 
     public Agendamento() {}
 
-    public long getId() { return id; }
-    public Cliente getCliente() { return cliente; }
-    public Profissional getProfissional() { return profissional; }
-    public Servicos getServico() { return servico; }
-    public LocalDate getData() { return data; }
-    public LocalTime getHora() { return hora; }
-}
+    // 🔹 Método para atualizar os dados do agendamento
+    public void atualizarDados(DadosCadastroAgendamento dados, Cliente cliente, Profissional profissional) {
+        this.cliente = cliente;
+        this.profissional = profissional;
+        this.servico = dados.servico();
+        this.data = dados.data();
+        this.hora = dados.hora();
+    }
+
+    // 🔹 Getters e Setters
+    public long getId() {
+        return id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
+    }
+
+    public Cliente getCliente() {
+        return cliente;
+    }
+
+    public void setCliente(Cliente cliente) {
+        this.cliente = cliente;
+    }
+
+    public Profissional getProfissional() {
+        return profissional;
+    }
+
+    public void setProfissional(Profissional profissional) {
+        this.profissional = profissional;
+    }
+
+    public Servicos getServico() {
+        return servico;
+    }
+
+    public void setServico(Servicos servico) {
+        this.servico = servico;
+    }
+
+    public LocalDate getData() {
+        return data;
+    }
+
+    public void setData(LocalDate data) {
+        this.data = data;
+    }
+
+    public LocalTime getHora() {
+        return hora;
+    }
+
+    public void setHora(LocalTime hora) {
+        this.hora = hora;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this ==
