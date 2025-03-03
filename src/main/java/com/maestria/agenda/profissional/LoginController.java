@@ -15,7 +15,6 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(origins = "*")
 public class LoginController {
 
     @Autowired
@@ -25,7 +24,7 @@ public class LoginController {
     private PasswordEncoder passwordEncoder;
 
     @Value("${jwt.secret}")
-    private String SECRET_KEY;
+    private String SECRET_KEY; // Chave secreta do JWT
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
