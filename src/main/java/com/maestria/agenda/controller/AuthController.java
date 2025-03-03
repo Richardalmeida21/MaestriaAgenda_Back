@@ -10,8 +10,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
-import java.util.Map;  // ✅ Correção: importando Map
-import java.util.HashMap;  // ✅ Correção: importando HashMap
+import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/auth")
@@ -38,7 +38,7 @@ public class AuthController {
 
         if (profissional.isPresent()) {
             Profissional user = profissional.get();
-            Map<String, Object> response = new HashMap<>(); // ✅ Agora Map e HashMap estão importados corretamente
+            Map<String, Object> response = new HashMap<>();
             response.put("id", user.getId());
             response.put("nome", user.getNome());
             response.put("login", user.getLogin());
@@ -56,12 +56,17 @@ public class AuthController {
             return ResponseEntity.badRequest().body("Erro: Login já está em uso!");
         }
 
-        // Criptografar a senha
+        // 🔹 Se não for passado um role, definir como "PROFISSIONAL"
+        if (profissional.getRole() == null || profissional.getRole().isEmpty()) {
+            profissional.setRole("PROFISSIONAL");
+        }
+
+        // 🔹 Criptografar a senha antes de salvar
         profissional.setSenha(passwordEncoder.encode(profissional.getSenha()));
 
-        // Salvar o novo profissional
+        // 🔹 Salvar o novo profissional
         profissionalRepository.save(profissional);
 
-        return ResponseEntity.ok("Usuário registrado com sucesso!");
+        return ResponseEntity.ok(Map.of("message", "Usuário registrado com sucesso!", "login", profissional.getLogin()));
     }
 }
