@@ -1,6 +1,5 @@
 package com.maestria.agenda.config;
 
-import com.maestria.agenda.profissional.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -28,6 +27,7 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/auth/login", "/auth/register", "/public/**", "/generate-password").permitAll()
+                .requestMatchers("/auth/me").authenticated() // ✅ Garantir acesso autenticado ao /auth/me
                 .requestMatchers("/auth/user", "/agendamento").hasAnyAuthority("ADMIN", "PROFISSIONAL")
                 .requestMatchers("/cliente/**", "/profissional/**").hasAuthority("ADMIN")
                 .anyRequest().authenticated()
@@ -52,7 +52,7 @@ public class SecurityConfig {
         CorsConfiguration corsConfig = new CorsConfiguration();
         corsConfig.setAllowedOrigins(List.of("https://maestria-agenda.netlify.app")); // Adicione o domínio do frontend
         corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type", "Access-Control-Allow-Headers")); // ✅ Adicionado Access-Control-Allow-Headers
         corsConfig.setExposedHeaders(List.of("Authorization"));
         corsConfig.setAllowCredentials(true);
 
