@@ -32,7 +32,8 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/auth/login", "/auth/register").permitAll()
-                .requestMatchers(HttpMethod.GET, "/auth/user", "/agendamento").authenticated()
+                .requestMatchers(HttpMethod.GET, "/auth/me").authenticated() // 🔥 Corrigido aqui
+                .requestMatchers(HttpMethod.GET, "/agendamento").authenticated()
                 .requestMatchers(HttpMethod.POST, "/agendamento").hasAnyAuthority("ADMIN", "PROFISSIONAL")
                 .requestMatchers("/cliente/**", "/profissional/**").hasAuthority("ADMIN")
                 .anyRequest().authenticated()
@@ -50,12 +51,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.setAllowedOrigins(List.of(
-            "https://maestria-agenda.netlify.app",
-            "https://mastriaagenda-production.up.railway.app",
-            "http://localhost:5173",
-            "http://localhost:3000"
-        ));
+        corsConfig.setAllowedOrigins(List.of("https://maestria-agenda.netlify.app", "https://mastriaagenda-production.up.railway.app", "*"));
         corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         corsConfig.setExposedHeaders(List.of("Authorization"));
