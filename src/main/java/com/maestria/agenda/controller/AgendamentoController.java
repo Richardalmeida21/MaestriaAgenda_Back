@@ -37,18 +37,20 @@ public class AgendamentoController {
 
     // ✅ ADMIN vê todos os agendamentos, PROFISSIONAL vê apenas os seus
     @GetMapping
-    public ResponseEntity<?> listarAgendamentos(@AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-            return ResponseEntity.ok(agendamentoRepository.findAll()); // 🔹 ADMIN vê todos os agendamentos
-        }
-
+public ResponseEntity<?> listarAgendamentos(@AuthenticationPrincipal UserDetails userDetails) {
+    if (userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+        // Se for admin, retorna todos os agendamentos
+        return ResponseEntity.ok(agendamentoRepository.findAll());
+    } else {
+        // Se for profissional, busca os agendamentos relacionados a ele
         Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
         if (profissional == null) {
             return ResponseEntity.status(403).body("Profissional não encontrado.");
         }
-        
-        return ResponseEntity.ok(agendamentoRepository.findByProfissional(profissional)); // 🔹 Profissional vê apenas os próprios agendamentos
+        return ResponseEntity.ok(agendamentoRepository.findByProfissional(profissional));
     }
+}
+
 
     // ✅ Apenas ADMIN pode criar agendamentos
     @PostMapping
