@@ -4,7 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
-import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.stereotype.Component;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -20,6 +20,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Collections;
 
+@Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final String SECRET_KEY = "your_secret_key"; // Substitua pela chave secreta usada para gerar os tokens JWT.
@@ -62,6 +63,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             } catch (Exception e) {
                 // Se o token for inválido ou expirar, apenas ignore e continue
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);  // Resposta não autorizada se o token for inválido
+                return;  // Retorne o fluxo da requisição sem continuar
             }
         }
 
