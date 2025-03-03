@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
@@ -19,12 +18,10 @@ import java.util.HashMap;
 public class AuthController {
 
     private final ProfissionalRepository profissionalRepository;
-    private final PasswordEncoder passwordEncoder;
 
     @Autowired
-    public AuthController(ProfissionalRepository profissionalRepository, PasswordEncoder passwordEncoder) {
+    public AuthController(ProfissionalRepository profissionalRepository) {
         this.profissionalRepository = profissionalRepository;
-        this.passwordEncoder = passwordEncoder;
     }
 
     @GetMapping("/me")
@@ -60,9 +57,6 @@ public class AuthController {
         if (profissional.getRole() == null || profissional.getRole().isEmpty()) {
             profissional.setRole("PROFISSIONAL");
         }
-
-        // 🔹 Criptografar a senha antes de salvar
-        profissional.setSenha(passwordEncoder.encode(profissional.getSenha()));
 
         // 🔹 Salvar o novo profissional
         profissionalRepository.save(profissional);
