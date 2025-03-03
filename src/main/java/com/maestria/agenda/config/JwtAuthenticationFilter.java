@@ -1,4 +1,4 @@
-package com.maestria.agenda.security;
+package com.maestria.agenda.config;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
