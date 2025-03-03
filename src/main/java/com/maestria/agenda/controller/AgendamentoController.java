@@ -62,12 +62,17 @@ public class AgendamentoController {
             return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode criar agendamentos.");
         }
 
+        // 🔍 Verifica se clienteId e profissionalId não são nulos
+        if (dados.clienteId() == null || dados.profissionalId() == null) {
+            return ResponseEntity.badRequest().body("Erro: Cliente e Profissional devem ser informados.");
+        }
+
         try {
             Cliente cliente = clienteRepository.findById(dados.clienteId())
-                    .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+                .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
 
             Profissional profissional = profissionalRepository.findById(dados.profissionalId())
-                    .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+                .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
 
             Agendamento agendamento = new Agendamento(dados, cliente, profissional);
             agendamentoRepository.save(agendamento);
@@ -75,51 +80,7 @@ public class AgendamentoController {
             return ResponseEntity.ok("Agendamento criado com sucesso.");
         } catch (Exception e) {
             logger.error("❌ Erro ao criar agendamento", e);
-            return ResponseEntity.status(500).body("Erro interno ao criar agendamento: " + e.getMessage());
+            return ResponseEntity.status(500).body("Erro ao criar agendamento.");
         }
-    }
-
-    // ✅ Apenas ADMIN pode editar um agendamento
-    @PutMapping("/{id}")
-    public ResponseEntity<?> atualizar(@PathVariable Long id, @RequestBody DadosCadastroAgendamento dados, @AuthenticationPrincipal UserDetails userDetails) {
-        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-            logger.warn("❌ Tentativa de edição de agendamento sem permissão por {}", userDetails.getUsername());
-            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode editar agendamentos.");
-        }
-
-        Optional<Agendamento> agendamentoOpt = agendamentoRepository.findById(id);
-        if (agendamentoOpt.isEmpty()) {
-            return ResponseEntity.badRequest().body("Agendamento não encontrado.");
-        }
-
-        Agendamento agendamento = agendamentoOpt.get();
-        Cliente cliente = clienteRepository.findById(dados.clienteId()).orElse(null);
-        Profissional profissional = profissionalRepository.findById(dados.profissionalId()).orElse(null);
-
-        if (cliente == null || profissional == null) {
-            return ResponseEntity.badRequest().body("Cliente ou profissional inválido.");
-        }
-
-        agendamento.atualizarDados(dados, cliente, profissional);
-        agendamentoRepository.save(agendamento);
-        logger.info("✅ Agendamento atualizado com sucesso: {}", agendamento);
-        return ResponseEntity.ok("Agendamento atualizado com sucesso.");
-    }
-
-    // ✅ Apenas ADMIN pode excluir um agendamento
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> deletar(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
-        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-            logger.warn("❌ Tentativa de exclusão de agendamento sem permissão por {}", userDetails.getUsername());
-            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode excluir agendamentos.");
-        }
-
-        if (!agendamentoRepository.existsById(id)) {
-            return ResponseEntity.badRequest().body("Agendamento não encontrado.");
-        }
-
-        agendamentoRepository.deleteById(id);
-        logger.info("✅ Agendamento removido com sucesso. ID: {}", id);
-        return ResponseEntity.ok("Agendamento removido com sucesso.");
     }
 }
