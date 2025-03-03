@@ -57,7 +57,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.setAllowedOrigins(List.of("https://maestria-agenda.netlify.app")); // 🔥 Ajuste para o seu frontend
+        corsConfig.setAllowedOrigins(List.of("https://maestria-agenda.netlify.app")); // Ajuste para o seu frontend
         corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));  // Métodos permitidos
         corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));  // Cabeçalhos permitidos
         corsConfig.setExposedHeaders(List.of("Authorization"));  // Expondo o cabeçalho Authorization
