@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.filter.OncePerRequestFilter;
 
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
