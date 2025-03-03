@@ -8,8 +8,8 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 public record DadosCadastroAgendamento(
-        @NotNull Long clienteId,  // Agora usa ID do cliente
-        @NotNull Long profissionalId, // Agora usa ID do profissional
+        @NotNull(message = "O ID do Cliente não pode ser nulo") Long clienteId,
+        @NotNull(message = "O ID do Profissional não pode ser nulo") Long profissionalId,
         @NotNull Servicos servico,
         @NotNull @FutureOrPresent LocalDate data,
         @NotNull LocalTime hora
