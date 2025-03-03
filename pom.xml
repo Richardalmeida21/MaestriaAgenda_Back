@@ -5,8 +5,8 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.4.3</version> <!-- Versão do Spring Boot -->
-        <relativePath/> <!-- lookup parent from repository -->
+        <version>3.4.3</version> <!-- Versão correta do Spring Boot -->
+        <relativePath/>
     </parent>
     <groupId>com.maestria</groupId>
     <artifactId>agenda</artifactId>
@@ -19,33 +19,33 @@
         <maven.compiler.target>17</maven.compiler.target>
     </properties>
     <dependencies>
-        <!-- Dependência do Spring Boot Starter Web -->
+        <!-- Spring Boot Starter Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- Dependência do Spring Boot Starter Security (versão compatível com Spring Boot 3.x) -->
+        <!-- Spring Boot Starter Security -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
-            <version>6.4.3</version> <!-- Versão atualizada para Spring Boot 3.x -->
+            <!-- NÃO ESPECIFIQUE A VERSÃO MANUALMENTE -->
         </dependency>
 
-        <!-- Dependência para usar JPA (Spring Data JPA) -->
+        <!-- Spring Boot Starter Data JPA -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
-        <!-- Dependência para PostgreSQL -->
+        <!-- PostgreSQL Driver -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <version>42.2.5</version>
         </dependency>
 
-        <!-- Dependência para o JWT -->
+        <!-- JWT -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
@@ -64,25 +64,24 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Dependência para o Jakarta Servlet API (compatível com Spring Boot 3.x) -->
+        <!-- Jakarta Validation API -->
         <dependency>
-            <groupId>jakarta.servlet</groupId>
-            <artifactId>jakarta.servlet-api</artifactId>
-            <version>5.0.0</version>
-            <scope>provided</scope>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
+            <version>3.0.2</version>
         </dependency>
 
-        <!-- Dependência de Testes -->
+        <!-- Hibernate Validator (implementação do Bean Validation) -->
+        <dependency>
+            <groupId>org.hibernate.validator</groupId>
+            <artifactId>hibernate-validator</artifactId>
+        </dependency>
+
+        <!-- Spring Boot Starter Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
-        </dependency>
-
-        <!-- Dependência para OAuth2 (caso necessário) -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-oauth2-client</artifactId>
         </dependency>
     </dependencies>
 
