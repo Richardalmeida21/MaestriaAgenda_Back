@@ -32,9 +32,11 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/auth/login", "/auth/register").permitAll()
-                .requestMatchers(HttpMethod.GET, "/auth/user", "/agendamento").authenticated() // Liberando GET com token
-                .requestMatchers(HttpMethod.POST, "/agendamento").hasAnyAuthority("ADMIN", "PROFISSIONAL")
-                .requestMatchers("/cliente/**", "/profissional/**").hasAuthority("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/auth/user", "/agendamento").authenticated() // ✅ Liberado para autenticados
+                .requestMatchers(HttpMethod.POST, "/agendamento").hasAuthority("ADMIN") // 🔒 Apenas ADMIN pode criar agendamentos
+                .requestMatchers(HttpMethod.PUT, "/agendamento/**").hasAuthority("ADMIN") // 🔒 Apenas ADMIN pode editar
+                .requestMatchers(HttpMethod.DELETE, "/agendamento/**").hasAuthority("ADMIN") // 🔒 Apenas ADMIN pode excluir
+                .requestMatchers("/cliente/**", "/profissional/**").hasAuthority("ADMIN") // 🔒 Apenas ADMIN pode gerenciar clientes e profissionais
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -50,7 +52,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.setAllowedOrigins(List.of("https://maestria-agenda.netlify.app", "https://maestriaagenda-production.up.railway.app", "*"));
+        corsConfig.setAllowedOrigins(List.of("https://maestria-agenda.netlify.app", "https://mastriaagenda-production.up.railway.app"));
         corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         corsConfig.setExposedHeaders(List.of("Authorization"));
