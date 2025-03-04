@@ -11,6 +11,6 @@ public class PasswordController {
     @GetMapping("/generate-password")
     public String generatePassword(@RequestParam String rawPassword) {
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-        return encoder.encode(rawPassword);
+        return encoder.encode(rawPassword);  // Criptografando a senha
     }
 }

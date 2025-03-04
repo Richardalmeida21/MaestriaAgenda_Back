@@ -23,14 +23,14 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))  // CORS Configuração
             .csrf(csrf -> csrf.disable())
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Configuração sem estado (stateless)
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/login", "/auth/register", "/public/**", "/generate-password").permitAll()
-                .requestMatchers("/auth/me", "/agendamento").hasAnyAuthority("ADMIN", "PROFISSIONAL")
-                .requestMatchers("/cliente/**", "/profissional/**").hasAuthority("ADMIN")
-                .anyRequest().authenticated()
+                .requestMatchers("/auth/login", "/auth/register", "/public/**", "/generate-password").permitAll()  // Permitir acesso às rotas sem autenticação
+                .requestMatchers("/auth/me", "/agendamento").hasAnyAuthority("ADMIN", "PROFISSIONAL")  // Requer login de PROFISSIONAL ou ADMIN
+                .requestMatchers("/cliente/**", "/profissional/**").hasAuthority("ADMIN")  // Apenas ADMIN pode acessar rotas de clientes e profissionais
+                .anyRequest().authenticated()  // Qualquer outra requisição precisa estar autenticada
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -44,17 +44,17 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        return new BCryptPasswordEncoder();  // Usando BCrypt para criptografar senhas
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.setAllowedOriginPatterns(List.of("https://maestria-agenda.netlify.app")); // Adicione o domínio do frontend
+        corsConfig.setAllowedOriginPatterns(List.of("https://maestria-agenda.netlify.app"));  // Permitir o frontend hospedado no Netlify
         corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         corsConfig.setExposedHeaders(List.of("Authorization"));
-        corsConfig.setAllowCredentials(true);
+        corsConfig.setAllowCredentials(true);  // Permitir credenciais
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", corsConfig);

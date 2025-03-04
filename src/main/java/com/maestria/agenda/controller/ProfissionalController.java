@@ -4,7 +4,6 @@ import com.maestria.agenda.profissional.Profissional;
 import com.maestria.agenda.profissional.ProfissionalRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,11 +14,9 @@ import java.util.List;
 public class ProfissionalController {
 
     private final ProfissionalRepository profissionalRepository;
-    private final PasswordEncoder passwordEncoder;
 
-    public ProfissionalController(ProfissionalRepository profissionalRepository, PasswordEncoder passwordEncoder) {
+    public ProfissionalController(ProfissionalRepository profissionalRepository) {
         this.profissionalRepository = profissionalRepository;
-        this.passwordEncoder = passwordEncoder;
     }
 
     // Apenas ADMIN pode cadastrar profissionais
@@ -30,8 +27,6 @@ public class ProfissionalController {
             return ResponseEntity.badRequest().body("Login já cadastrado.");
         }
 
-        // Criptografa a senha
-        profissional.setSenha(passwordEncoder.encode(profissional.getSenha()));
         return ResponseEntity.ok(profissionalRepository.save(profissional));
     }
 

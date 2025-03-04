@@ -27,7 +27,6 @@ public class AuthController {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // Endpoint para obter o usuário logado
     @GetMapping("/me")
     public ResponseEntity<Object> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
         if (userDetails == null) {
@@ -51,7 +50,6 @@ public class AuthController {
         }
     }
 
-    // Endpoint para registrar novo profissional
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody Profissional profissional) {
         if (profissionalRepository.existsByLogin(profissional.getLogin())) {
