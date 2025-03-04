@@ -1,6 +1,5 @@
 package com.maestria.agenda.config;
 
-import com.maestria.agenda.profissional.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -28,7 +27,7 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/auth/login", "/auth/register", "/public/**", "/generate-password").permitAll()
-                .requestMatchers("/auth/user", "/agendamento").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+                .requestMatchers("/auth/me", "/agendamento").hasAnyAuthority("ADMIN", "PROFISSIONAL")
                 .requestMatchers("/cliente/**", "/profissional/**").hasAuthority("ADMIN")
                 .anyRequest().authenticated()
             )
