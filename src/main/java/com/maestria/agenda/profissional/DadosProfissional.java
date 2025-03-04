@@ -3,10 +3,7 @@ package com.maestria.agenda.profissional;
 import jakarta.validation.constraints.NotBlank;
 
 public record DadosProfissional(
-        @NotBlank String nome
+        @NotBlank(message = "O nome não pode ser vazio.") String nome
 ) {
-    // Construtor padrão
-    public DadosProfissional() {
-        this(null);
-    }
+    // O record já fornece automaticamente o construtor, getters e outros métodos.
 }

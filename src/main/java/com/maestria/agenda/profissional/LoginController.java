@@ -13,7 +13,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/auth")
@@ -31,13 +30,12 @@ public class LoginController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
-        Optional<Profissional> profissionalOpt = Optional.ofNullable(profissionalRepository.findByLogin(loginRequest.getUsername()));
+        Profissional profissional = profissionalRepository.findByLogin(loginRequest.getUsername());
 
-        if (profissionalOpt.isEmpty()) {
+        if (profissional == null) {
             return ResponseEntity.status(401).body("Usuário não encontrado.");
         }
 
-        Profissional profissional = profissionalOpt.get();
         if (!passwordEncoder.matches(loginRequest.getSenha(), profissional.getSenha())) {
             return ResponseEntity.status(401).body("Senha incorreta.");
         }

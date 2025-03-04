@@ -2,26 +2,24 @@ package com.maestria.agenda.controller;
 
 import com.maestria.agenda.profissional.Profissional;
 import com.maestria.agenda.profissional.ProfissionalRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-
+import jakarta.validation.Valid;
 import java.util.Optional;
 import java.util.Map;
 import java.util.HashMap;
 
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "*") // Permite acesso de todos os domínios
 public class AuthController {
 
     private final ProfissionalRepository profissionalRepository;
     private final PasswordEncoder passwordEncoder;
 
-    @Autowired
     public AuthController(ProfissionalRepository profissionalRepository, PasswordEncoder passwordEncoder) {
         this.profissionalRepository = profissionalRepository;
         this.passwordEncoder = passwordEncoder;
@@ -51,9 +49,13 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@RequestBody Profissional profissional) {
+    public ResponseEntity<?> registerUser(@RequestBody @Valid Profissional profissional) {
         if (profissionalRepository.existsByLogin(profissional.getLogin())) {
             return ResponseEntity.badRequest().body("Erro: Login já está em uso!");
+        }
+
+        if (profissional.getSenha().length() < 6) {
+            return ResponseEntity.badRequest().body("Erro: A senha deve ter no mínimo 6 caracteres!");
         }
 
         // Criptografar a senha
