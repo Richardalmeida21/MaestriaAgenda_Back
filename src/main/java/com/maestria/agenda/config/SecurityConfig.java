@@ -1,64 +1,63 @@
 package com.maestria.agenda.config;
 
+import com.maestria.agenda.profissional.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
 @Configuration
-@EnableWebSecurity
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
-
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
-        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
-    }
-
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Configuração do CORS
-            .csrf(csrf -> csrf.disable()) // Desativa CSRF
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Configuração de sessão sem estado
-            .authorizeRequests(auth -> auth
-                .requestMatchers("/auth/login", "/auth/register").permitAll() // Permite acesso livre a login e registro
-                .requestMatchers(HttpMethod.GET, "/auth/me").authenticated() // Apenas usuários autenticados podem acessar /auth/me
-                .requestMatchers(HttpMethod.GET, "/agendamento").authenticated() // Acesso a agendamentos para usuários autenticados
-                .requestMatchers(HttpMethod.POST, "/agendamento").hasAuthority("ADMIN") // Apenas ADMIN pode criar agendamentos
-                .anyRequest().authenticated() // Todas as outras requisições precisam ser autenticadas
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/auth/login", "/auth/register", "/public/**", "/generate-password").permitAll()
+                .requestMatchers("/auth/user", "/agendamento").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+                .requestMatchers("/cliente/**", "/profissional/**").hasAuthority("ADMIN")
+                .anyRequest().authenticated()
             )
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class); // Filtro JWT
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(); // Usando o BCrypt para codificar senhas
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
+        return authenticationConfiguration.getAuthenticationManager();
     }
 
     @Bean
-    public UrlBasedCorsConfigurationSource corsConfigurationSource() {
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.setAllowedOrigins(List.of("https://maestria-agenda.netlify.app", "https://mastriaagenda-production.up.railway.app"));
+        corsConfig.setAllowedOriginPatterns(List.of("https://maestria-agenda.netlify.app")); // Adicione o domínio do frontend
         corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         corsConfig.setExposedHeaders(List.of("Authorization"));
-        corsConfig.setAllowCredentials(true); // Permite credenciais (cookies, headers de autorização)
+        corsConfig.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", corsConfig); // Registra a configuração CORS para todas as URLs
+        source.registerCorsConfiguration("/**", corsConfig);
         return source;
     }
 }
