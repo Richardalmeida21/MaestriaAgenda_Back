@@ -37,7 +37,10 @@ public class Profissional {
     private Role role; // Alterado para o tipo Role
 
     // Construtor padrão
-    public Profissional() {}
+    public Profissional() {
+        // Role padrão para o profissional, caso não seja passado no cadastro
+        this.role = Role.PROFISSIONAL;
+    }
 
     // Getters e Setters
     public long getId() {

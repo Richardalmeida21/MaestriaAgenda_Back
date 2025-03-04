@@ -29,6 +29,17 @@ public class ProfissionalController {
             return ResponseEntity.badRequest().body(new ErrorResponse("Erro: Login já cadastrado."));
         }
 
+        // Verifica se o campo 'role' não está vazio. Se estiver vazio, atribui 'ROLE_PROFISSIONAL' por padrão.
+        if (profissional.getRole() == null) {
+            profissional.setRole(Profissional.Role.PROFISSIONAL);  // Atribuindo o valor padrão como PROFISSIONAL
+        }
+        
+
+        // Caso o role seja "ROLE_ADMIN" e o usuário não seja ADMIN, retorna erro.
+        if (profissional.getRole().equals("ROLE_ADMIN") && !temPermissaoParaCadastrarAdmin()) {
+            return ResponseEntity.badRequest().body(new ErrorResponse("Erro: Somente administradores podem atribuir o role 'ROLE_ADMIN'."));
+        }
+
         // Salva o profissional
         Profissional novoProfissional = profissionalRepository.save(profissional);
         return ResponseEntity.ok(novoProfissional);
@@ -56,5 +67,14 @@ public class ProfissionalController {
         public void setMessage(String message) {
             this.message = message;
         }
+    }
+
+    // Verifica se o usuário logado tem permissão para atribuir o role 'ROLE_ADMIN'
+    private boolean temPermissaoParaCadastrarAdmin() {
+        // Lógica para verificar se o usuário logado é um ADMIN
+        // Isso pode ser feito com a verificação do principal ou das authorities do usuário logado
+        // Exemplo de verificação baseada nas authorities
+        // Você pode adaptar isso de acordo com a sua implementação de segurança.
+        return true;  // Aqui você pode implementar a lógica de verificação de permissões
     }
 }
