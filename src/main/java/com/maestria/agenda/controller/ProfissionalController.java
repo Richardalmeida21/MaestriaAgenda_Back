@@ -8,7 +8,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/profissional")
@@ -31,7 +30,8 @@ public class ProfissionalController {
             return ResponseEntity.badRequest().body("Login já cadastrado.");
         }
 
-        profissional.setSenha(passwordEncoder.encode(profissional.getSenha())); // Criptografa senha
+        // Criptografa a senha
+        profissional.setSenha(passwordEncoder.encode(profissional.getSenha()));
         return ResponseEntity.ok(profissionalRepository.save(profissional));
     }
 
