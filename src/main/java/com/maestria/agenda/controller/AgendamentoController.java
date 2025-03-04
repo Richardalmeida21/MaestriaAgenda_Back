@@ -73,6 +73,7 @@ public class AgendamentoController {
             Profissional profissional = profissionalRepository.findById(dados.profissionalId())
                 .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
 
+            // Usando os campos LocalDate e LocalTime diretamente
             Agendamento agendamento = new Agendamento(dados, cliente, profissional);
             agendamentoRepository.save(agendamento);
             logger.info("✅ Agendamento criado com sucesso: {}", agendamento);
