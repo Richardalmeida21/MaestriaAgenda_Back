@@ -29,7 +29,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
-            <!-- NÃO ESPECIFIQUE A VERSÃO MANUALMENTE -->
         </dependency>
 
         <!-- Spring Boot Starter Data JPA -->
@@ -38,14 +37,14 @@
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
-        <!-- PostgreSQL Driver -->
+        <!-- PostgreSQL Driver (Atualizado) -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <version>42.2.5</version>
+            <version>42.5.1</version> <!-- Versão mais recente -->
         </dependency>
 
-        <!-- JWT -->
+        <!-- JWT (Atualizado para utilizar apenas a dependência principal) -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
@@ -64,14 +63,7 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Jakarta Validation API -->
-        <dependency>
-            <groupId>jakarta.validation</groupId>
-            <artifactId>jakarta.validation-api</artifactId>
-            <version>3.0.2</version>
-        </dependency>
-
-        <!-- Hibernate Validator (implementação do Bean Validation) -->
+        <!-- Jakarta Validation API (Já incluída com Hibernate Validator) -->
         <dependency>
             <groupId>org.hibernate.validator</groupId>
             <artifactId>hibernate-validator</artifactId>
