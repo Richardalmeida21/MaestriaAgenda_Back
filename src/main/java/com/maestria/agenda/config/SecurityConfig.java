@@ -30,7 +30,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())  // Desativa CSRF
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeRequests(auth -> auth
+            .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/auth/login", "/auth/register").permitAll()  // Liberando login e registro
                 .requestMatchers(HttpMethod.GET, "/auth/me").authenticated()  // Autenticado para acessar
                 .requestMatchers(HttpMethod.GET, "/agendamento").authenticated()
