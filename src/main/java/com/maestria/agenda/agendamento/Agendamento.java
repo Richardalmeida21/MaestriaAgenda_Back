@@ -9,7 +9,7 @@ import com.maestria.agenda.servicos.Servicos;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "agendamento") // Nome corrigido para convenção
+@Table(name = "agendamento")
 public class Agendamento {
 
     @Id
