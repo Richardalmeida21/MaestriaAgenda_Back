@@ -27,24 +27,24 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf.disable())  // Desativa CSRF
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/login", "/auth/register").permitAll()  // Liberando login e registro
-                .requestMatchers(HttpMethod.GET, "/auth/me").authenticated()  // Autenticado para acessar
-                .requestMatchers(HttpMethod.GET, "/agendamento").authenticated()
-                .requestMatchers(HttpMethod.POST, "/agendamento").hasAuthority("ADMIN")  // Apenas ADMIN pode criar agendamentos
-                .anyRequest().authenticated()  // Qualquer outra requisição precisa estar autenticada
+            .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Configuração do CORS
+            .csrf(csrf -> csrf.disable()) // Desativa CSRF
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Configuração de sessão sem estado
+            .authorizeRequests(auth -> auth
+                .requestMatchers("/auth/login", "/auth/register").permitAll() // Permite acesso livre a login e registro
+                .requestMatchers(HttpMethod.GET, "/auth/me").authenticated() // Apenas usuários autenticados podem acessar /auth/me
+                .requestMatchers(HttpMethod.GET, "/agendamento").authenticated() // Acesso a agendamentos para usuários autenticados
+                .requestMatchers(HttpMethod.POST, "/agendamento").hasAuthority("ADMIN") // Apenas ADMIN pode criar agendamentos
+                .anyRequest().authenticated() // Todas as outras requisições precisam ser autenticadas
             )
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);  // Adiciona filtro JWT
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class); // Filtro JWT
 
         return http.build();
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        return new BCryptPasswordEncoder(); // Usando o BCrypt para codificar senhas
     }
 
     @Bean
@@ -54,10 +54,10 @@ public class SecurityConfig {
         corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         corsConfig.setExposedHeaders(List.of("Authorization"));
-        corsConfig.setAllowCredentials(true);
+        corsConfig.setAllowCredentials(true); // Permite credenciais (cookies, headers de autorização)
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", corsConfig);
+        source.registerCorsConfiguration("/**", corsConfig); // Registra a configuração CORS para todas as URLs
         return source;
     }
 }
