@@ -15,6 +15,8 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/agendamento")
 @CrossOrigin(origins = "*")
@@ -79,5 +81,22 @@ public class AgendamentoController {
             logger.error("❌ Erro ao criar agendamento", e);
             return ResponseEntity.status(500).body("Erro ao criar agendamento.");
         }
+    }
+
+    // ✅ Apenas ADMIN pode excluir agendamentos
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> excluirAgendamento(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            logger.warn("❌ Tentativa de exclusão de agendamento sem permissão por {}", userDetails.getUsername());
+            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode excluir agendamentos.");
+        }
+
+        if (!agendamentoRepository.existsById(id)) {
+            return ResponseEntity.badRequest().body("Erro: Agendamento não encontrado.");
+        }
+
+        agendamentoRepository.deleteById(id);
+        logger.info("✅ Agendamento excluído com sucesso. ID: {}", id);
+        return ResponseEntity.ok("Agendamento excluído com sucesso.");
     }
 }
