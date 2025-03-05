@@ -15,6 +15,8 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/agendamento")
 @CrossOrigin(origins = "*")
@@ -37,22 +39,35 @@ public class AgendamentoController {
     public ResponseEntity<?> listarAgendamentos(@AuthenticationPrincipal UserDetails userDetails) {
         logger.info("🔍 Solicitando lista de agendamentos para: {}", userDetails.getUsername());
 
-        // Verifica se o usuário é um ADMIN
         if (userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
             logger.info("✅ ADMIN solicitou todos os agendamentos.");
             return ResponseEntity.ok(agendamentoRepository.findAll());
         } else {
-            // Verifica se o usuário é um PROFISSIONAL
             Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
             if (profissional == null) {
                 logger.warn("❌ Profissional não encontrado: {}", userDetails.getUsername());
                 return ResponseEntity.status(403).body("Profissional não encontrado.");
             }
-            logger.info("✅ PROFISSIONAL solicitou seus próprios agendamentos.");
-
-            // **Filtra os agendamentos apenas para o profissional logado**
+            logger.info("✅ PROFISSIONAL {} solicitou seus agendamentos.", profissional.getNome());
             return ResponseEntity.ok(agendamentoRepository.findByProfissional(profissional));
         }
+    }
+
+    // ✅ NOVA ROTA: PROFISSIONAL pode ver apenas seus próprios agendamentos
+    @GetMapping("/profissional")
+    public ResponseEntity<?> listarAgendamentosProfissional(@AuthenticationPrincipal UserDetails userDetails) {
+        logger.info("🔍 PROFISSIONAL {} solicitando seus agendamentos.", userDetails.getUsername());
+
+        Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
+
+        if (profissional == null) {
+            logger.warn("❌ Profissional não encontrado.");
+            return ResponseEntity.status(403).body("Profissional não encontrado.");
+        }
+
+        List<Agendamento> agendamentos = agendamentoRepository.findByProfissional(profissional);
+        logger.info("✅ Retornando {} agendamentos para PROFISSIONAL {}", agendamentos.size(), profissional.getNome());
+        return ResponseEntity.ok(agendamentos);
     }
 
     // ✅ Apenas ADMIN pode criar agendamentos
@@ -63,7 +78,6 @@ public class AgendamentoController {
             return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode criar agendamentos.");
         }
 
-        // 🔍 Verifica se clienteId e profissionalId não são nulos
         if (dados.clienteId() == null || dados.profissionalId() == null) {
             return ResponseEntity.badRequest().body("Erro: Cliente e Profissional devem ser informados.");
         }
@@ -75,7 +89,6 @@ public class AgendamentoController {
             Profissional profissional = profissionalRepository.findById(dados.profissionalId())
                 .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
 
-            // Usando os campos LocalDate e LocalTime diretamente
             Agendamento agendamento = new Agendamento(dados, cliente, profissional);
             agendamentoRepository.save(agendamento);
             logger.info("✅ Agendamento criado com sucesso: {}", agendamento);
