@@ -15,8 +15,6 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
-
-
 @RestController
 @RequestMapping("/agendamento")
 @CrossOrigin(origins = "*")
@@ -39,16 +37,20 @@ public class AgendamentoController {
     public ResponseEntity<?> listarAgendamentos(@AuthenticationPrincipal UserDetails userDetails) {
         logger.info("🔍 Solicitando lista de agendamentos para: {}", userDetails.getUsername());
 
+        // Verifica se o usuário é um ADMIN
         if (userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
             logger.info("✅ ADMIN solicitou todos os agendamentos.");
             return ResponseEntity.ok(agendamentoRepository.findAll());
         } else {
+            // Verifica se o usuário é um PROFISSIONAL
             Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
             if (profissional == null) {
                 logger.warn("❌ Profissional não encontrado: {}", userDetails.getUsername());
                 return ResponseEntity.status(403).body("Profissional não encontrado.");
             }
             logger.info("✅ PROFISSIONAL solicitou seus próprios agendamentos.");
+
+            // **Filtra os agendamentos apenas para o profissional logado**
             return ResponseEntity.ok(agendamentoRepository.findByProfissional(profissional));
         }
     }
