@@ -29,7 +29,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/auth/login", "/auth/register", "/public/**", "/generate-password").permitAll()  // Rotas públicas
                 .requestMatchers("/profissional/teste-login/**").permitAll()  // Libera apenas o teste de login para todos
-                .requestMatchers("/auth/me", "/agendamento").hasAnyAuthority("ADMIN", "PROFISSIONAL")  // Apenas ADMIN e PROFISSIONAL podem acessar
+                .requestMatchers("/auth/me", "/agendamento/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")  // Apenas ADMIN e PROFISSIONAL podem acessar
                 .requestMatchers("/cliente/**").hasAuthority("ADMIN")  // Apenas ADMIN pode acessar clientes
                 .requestMatchers("/profissional/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")  // ADMIN e PROFISSIONAL podem acessar profissional
                 .anyRequest().authenticated()  // Todas as outras rotas precisam de autenticação
@@ -50,17 +50,16 @@ public class SecurityConfig {
     }
 
     @Bean
-public CorsConfigurationSource corsConfigurationSource() {
-    CorsConfiguration corsConfig = new CorsConfiguration();
-    corsConfig.setAllowedOrigins(List.of("http://localhost:8080", "https://maestria-agenda.netlify.app")); // Certifique-se de usar a porta correta
-    corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-    corsConfig.setAllowedHeaders(List.of("*"));  // Permitir todos os cabeçalhos
-    corsConfig.setExposedHeaders(List.of("Authorization"));
-    corsConfig.setAllowCredentials(false); // Se permitir "*", precisa ser false
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration corsConfig = new CorsConfiguration();
+        corsConfig.setAllowedOrigins(List.of("http://localhost:8080", "https://maestria-agenda.netlify.app")); // Certifique-se de usar a porta correta
+        corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        corsConfig.setAllowedHeaders(List.of("*"));  // Permitir todos os cabeçalhos
+        corsConfig.setExposedHeaders(List.of("Authorization"));
+        corsConfig.setAllowCredentials(false); // Se permitir "*", precisa ser false
 
-    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-    source.registerCorsConfiguration("/**", corsConfig);
-    return source;
-}
-
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", corsConfig);
+        return source;
+    }
 }
