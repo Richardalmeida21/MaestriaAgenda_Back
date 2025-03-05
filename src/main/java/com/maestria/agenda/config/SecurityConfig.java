@@ -23,16 +23,18 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))  // CORS configuração
-            .csrf(csrf -> csrf.disable())  // Desabilitar CSRF já que estamos usando JWT
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))  // Stateless, não há sessão no backend
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))  // Configuração de CORS
+            .csrf(csrf -> csrf.disable())  // Desativando CSRF pois usamos JWT
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))  // API Stateless, sem sessão
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/login", "/auth/register", "/public/**", "/generate-password").permitAll()  // Acesso público
-                .requestMatchers("/auth/me", "/agendamento").hasAnyAuthority("ADMIN", "PROFISSIONAL")  // Requer LOGIN de ADMIN ou PROFISSIONAL
-                .requestMatchers("/cliente/**", "/profissional/**").hasAuthority("ADMIN")  // Apenas ADMIN pode acessar rotas de cliente/profissional
-                .anyRequest().authenticated()  // Requer autenticação para outras rotas
+                .requestMatchers("/auth/login", "/auth/register", "/public/**", "/generate-password").permitAll()  // Rotas públicas
+                .requestMatchers("/profissional/teste-login/**").permitAll()  // Libera apenas o teste de login para todos
+                .requestMatchers("/auth/me", "/agendamento").hasAnyAuthority("ADMIN", "PROFISSIONAL")  // Apenas ADMIN e PROFISSIONAL podem acessar
+                .requestMatchers("/cliente/**").hasAuthority("ADMIN")  // Apenas ADMIN pode acessar clientes
+                .requestMatchers("/profissional/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")  // ADMIN e PROFISSIONAL podem acessar profissional
+                .anyRequest().authenticated()  // Todas as outras rotas precisam de autenticação
             )
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);  // Filtro JWT antes da autenticação padrão
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);  // Adiciona filtro JWT
 
         return http.build();
     }
@@ -44,19 +46,18 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();  // Criptografar senhas usando BCrypt
+        return new BCryptPasswordEncoder();  // Senhas criptografadas com BCrypt
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.setAllowedOriginPatterns(List.of("https://maestria-agenda.netlify.app", "http://localhost:8080/")); // Frontend hospedado no Netlify e local
+        corsConfig.setAllowedOriginPatterns(List.of("https://maestria-agenda.netlify.app", "http://localhost:8080/")); // Frontend no Netlify e local
         corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));  // Cabeçalhos permitidos
-        corsConfig.setExposedHeaders(List.of("Authorization"));  // Expor o cabeçalho Authorization para o frontend
-        corsConfig.setAllowCredentials(true);  // Permitir credenciais (como cookies, tokens)
+        corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        corsConfig.setExposedHeaders(List.of("Authorization"));
+        corsConfig.setAllowCredentials(true);  
 
-        // Definir as configurações de CORS para todas as URLs
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", corsConfig);
         return source;
