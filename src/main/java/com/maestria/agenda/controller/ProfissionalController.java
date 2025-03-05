@@ -1,8 +1,8 @@
 package com.maestria.agenda.controller;
 
-import com.maestria.agenda.profissional.Profissional;  // Certifique-se de que essa importação está correta
+import com.maestria.agenda.profissional.Profissional;
 import com.maestria.agenda.profissional.ProfissionalRepository;
-import org.springframework.http.ResponseEntity;  // Importação correta do ResponseEntity
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,7 +20,7 @@ public class ProfissionalController {
         this.profissionalRepository = profissionalRepository;
     }
 
-    // Método para testar login do profissional
+    // ✅ Rota pública para testar login de profissional
     @GetMapping("/teste-login/{login}")
     public ResponseEntity<String> testarLogin(@PathVariable String login) {
         Profissional profissional = profissionalRepository.findByLogin(login);
@@ -31,5 +31,29 @@ public class ProfissionalController {
         }
     }
 
-    // Outros métodos
+    // ✅ ADMIN e PROFISSIONAIS podem visualizar todos os profissionais
+    @GetMapping
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'PROFISSIONAL')")
+    public ResponseEntity<List<Profissional>> listarProfissionais() {
+        return ResponseEntity.ok(profissionalRepository.findAll());
+    }
+
+    // ✅ Apenas ADMIN pode cadastrar profissionais
+    @PostMapping
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<Profissional> criarProfissional(@Valid @RequestBody Profissional profissional) {
+        Profissional novoProfissional = profissionalRepository.save(profissional);
+        return ResponseEntity.ok(novoProfissional);
+    }
+
+    // ✅ Apenas ADMIN pode excluir profissionais
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<String> deletarProfissional(@PathVariable Long id) {
+        if (profissionalRepository.existsById(id)) {
+            profissionalRepository.deleteById(id);
+            return ResponseEntity.ok("✅ Profissional deletado!");
+        }
+        return ResponseEntity.status(404).body("❌ Profissional não encontrado!");
+    }
 }
