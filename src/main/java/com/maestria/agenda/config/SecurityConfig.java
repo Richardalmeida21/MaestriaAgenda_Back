@@ -50,16 +50,17 @@ public class SecurityConfig {
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.setAllowedOriginPatterns(List.of("https://maestria-agenda.netlify.app", "http://localhost:8080/")); // Frontend no Netlify e local
-        corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-        corsConfig.setExposedHeaders(List.of("Authorization"));
-        corsConfig.setAllowCredentials(true);  
+public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration corsConfig = new CorsConfiguration();
+    corsConfig.setAllowedOrigins(List.of("http://localhost:8080", "https://maestria-agenda.netlify.app")); // Certifique-se de usar a porta correta
+    corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+    corsConfig.setAllowedHeaders(List.of("*"));  // Permitir todos os cabeçalhos
+    corsConfig.setExposedHeaders(List.of("Authorization"));
+    corsConfig.setAllowCredentials(false); // Se permitir "*", precisa ser false
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", corsConfig);
-        return source;
-    }
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", corsConfig);
+    return source;
+}
+
 }
