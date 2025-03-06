@@ -2,7 +2,6 @@ package com.maestria.agenda.agendamento;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.Objects;
 import com.maestria.agenda.cliente.Cliente;
 import com.maestria.agenda.profissional.Profissional;
 import com.maestria.agenda.servicos.Servicos;
