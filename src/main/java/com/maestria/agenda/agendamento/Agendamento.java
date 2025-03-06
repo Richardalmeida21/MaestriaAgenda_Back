@@ -30,6 +30,9 @@ public class Agendamento {
     private LocalDate data;
     private LocalTime hora;
 
+    @Column(length = 500) // Definindo um tamanho máximo para a observação
+    private String observacao;
+
     // Construtor atualizado
     public Agendamento(DadosCadastroAgendamento dados, Cliente cliente, Profissional profissional) {
         this.cliente = cliente;
@@ -37,6 +40,7 @@ public class Agendamento {
         this.servico = dados.servico();
         this.data = dados.data();
         this.hora = dados.hora();
+        this.observacao = dados.observacao(); // Novo campo
     }
 
     public Agendamento() {}
@@ -60,6 +64,9 @@ public class Agendamento {
     public LocalTime getHora() { return hora; }
     public void setHora(LocalTime hora) { this.hora = hora; }
 
+    public String getObservacao() { return observacao; }
+    public void setObservacao(String observacao) { this.observacao = observacao; }
+
     @Override
     public String toString() {
         return "Agendamento{" +
@@ -69,6 +76,7 @@ public class Agendamento {
                 ", servico=" + servico +
                 ", data=" + data +
                 ", hora=" + hora +
+                ", observacao='" + observacao + '\'' +
                 '}';
     }
 }
