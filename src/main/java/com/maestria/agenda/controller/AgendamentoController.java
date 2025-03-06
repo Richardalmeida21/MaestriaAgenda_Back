@@ -71,7 +71,7 @@ public class AgendamentoController {
     }
 
     // ✅ Apenas ADMIN pode criar agendamentos
-    @PostMapping
+       @PostMapping
     public ResponseEntity<?> cadastrar(@RequestBody DadosCadastroAgendamento dados, @AuthenticationPrincipal UserDetails userDetails) {
         if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
             logger.warn("❌ Tentativa de criação de agendamento sem permissão por {}", userDetails.getUsername());
@@ -89,10 +89,8 @@ public class AgendamentoController {
             Profissional profissional = profissionalRepository.findById(dados.profissionalId())
                 .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
 
-            // 🔹 Criando o agendamento com observação
-            Agendamento agendamento = new Agendamento(dados, cliente, profissional, dados.observacao());
+            Agendamento agendamento = new Agendamento(dados, cliente, profissional);
             agendamentoRepository.save(agendamento);
-
             logger.info("✅ Agendamento criado com sucesso: {}", agendamento);
             return ResponseEntity.ok("Agendamento criado com sucesso.");
         } catch (Exception e) {
@@ -100,6 +98,7 @@ public class AgendamentoController {
             return ResponseEntity.status(500).body("Erro ao criar agendamento.");
         }
     }
+
 
     // ✅ Apenas ADMIN pode excluir agendamentos
     @DeleteMapping("/{id}")
