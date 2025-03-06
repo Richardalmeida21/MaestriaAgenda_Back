@@ -2,6 +2,7 @@ package com.maestria.agenda.agendamento;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Objects;
 import com.maestria.agenda.cliente.Cliente;
 import com.maestria.agenda.profissional.Profissional;
 import com.maestria.agenda.servicos.Servicos;
@@ -29,10 +30,9 @@ public class Agendamento {
     private LocalDate data;
     private LocalTime hora;
 
-    @Column(columnDefinition = "TEXT") // Permite textos longos
+    @Column(columnDefinition = "TEXT")
     private String observacao;
 
-    // ✅ Construtor atualizado com observação
     public Agendamento(DadosCadastroAgendamento dados, Cliente cliente, Profissional profissional) {
         this.cliente = cliente;
         this.profissional = profissional;
@@ -44,7 +44,51 @@ public class Agendamento {
 
     public Agendamento() {}
 
-    // ✅ Adicionando Getters e Setters para observacao
+    // ✅ Getters e Setters
+    public long getId() {
+        return id;
+    }
+
+    public Cliente getCliente() {
+        return cliente;
+    }
+
+    public void setCliente(Cliente cliente) {
+        this.cliente = cliente;
+    }
+
+    public Profissional getProfissional() {
+        return profissional;
+    }
+
+    public void setProfissional(Profissional profissional) {
+        this.profissional = profissional;
+    }
+
+    public Servicos getServico() {
+        return servico;
+    }
+
+    public void setServico(Servicos servico) {
+        this.servico = servico;
+    }
+
+    public LocalDate getData() {
+        return data;
+    }
+
+    public void setData(LocalDate data) {
+        this.data = data;
+    }
+
+    public LocalTime getHora() {
+        return hora;
+    }
+
+    public void setHora(LocalTime hora) {
+        this.hora = hora;
+    }
+
     public String getObservacao() {
         return observacao;
     }
@@ -53,16 +97,31 @@ public class Agendamento {
         this.observacao = observacao;
     }
 
+    // ✅ Método toString() para logs e debug
     @Override
     public String toString() {
         return "Agendamento{" +
                 "id=" + id +
-                ", cliente=" + cliente.getNome() +
-                ", profissional=" + profissional.getNome() +
+                ", cliente=" + (cliente != null ? cliente.getNome() : "null") +
+                ", profissional=" + (profissional != null ? profissional.getNome() : "null") +
                 ", servico=" + servico +
                 ", data=" + data +
                 ", hora=" + hora +
                 ", observacao='" + observacao + '\'' +
                 '}';
+    }
+
+    // ✅ Equals e HashCode para comparações corretas (usando ID como referência)
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Agendamento that = (Agendamento) o;
+        return id == that.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }
