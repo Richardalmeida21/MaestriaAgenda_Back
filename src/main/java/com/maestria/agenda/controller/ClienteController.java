@@ -38,6 +38,24 @@ public class ClienteController {
         return ResponseEntity.ok(savedCliente);
     }
 
+    @PutMapping("/{id}")
+public ResponseEntity<Cliente> updateCliente(@PathVariable Long id, @RequestBody Cliente updatedCliente) {
+    Optional<Cliente> existingCliente = clienteRepository.findById(id);
+
+    if (existingCliente.isPresent()) {
+        Cliente cliente = existingCliente.get();
+        cliente.setNome(updatedCliente.getNome());
+        cliente.setEmail(updatedCliente.getEmail());
+        cliente.setTelefone(updatedCliente.getTelefone());
+
+        Cliente savedCliente = clienteRepository.save(cliente);
+        return ResponseEntity.ok(savedCliente);
+    } else {
+        return ResponseEntity.status(404).build();
+    }
+}
+
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCliente(@PathVariable Long id) {
         if (clienteRepository.existsById(id)) {
