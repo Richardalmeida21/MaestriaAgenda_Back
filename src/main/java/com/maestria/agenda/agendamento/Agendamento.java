@@ -30,42 +30,29 @@ public class Agendamento {
     private LocalDate data;
     private LocalTime hora;
 
-    @Column(length = 500) // Definindo um tamanho máximo para a observação
+    @Column(columnDefinition = "TEXT") // Permite textos longos
     private String observacao;
 
-    // Construtor atualizado
+    // ✅ Construtor atualizado com observação
     public Agendamento(DadosCadastroAgendamento dados, Cliente cliente, Profissional profissional) {
         this.cliente = cliente;
         this.profissional = profissional;
         this.servico = dados.servico();
         this.data = dados.data();
         this.hora = dados.hora();
-        this.observacao = dados.observacao(); // Novo campo
+        this.observacao = dados.observacao();
     }
 
     public Agendamento() {}
 
-    // Getters e Setters
-    public long getId() { return id; }
-    public void setId(long id) { this.id = id; }
+    // ✅ Adicionando Getters e Setters para observacao
+    public String getObservacao() {
+        return observacao;
+    }
 
-    public Cliente getCliente() { return cliente; }
-    public void setCliente(Cliente cliente) { this.cliente = cliente; }
-
-    public Profissional getProfissional() { return profissional; }
-    public void setProfissional(Profissional profissional) { this.profissional = profissional; }
-
-    public Servicos getServico() { return servico; }
-    public void setServico(Servicos servico) { this.servico = servico; }
-
-    public LocalDate getData() { return data; }
-    public void setData(LocalDate data) { this.data = data; }
-
-    public LocalTime getHora() { return hora; }
-    public void setHora(LocalTime hora) { this.hora = hora; }
-
-    public String getObservacao() { return observacao; }
-    public void setObservacao(String observacao) { this.observacao = observacao; }
+    public void setObservacao(String observacao) {
+        this.observacao = observacao;
+    }
 
     @Override
     public String toString() {
