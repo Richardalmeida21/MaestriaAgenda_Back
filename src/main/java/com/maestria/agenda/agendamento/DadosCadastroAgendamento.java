@@ -13,5 +13,5 @@ public record DadosCadastroAgendamento(
         @NotNull Servicos servico,
         @NotNull @FutureOrPresent LocalDate data,
         @NotNull LocalTime hora,
-        String observacao // Novo campo opcional
+        String observacao // ✅ Novo campo adicionado
 ) {}
