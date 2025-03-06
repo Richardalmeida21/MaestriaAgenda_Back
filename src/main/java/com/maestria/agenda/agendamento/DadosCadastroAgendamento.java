@@ -12,5 +12,6 @@ public record DadosCadastroAgendamento(
         @NotNull(message = "O ID do Profissional não pode ser nulo") Long profissionalId,
         @NotNull Servicos servico,
         @NotNull @FutureOrPresent LocalDate data,
-        @NotNull LocalTime hora
+        @NotNull LocalTime hora,
+        String observacao // Novo campo opcional
 ) {}
