@@ -89,8 +89,10 @@ public class AgendamentoController {
             Profissional profissional = profissionalRepository.findById(dados.profissionalId())
                 .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
 
-            Agendamento agendamento = new Agendamento(dados, cliente, profissional);
+            // 🔹 Criando o agendamento com observação
+            Agendamento agendamento = new Agendamento(dados, cliente, profissional, dados.observacao());
             agendamentoRepository.save(agendamento);
+
             logger.info("✅ Agendamento criado com sucesso: {}", agendamento);
             return ResponseEntity.ok("Agendamento criado com sucesso.");
         } catch (Exception e) {
