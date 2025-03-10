@@ -10,4 +10,6 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     List<Agendamento> findByCliente(Cliente cliente);
     
     List<Agendamento> findByProfissional(Profissional profissional);
+    
+    List<Agendamento> findByData(LocalDate data);
 }
