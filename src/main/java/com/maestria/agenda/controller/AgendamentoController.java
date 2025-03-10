@@ -70,6 +70,14 @@ public class AgendamentoController {
         return ResponseEntity.ok(agendamentos);
     }
 
+    @GetMapping("/dia/{data}")
+public ResponseEntity<List<Agendamento>> listarPorData(@PathVariable String data) {
+    LocalDate dataFormatada = LocalDate.parse(data);
+    List<Agendamento> agendamentos = agendamentoRepository.findByData(dataFormatada);
+    return ResponseEntity.ok(agendamentos);
+}
+
+
     // ✅ Apenas ADMIN pode criar agendamentos
        @PostMapping
     public ResponseEntity<?> cadastrar(@RequestBody DadosCadastroAgendamento dados, @AuthenticationPrincipal UserDetails userDetails) {
