@@ -15,6 +15,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime; // Importação necessária
 import java.util.List;
 
 @RestController
@@ -70,29 +71,26 @@ public class AgendamentoController {
         return ResponseEntity.ok(agendamentos);
     }
 
-  @GetMapping("/dia")
-public ResponseEntity<List<Agendamento>> listarPorData(@RequestParam String data) {
-    // Parse da data para LocalDate
-    LocalDate dataFormatada = LocalDate.parse(data);
-    
-    // Definindo o início e o fim do dia
-    LocalDateTime dataInicio = dataFormatada.atStartOfDay();  // Início do dia (00:00)
-    LocalDateTime dataFim = dataFormatada.atTime(23, 59, 59);  // Final do dia (23:59:59)
-    
-    // Consultando os agendamentos dentro do intervalo de tempo do dia
-    List<Agendamento> agendamentos = agendamentoRepository.findByDataBetween(dataInicio, dataFim);
-    
-    logger.info("🔍 Agendamentos para o dia {}: {}", dataFormatada, agendamentos.size());
-    
-    return ResponseEntity.ok(agendamentos);
-}
-
-
-
-
+    // ✅ NOVA ROTA: Listar agendamentos por data
+    @GetMapping("/dia")
+    public ResponseEntity<List<Agendamento>> listarPorData(@RequestParam String data) {
+        // Parse da data para LocalDate
+        LocalDate dataFormatada = LocalDate.parse(data);
+        
+        // Definindo o início e o fim do dia
+        LocalDateTime dataInicio = dataFormatada.atStartOfDay();  // Início do dia (00:00)
+        LocalDateTime dataFim = dataFormatada.atTime(23, 59, 59);  // Final do dia (23:59:59)
+        
+        // Consultando os agendamentos dentro do intervalo de tempo do dia
+        List<Agendamento> agendamentos = agendamentoRepository.findByDataBetween(dataInicio, dataFim);
+        
+        logger.info("🔍 Agendamentos para o dia {}: {}", dataFormatada, agendamentos.size());
+        
+        return ResponseEntity.ok(agendamentos);
+    }
 
     // ✅ Apenas ADMIN pode criar agendamentos
-       @PostMapping
+    @PostMapping
     public ResponseEntity<?> cadastrar(@RequestBody DadosCadastroAgendamento dados, @AuthenticationPrincipal UserDetails userDetails) {
         if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
             logger.warn("❌ Tentativa de criação de agendamento sem permissão por {}", userDetails.getUsername());
@@ -119,7 +117,6 @@ public ResponseEntity<List<Agendamento>> listarPorData(@RequestParam String data
             return ResponseEntity.status(500).body("Erro ao criar agendamento.");
         }
     }
-
 
     // ✅ Apenas ADMIN pode excluir agendamentos
     @DeleteMapping("/{id}")
