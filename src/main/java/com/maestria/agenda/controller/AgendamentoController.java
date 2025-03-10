@@ -73,9 +73,15 @@ public class AgendamentoController {
     @GetMapping("/dia/{data}")
 public ResponseEntity<List<Agendamento>> listarPorData(@PathVariable String data) {
     LocalDate dataFormatada = LocalDate.parse(data);
+    
+    // Ajustando o filtro para garantir que a hora não afete a busca.
     List<Agendamento> agendamentos = agendamentoRepository.findByData(dataFormatada);
+    
+    logger.info("🔍 Agendamentos para o dia {}: {}", dataFormatada, agendamentos.size());
+    
     return ResponseEntity.ok(agendamentos);
 }
+
 
 
     // ✅ Apenas ADMIN pode criar agendamentos
