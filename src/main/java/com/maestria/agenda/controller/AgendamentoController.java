@@ -70,17 +70,23 @@ public class AgendamentoController {
         return ResponseEntity.ok(agendamentos);
     }
 
-   @GetMapping("/dia")
+  @GetMapping("/dia")
 public ResponseEntity<List<Agendamento>> listarPorData(@RequestParam String data) {
+    // Parse da data para LocalDate
     LocalDate dataFormatada = LocalDate.parse(data);
     
-    // Ajustando o filtro para garantir que a hora não afete a busca.
-    List<Agendamento> agendamentos = agendamentoRepository.findByData(dataFormatada);
+    // Definindo o início e o fim do dia
+    LocalDateTime dataInicio = dataFormatada.atStartOfDay();  // Início do dia (00:00)
+    LocalDateTime dataFim = dataFormatada.atTime(23, 59, 59);  // Final do dia (23:59:59)
+    
+    // Consultando os agendamentos dentro do intervalo de tempo do dia
+    List<Agendamento> agendamentos = agendamentoRepository.findByDataBetween(dataInicio, dataFim);
     
     logger.info("🔍 Agendamentos para o dia {}: {}", dataFormatada, agendamentos.size());
     
     return ResponseEntity.ok(agendamentos);
 }
+
 
 
 
