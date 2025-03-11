@@ -27,7 +27,9 @@ public class Agendamento {
     @Enumerated(EnumType.STRING)
     private Servicos servico;
 
+    @Column(nullable = false)
     private LocalDate data;
+
     private LocalTime hora;
 
     @Column(columnDefinition = "TEXT")
