@@ -2,6 +2,7 @@ package com.maestria.agenda.agendamento;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.Duration;
 import java.util.Objects;
 import com.maestria.agenda.cliente.Cliente;
 import com.maestria.agenda.profissional.Profissional;
@@ -28,7 +29,8 @@ public class Agendamento {
     private Servicos servico;
 
     private LocalDate data;
-    private LocalTime hora;
+    private LocalTime hora; // Adicionando o campo hora de volta
+    private Duration duracao; // Novo campo de duração
 
     @Column(columnDefinition = "TEXT")
     private String observacao;
@@ -38,13 +40,13 @@ public class Agendamento {
         this.profissional = profissional;
         this.servico = dados.servico();
         this.data = dados.data();
-        this.hora = dados.hora();
+        this.hora = dados.hora(); // Inicializando o campo hora
+        this.duracao = dados.duracao(); // Inicializando o campo de duração
         this.observacao = dados.observacao();
     }
 
     public Agendamento() {}
 
-    // ✅ Getters e Setters
     public long getId() {
         return id;
     }
@@ -89,6 +91,14 @@ public class Agendamento {
         this.hora = hora;
     }
 
+    public Duration getDuracao() {
+        return duracao;
+    }
+
+    public void setDuracao(Duration duracao) {
+        this.duracao = duracao;
+    }
+
     public String getObservacao() {
         return observacao;
     }
@@ -97,31 +107,37 @@ public class Agendamento {
         this.observacao = observacao;
     }
 
-    // ✅ Método toString() para logs e debug
     @Override
     public String toString() {
         return "Agendamento{" +
                 "id=" + id +
-                ", cliente=" + (cliente != null ? cliente.getNome() : "null") +
-                ", profissional=" + (profissional != null ? profissional.getNome() : "null") +
+                ", cliente=" + cliente +
+                ", profissional=" + profissional +
                 ", servico=" + servico +
                 ", data=" + data +
                 ", hora=" + hora +
+                ", duracao=" + duracao +
                 ", observacao='" + observacao + '\'' +
                 '}';
     }
 
-    // ✅ Equals e HashCode para comparações corretas (usando ID como referência)
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Agendamento that = (Agendamento) o;
-        return id == that.id;
+        return id == that.id &&
+                Objects.equals(cliente, that.cliente) &&
+                Objects.equals(profissional, that.profissional) &&
+                servico == that.servico &&
+                Objects.equals(data, that.data) &&
+                Objects.equals(hora, that.hora) &&
+                Objects.equals(duracao, that.duracao) &&
+                Objects.equals(observacao, that.observacao);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return Objects.hash(id, cliente, profissional, servico, data, hora, duracao, observacao);
     }
 }

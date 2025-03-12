@@ -15,7 +15,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
-import java.time.LocalDateTime; // Importação necessária
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -73,19 +73,29 @@ public class AgendamentoController {
 
     // ✅ NOVA ROTA: Listar agendamentos por data
     @GetMapping("/dia")
-    public ResponseEntity<List<Agendamento>> listarPorData(@RequestParam String data) {
+    public ResponseEntity<?> listarPorData(@RequestParam String data, @AuthenticationPrincipal UserDetails userDetails) {
+        logger.info("🔍 Solicitando agendamentos para o dia {} por {}", data, userDetails.getUsername());
+
         // Parse da data para LocalDate
         LocalDate dataFormatada = LocalDate.parse(data);
-        
-        // Definindo o início e o fim do dia
-        LocalDateTime dataInicio = dataFormatada.atStartOfDay();  // Início do dia (00:00)
-        LocalDateTime dataFim = dataFormatada.atTime(23, 59, 59);  // Final do dia (23:59:59)
-        
-        // Consultando os agendamentos dentro do intervalo de tempo do dia
-        List<Agendamento> agendamentos = agendamentoRepository.findByDataBetween(dataInicio, dataFim);
-        
-        logger.info("🔍 Agendamentos para o dia {}: {}", dataFormatada, agendamentos.size());
-        
+
+        List<Agendamento> agendamentos;
+
+        if (userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            // ADMIN pode ver todos os agendamentos
+            agendamentos = agendamentoRepository.findByData(dataFormatada);
+            logger.info("🔍 ADMIN solicitou agendamentos para o dia {}: {}", dataFormatada, agendamentos.size());
+        } else {
+            // PROFISSIONAL pode ver apenas seus próprios agendamentos
+            Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
+            if (profissional == null) {
+                logger.warn("❌ Profissional não encontrado: {}", userDetails.getUsername());
+                return ResponseEntity.status(403).body("Profissional não encontrado.");
+            }
+            agendamentos = agendamentoRepository.findByProfissionalAndData(profissional, dataFormatada);
+            logger.info("🔍 PROFISSIONAL {} solicitou agendamentos para o dia {}: {}", profissional.getNome(), dataFormatada, agendamentos.size());
+        }
+
         return ResponseEntity.ok(agendamentos);
     }
 
