@@ -1,6 +1,0 @@
-target/
-build/
-*.iml
-.idea/
-*.log
-node_modules/
