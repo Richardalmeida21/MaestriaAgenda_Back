@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: mastria-agenda
+    env: docker
+    plan: free
+    buildCommand: "mvn clean package" # ou ./gradlew build, dependendo de sua ferramenta
+    startCommand: "java -jar target/agenda-0.0.1-SNAPSHOT.jar"
+    envVars:
+      - key: PORT
+        value: "8080"
