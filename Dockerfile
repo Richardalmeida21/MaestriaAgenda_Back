@@ -1,16 +1,25 @@
-FROM ubuntu:latest AS build 
+FROM ubuntu:latest AS build
 
-RUN apt-get update
-RUN apt-get install openjdk-17-jdk -y
-COPY . .
+RUN apt-get update && apt-get install openjdk-17-jdk maven -y
 
-RUN apt-get install maven -y
+WORKDIR /app
+
+COPY pom.xml .
+RUN mvn dependency:go-offline
+
+COPY src ./src
+
 RUN mvn clean install
+RUN ls -l /app
+RUN ls -l /app/target
 
+# Stage 2: Runtime stage
 FROM openjdk:17-jdk-slim
+
+WORKDIR /app
 
 EXPOSE 8080
 
 COPY --from=build /app/target/agenda-0.0.1-SNAPSHOT.jar app.jar
 
-ENTRYPOINT [ "Java", "-jar", "app.jar" ]
+ENTRYPOINT ["java", "-jar", "app.jar"]
