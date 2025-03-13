@@ -1,14 +1,16 @@
-# Use uma imagem base do Java
+FROM ubuntu:latest AS build 
+
+RUN apt-get update
+RUN apt-get install openjdk-17-jdk -y
+COPY . .
+
+RUN apt-get install maven -y
+RUN mvn clean install
+
 FROM openjdk:17-jdk-slim
 
-# Defina o diretório de trabalho no contêiner
-WORKDIR /app
-
-# Copie o JAR da sua aplicação para o contêiner
-COPY target/agenda-0.0.1-SNAPSHOT.jar /app/agenda.jar
-
-# Exponha a porta onde a aplicação vai rodar
 EXPOSE 8080
 
-# Comando para rodar sua aplicação Spring Boot
-CMD ["java", "-jar", "agenda.jar"]
+COPY --from=build target\agenda-0.0.1-SNAPSHOT.jar app.jar
+
+ENTRYPOINT [ "Java", "-jar", "app.jar" ]
