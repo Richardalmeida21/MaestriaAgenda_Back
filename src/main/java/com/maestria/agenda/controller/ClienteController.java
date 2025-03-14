@@ -26,27 +26,35 @@ public class ClienteController {
         return clienteRepository.findAll();
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Cliente> getClienteById(@PathVariable Long id) {
-        Optional<Cliente> cliente = clienteRepository.findById(id);
-        return cliente.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.status(404).body(null));
-    }
+   @GetMapping("/{id}")
+public ResponseEntity<Cliente> getClienteById(@PathVariable Long id) {
+    return clienteRepository.findById(id)
+            .map(ResponseEntity::ok)
+            .orElseGet(() -> ResponseEntity.notFound().build());
+}
 
-    @PostMapping
-    public ResponseEntity<Cliente> createCliente(@RequestBody Cliente cliente) {
-        Cliente savedCliente = clienteRepository.save(cliente);
-        return ResponseEntity.ok(savedCliente);
-    }
 
-    @PutMapping("/{id}")
-public ResponseEntity<Cliente> updateCliente(@PathVariable Long id, @RequestBody Cliente updatedCliente) {
+   @PostMapping
+public ResponseEntity<Cliente> createCliente(@RequestBody @Valid DadosCliente dados) {
+    Cliente cliente = new Cliente();
+    cliente.setNome(dados.nome());
+    cliente.setEmail(dados.email());
+    cliente.setTelefone(dados.telefone());
+
+    Cliente savedCliente = clienteRepository.save(cliente);
+    return ResponseEntity.ok(savedCliente);
+}
+
+
+  @PutMapping("/{id}")
+public ResponseEntity<Cliente> updateCliente(@PathVariable Long id, @RequestBody @Valid DadosCliente dados) {
     Optional<Cliente> existingCliente = clienteRepository.findById(id);
 
     if (existingCliente.isPresent()) {
         Cliente cliente = existingCliente.get();
-        cliente.setNome(updatedCliente.getNome());
-        cliente.setEmail(updatedCliente.getEmail());
-        cliente.setTelefone(updatedCliente.getTelefone());
+        cliente.setNome(dados.nome());
+        cliente.setEmail(dados.email());
+        cliente.setTelefone(dados.telefone());
 
         Cliente savedCliente = clienteRepository.save(cliente);
         return ResponseEntity.ok(savedCliente);
@@ -56,13 +64,15 @@ public ResponseEntity<Cliente> updateCliente(@PathVariable Long id, @RequestBody
 }
 
 
+
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCliente(@PathVariable Long id) {
-        if (clienteRepository.existsById(id)) {
-            clienteRepository.deleteById(id);
-            return ResponseEntity.ok().build();
-        } else {
-            return ResponseEntity.status(404).build();
-        }
+public ResponseEntity<Void> deleteCliente(@PathVariable Long id) {
+    if (!clienteRepository.existsById(id)) {
+        return ResponseEntity.notFound().build();
+    }
+    clienteRepository.deleteById(id);
+    return ResponseEntity.noContent().build(); 
+}
+
     }
 }
