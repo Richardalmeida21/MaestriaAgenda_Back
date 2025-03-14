@@ -1,28 +1,22 @@
-name: Deploy no Fly.io
+name: Deploy to Fly.io
 
 on:
   push:
     branches:
-      - main  # ou a branch que você quer usar para deploy automático
+      - main  # ou qualquer outra branch que você estiver usando
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout do código
-        uses: actions/checkout@v3
+    - name: Check out the code
+      uses: actions/checkout@v2
 
-      - name: Instalar Fly CLI
-        run: curl -L https://fly.io/install.sh | sh
+    - name: Set up Fly CLI
+      run: |
+        curl -L https://fly.io/install.sh | sh
+        export FLYCTL_INSTALL="/home/runner/.fly"
+        export PATH="$FLYCTL_INSTALL/bin:$PATH"
 
-      - name: Autenticar no Fly.io
-        run: |
-          export FLYCTL_INSTALL="/home/runner/.fly"
-          export PATH="$FLYCTL_INSTALL/bin:$PATH"
-          flyctl auth token ${{ secrets.FLY_API_TOKEN }}
-
-      - name: Fazer deploy
-        run: |
-          export FLYCTL_INSTALL="/home/runner/.fly"
-          export PATH="$FLYCTL_INSTALL/bin:$PATH"
-          flyctl deploy
+    - name: Deploy to Fly.io
+      run: flyctl deploy --token ${{ secrets.FLY_API_TOKEN }}
