@@ -107,6 +107,12 @@ public class Agendamento {
         this.observacao = observacao;
     }
 
+    // Método para formatar a duração
+    public String getDuracaoFormatada() {
+        long minutos = duracao.toMinutes();
+        return minutos + " min";
+    }
+
     @Override
     public String toString() {
         return "Agendamento{" +
@@ -116,7 +122,7 @@ public class Agendamento {
                 ", servico=" + servico +
                 ", data=" + data +
                 ", hora=" + hora +
-                ", duracao=" + duracao +
+                ", duracao=" + getDuracaoFormatada() + // Usando o método formatado
                 ", observacao='" + observacao + '\'' +
                 '}';
     }
