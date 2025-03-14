@@ -8,8 +8,4 @@ public record DadosCliente(
         @Email @NotBlank String email,
         @NotBlank String telefone
 ) {
-    // Construtor padrão
-    public DadosCliente() {
-        this(null, null, null);
-    }
 }
