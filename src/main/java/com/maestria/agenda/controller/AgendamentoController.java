@@ -128,6 +128,46 @@ public class AgendamentoController {
         }
     }
 
+    // ✅ Apenas ADMIN pode atualizar agendamentos
+@PutMapping("/{id}")
+public ResponseEntity<?> atualizarAgendamento(
+        @PathVariable Long id,
+        @RequestBody DadosCadastroAgendamento dados,
+        @AuthenticationPrincipal UserDetails userDetails) {
+    if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+        logger.warn("❌ Tentativa de atualização de agendamento sem permissão por {}", userDetails.getUsername());
+        return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode atualizar agendamentos.");
+    }
+
+    // Verifica se o agendamento existe
+    Agendamento agendamento = agendamentoRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Agendamento não encontrado"));
+
+    // Atualiza os dados do agendamento
+    try {
+        Cliente cliente = clienteRepository.findById(dados.clienteId())
+                .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+
+        Profissional profissional = profissionalRepository.findById(dados.profissionalId())
+                .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+
+        agendamento.setCliente(cliente);
+        agendamento.setProfissional(profissional);
+        agendamento.setServico(dados.servico());
+        agendamento.setData(dados.data());
+        agendamento.setHora(dados.hora());
+        agendamento.setDuracao(dados.duracao());
+        agendamento.setObservacao(dados.observacao());
+
+        agendamentoRepository.save(agendamento);
+        logger.info("✅ Agendamento atualizado com sucesso: {}", agendamento);
+        return ResponseEntity.ok("Agendamento atualizado com sucesso.");
+    } catch (Exception e) {
+        logger.error("❌ Erro ao atualizar agendamento", e);
+        return ResponseEntity.status(500).body("Erro ao atualizar agendamento.");
+    }
+}
+
     // ✅ Apenas ADMIN pode excluir agendamentos
     @DeleteMapping("/{id}")
     public ResponseEntity<?> excluirAgendamento(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
