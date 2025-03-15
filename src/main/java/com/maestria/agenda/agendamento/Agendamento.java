@@ -29,24 +29,29 @@ public class Agendamento {
     private Servicos servico;
 
     private LocalDate data;
-    private LocalTime hora; // Adicionando o campo hora de volta
-    private Duration duracao; // Novo campo de duração
+    private LocalTime hora;
+
+    @Convert(converter = DurationConverter.class) // Aplica o conversor
+    private Duration duracao;
 
     @Column(columnDefinition = "TEXT")
     private String observacao;
 
+    // Construtor com DadosCadastroAgendamento
     public Agendamento(DadosCadastroAgendamento dados, Cliente cliente, Profissional profissional) {
         this.cliente = cliente;
         this.profissional = profissional;
         this.servico = dados.servico();
         this.data = dados.data();
-        this.hora = dados.hora(); // Inicializando o campo hora
-        this.duracao = dados.duracao(); // Inicializando o campo de duração
+        this.hora = dados.hora();
+        this.duracao = Duration.parse(dados.duracao()); // Converte a string para Duration
         this.observacao = dados.observacao();
     }
 
+    // Construtor padrão necessário para o JPA
     public Agendamento() {}
 
+    // Getters e Setters
     public long getId() {
         return id;
     }
@@ -109,6 +114,9 @@ public class Agendamento {
 
     // Método para formatar a duração
     public String getDuracaoFormatada() {
+        if (duracao == null) {
+            return "0 min";
+        }
         long minutos = duracao.toMinutes();
         return minutos + " min";
     }
