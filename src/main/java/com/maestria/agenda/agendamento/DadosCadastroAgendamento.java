@@ -3,7 +3,6 @@ package com.maestria.agenda.agendamento;
 import com.maestria.agenda.servicos.Servicos;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotNull;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
@@ -14,7 +13,6 @@ public record DadosCadastroAgendamento(
         @NotNull Servicos servico,
         @NotNull @FutureOrPresent LocalDate data,
         @NotNull LocalTime hora,
-        @NotNull Duration duracao, 
+        @NotNull String duracao, // Alterado para String (formato ISO 8601)
         String observacao
 ) {}
-
