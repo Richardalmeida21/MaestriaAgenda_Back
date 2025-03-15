@@ -122,7 +122,23 @@ public ResponseEntity<?> cadastrar(@RequestBody DadosCadastroAgendamento dados, 
         // Converte a string duracao para Duration
         Duration duracao = Duration.parse(dados.duracao());
 
-        // Cria o agendamento com os dados convertidos
+        // Verifica conflitos de horário
+        List<Agendamento> agendamentosExistentes = agendamentoRepository.findByProfissionalAndData(profissional, dados.data());
+
+        LocalTime horaInicio = dados.hora();
+        LocalTime horaFim = horaInicio.plus(duracao);
+
+        for (Agendamento agendamentoExistente : agendamentosExistentes) {
+            LocalTime existenteHoraInicio = agendamentoExistente.getHora();
+            LocalTime existenteHoraFim = existenteHoraInicio.plus(agendamentoExistente.getDuracao());
+
+            // Verifica se há sobreposição de horários
+            if (horaInicio.isBefore(existenteHoraFim) && horaFim.isAfter(existenteHoraInicio)) {
+                return ResponseEntity.badRequest().body("Conflito de horário: Já existe um agendamento para este horário.");
+            }
+        }
+
+        // Cria o agendamento
         Agendamento agendamento = new Agendamento(dados, cliente, profissional);
         agendamento.setDuracao(duracao); // Define a duração convertida
 
@@ -161,6 +177,25 @@ public ResponseEntity<?> atualizarAgendamento(
         // Converte a string duracao para Duration
         Duration duracao = Duration.parse(dados.duracao());
 
+        // Verifica conflitos de horário (exceto o próprio agendamento que está sendo atualizado)
+        List<Agendamento> agendamentosExistentes = agendamentoRepository.findByProfissionalAndData(profissional, dados.data())
+                .stream()
+                .filter(a -> !a.getId().equals(id)) // Ignora o agendamento atual
+                .toList();
+
+        LocalTime horaInicio = dados.hora();
+        LocalTime horaFim = horaInicio.plus(duracao);
+
+        for (Agendamento agendamentoExistente : agendamentosExistentes) {
+            LocalTime existenteHoraInicio = agendamentoExistente.getHora();
+            LocalTime existenteHoraFim = existenteHoraInicio.plus(agendamentoExistente.getDuracao());
+
+            // Verifica se há sobreposição de horários
+            if (horaInicio.isBefore(existenteHoraFim) && horaFim.isAfter(existenteHoraInicio)) {
+                return ResponseEntity.badRequest().body("Conflito de horário: Já existe um agendamento para este horário.");
+            }
+        }
+
         agendamento.setCliente(cliente);
         agendamento.setProfissional(profissional);
         agendamento.setServico(dados.servico());
@@ -177,7 +212,6 @@ public ResponseEntity<?> atualizarAgendamento(
         return ResponseEntity.status(500).body("Erro ao atualizar agendamento.");
     }
 }
-
     // ✅ Apenas ADMIN pode excluir agendamentos
     @DeleteMapping("/{id}")
     public ResponseEntity<?> excluirAgendamento(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
