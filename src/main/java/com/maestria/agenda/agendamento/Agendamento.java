@@ -15,7 +15,7 @@ public class Agendamento {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long id; // Tipo Long (classe wrapper)
 
     @ManyToOne
     @JoinColumn(name = "cliente_id", nullable = false)
@@ -52,8 +52,12 @@ public class Agendamento {
     public Agendamento() {}
 
     // Getters e Setters
-    public long getId() {
+    public Long getId() { // Retorna Long, não long
         return id;
+    }
+
+    public void setId(Long id) { // Aceita Long, não long
+        this.id = id;
     }
 
     public Cliente getCliente() {
@@ -140,7 +144,7 @@ public class Agendamento {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Agendamento that = (Agendamento) o;
-        return id == that.id &&
+        return Objects.equals(id, that.id) && // Usando Objects.equals para comparar Long
                 Objects.equals(cliente, that.cliente) &&
                 Objects.equals(profissional, that.profissional) &&
                 servico == that.servico &&
