@@ -180,7 +180,7 @@ public class AgendamentoController {
             // Verifica conflitos de horário (exceto o próprio agendamento que está sendo atualizado)
             List<Agendamento> agendamentosExistentes = agendamentoRepository.findByProfissionalAndData(profissional, dados.data())
                     .stream()
-                    .filter(a -> !a.getId().equals(id)) // Ignora o agendamento atual
+                    .filter(a -> !a.getId().equals(id)) // Funciona se `a.getId()` retornar `Long`
                     .toList();
 
             LocalTime horaInicio = dados.hora();
