@@ -15,9 +15,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.List;
+import java.time.LocalTime; // Import adicionado aqui
 import java.time.Duration;
+import java.util.List;
 
 @RestController
 @RequestMapping("/agendamento")
@@ -102,116 +102,117 @@ public class AgendamentoController {
 
     // ✅ Apenas ADMIN pode criar agendamentos
     @PostMapping
-public ResponseEntity<?> cadastrar(@RequestBody DadosCadastroAgendamento dados, @AuthenticationPrincipal UserDetails userDetails) {
-    if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-        logger.warn("❌ Tentativa de criação de agendamento sem permissão por {}", userDetails.getUsername());
-        return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode criar agendamentos.");
-    }
-
-    if (dados.clienteId() == null || dados.profissionalId() == null) {
-        return ResponseEntity.badRequest().body("Erro: Cliente e Profissional devem ser informados.");
-    }
-
-    try {
-        Cliente cliente = clienteRepository.findById(dados.clienteId())
-            .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
-
-        Profissional profissional = profissionalRepository.findById(dados.profissionalId())
-            .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
-
-        // Converte a string duracao para Duration
-        Duration duracao = Duration.parse(dados.duracao());
-
-        // Verifica conflitos de horário
-        List<Agendamento> agendamentosExistentes = agendamentoRepository.findByProfissionalAndData(profissional, dados.data());
-
-        LocalTime horaInicio = dados.hora();
-        LocalTime horaFim = horaInicio.plus(duracao);
-
-        for (Agendamento agendamentoExistente : agendamentosExistentes) {
-            LocalTime existenteHoraInicio = agendamentoExistente.getHora();
-            LocalTime existenteHoraFim = existenteHoraInicio.plus(agendamentoExistente.getDuracao());
-
-            // Verifica se há sobreposição de horários
-            if (horaInicio.isBefore(existenteHoraFim) && horaFim.isAfter(existenteHoraInicio)) {
-                return ResponseEntity.badRequest().body("Conflito de horário: Já existe um agendamento para este horário.");
-            }
+    public ResponseEntity<?> cadastrar(@RequestBody DadosCadastroAgendamento dados, @AuthenticationPrincipal UserDetails userDetails) {
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            logger.warn("❌ Tentativa de criação de agendamento sem permissão por {}", userDetails.getUsername());
+            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode criar agendamentos.");
         }
 
-        // Cria o agendamento
-        Agendamento agendamento = new Agendamento(dados, cliente, profissional);
-        agendamento.setDuracao(duracao); // Define a duração convertida
+        if (dados.clienteId() == null || dados.profissionalId() == null) {
+            return ResponseEntity.badRequest().body("Erro: Cliente e Profissional devem ser informados.");
+        }
 
-        agendamentoRepository.save(agendamento);
-        logger.info("✅ Agendamento criado com sucesso: {}", agendamento);
-        return ResponseEntity.ok("Agendamento criado com sucesso.");
-    } catch (Exception e) {
-        logger.error("❌ Erro ao criar agendamento", e);
-        return ResponseEntity.status(500).body("Erro ao criar agendamento.");
-    }
-}
-
-    // ✅ Apenas ADMIN pode atualizar agendamentos
-@PutMapping("/{id}")
-public ResponseEntity<?> atualizarAgendamento(
-        @PathVariable Long id,
-        @RequestBody DadosCadastroAgendamento dados,
-        @AuthenticationPrincipal UserDetails userDetails) {
-    if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-        logger.warn("❌ Tentativa de atualização de agendamento sem permissão por {}", userDetails.getUsername());
-        return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode atualizar agendamentos.");
-    }
-
-    // Verifica se o agendamento existe
-    Agendamento agendamento = agendamentoRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Agendamento não encontrado"));
-
-    // Atualiza os dados do agendamento
-    try {
-        Cliente cliente = clienteRepository.findById(dados.clienteId())
+        try {
+            Cliente cliente = clienteRepository.findById(dados.clienteId())
                 .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
 
-        Profissional profissional = profissionalRepository.findById(dados.profissionalId())
+            Profissional profissional = profissionalRepository.findById(dados.profissionalId())
                 .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
 
-        // Converte a string duracao para Duration
-        Duration duracao = Duration.parse(dados.duracao());
+            // Converte a string duracao para Duration
+            Duration duracao = Duration.parse(dados.duracao());
 
-        // Verifica conflitos de horário (exceto o próprio agendamento que está sendo atualizado)
-        List<Agendamento> agendamentosExistentes = agendamentoRepository.findByProfissionalAndData(profissional, dados.data())
-                .stream()
-                .filter(a -> !a.getId().equals(id)) // Ignora o agendamento atual
-                .toList();
+            // Verifica conflitos de horário
+            List<Agendamento> agendamentosExistentes = agendamentoRepository.findByProfissionalAndData(profissional, dados.data());
 
-        LocalTime horaInicio = dados.hora();
-        LocalTime horaFim = horaInicio.plus(duracao);
+            LocalTime horaInicio = dados.hora();
+            LocalTime horaFim = horaInicio.plus(duracao);
 
-        for (Agendamento agendamentoExistente : agendamentosExistentes) {
-            LocalTime existenteHoraInicio = agendamentoExistente.getHora();
-            LocalTime existenteHoraFim = existenteHoraInicio.plus(agendamentoExistente.getDuracao());
+            for (Agendamento agendamentoExistente : agendamentosExistentes) {
+                LocalTime existenteHoraInicio = agendamentoExistente.getHora();
+                LocalTime existenteHoraFim = existenteHoraInicio.plus(agendamentoExistente.getDuracao());
 
-            // Verifica se há sobreposição de horários
-            if (horaInicio.isBefore(existenteHoraFim) && horaFim.isAfter(existenteHoraInicio)) {
-                return ResponseEntity.badRequest().body("Conflito de horário: Já existe um agendamento para este horário.");
+                // Verifica se há sobreposição de horários
+                if (horaInicio.isBefore(existenteHoraFim) && horaFim.isAfter(existenteHoraInicio)) {
+                    return ResponseEntity.badRequest().body("Conflito de horário: Já existe um agendamento para este horário.");
+                }
             }
+
+            // Cria o agendamento
+            Agendamento agendamento = new Agendamento(dados, cliente, profissional);
+            agendamento.setDuracao(duracao); // Define a duração convertida
+
+            agendamentoRepository.save(agendamento);
+            logger.info("✅ Agendamento criado com sucesso: {}", agendamento);
+            return ResponseEntity.ok("Agendamento criado com sucesso.");
+        } catch (Exception e) {
+            logger.error("❌ Erro ao criar agendamento", e);
+            return ResponseEntity.status(500).body("Erro ao criar agendamento.");
+        }
+    }
+
+    // ✅ Apenas ADMIN pode atualizar agendamentos
+    @PutMapping("/{id}")
+    public ResponseEntity<?> atualizarAgendamento(
+            @PathVariable Long id,
+            @RequestBody DadosCadastroAgendamento dados,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            logger.warn("❌ Tentativa de atualização de agendamento sem permissão por {}", userDetails.getUsername());
+            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode atualizar agendamentos.");
         }
 
-        agendamento.setCliente(cliente);
-        agendamento.setProfissional(profissional);
-        agendamento.setServico(dados.servico());
-        agendamento.setData(dados.data());
-        agendamento.setHora(dados.hora());
-        agendamento.setDuracao(duracao); // Define a duração convertida
-        agendamento.setObservacao(dados.observacao());
+        // Verifica se o agendamento existe
+        Agendamento agendamento = agendamentoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Agendamento não encontrado"));
 
-        agendamentoRepository.save(agendamento);
-        logger.info("✅ Agendamento atualizado com sucesso: {}", agendamento);
-        return ResponseEntity.ok("Agendamento atualizado com sucesso.");
-    } catch (Exception e) {
-        logger.error("❌ Erro ao atualizar agendamento", e);
-        return ResponseEntity.status(500).body("Erro ao atualizar agendamento.");
+        // Atualiza os dados do agendamento
+        try {
+            Cliente cliente = clienteRepository.findById(dados.clienteId())
+                    .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+
+            Profissional profissional = profissionalRepository.findById(dados.profissionalId())
+                    .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+
+            // Converte a string duracao para Duration
+            Duration duracao = Duration.parse(dados.duracao());
+
+            // Verifica conflitos de horário (exceto o próprio agendamento que está sendo atualizado)
+            List<Agendamento> agendamentosExistentes = agendamentoRepository.findByProfissionalAndData(profissional, dados.data())
+                    .stream()
+                    .filter(a -> !a.getId().equals(id)) // Ignora o agendamento atual
+                    .toList();
+
+            LocalTime horaInicio = dados.hora();
+            LocalTime horaFim = horaInicio.plus(duracao);
+
+            for (Agendamento agendamentoExistente : agendamentosExistentes) {
+                LocalTime existenteHoraInicio = agendamentoExistente.getHora();
+                LocalTime existenteHoraFim = existenteHoraInicio.plus(agendamentoExistente.getDuracao());
+
+                // Verifica se há sobreposição de horários
+                if (horaInicio.isBefore(existenteHoraFim) && horaFim.isAfter(existenteHoraInicio)) {
+                    return ResponseEntity.badRequest().body("Conflito de horário: Já existe um agendamento para este horário.");
+                }
+            }
+
+            agendamento.setCliente(cliente);
+            agendamento.setProfissional(profissional);
+            agendamento.setServico(dados.servico());
+            agendamento.setData(dados.data());
+            agendamento.setHora(dados.hora());
+            agendamento.setDuracao(duracao); // Define a duração convertida
+            agendamento.setObservacao(dados.observacao());
+
+            agendamentoRepository.save(agendamento);
+            logger.info("✅ Agendamento atualizado com sucesso: {}", agendamento);
+            return ResponseEntity.ok("Agendamento atualizado com sucesso.");
+        } catch (Exception e) {
+            logger.error("❌ Erro ao atualizar agendamento", e);
+            return ResponseEntity.status(500).body("Erro ao atualizar agendamento.");
+        }
     }
-}
+
     // ✅ Apenas ADMIN pode excluir agendamentos
     @DeleteMapping("/{id}")
     public ResponseEntity<?> excluirAgendamento(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
