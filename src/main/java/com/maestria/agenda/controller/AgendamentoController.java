@@ -101,32 +101,38 @@ public class AgendamentoController {
 
     // ✅ Apenas ADMIN pode criar agendamentos
     @PostMapping
-    public ResponseEntity<?> cadastrar(@RequestBody DadosCadastroAgendamento dados, @AuthenticationPrincipal UserDetails userDetails) {
-        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-            logger.warn("❌ Tentativa de criação de agendamento sem permissão por {}", userDetails.getUsername());
-            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode criar agendamentos.");
-        }
-
-        if (dados.clienteId() == null || dados.profissionalId() == null) {
-            return ResponseEntity.badRequest().body("Erro: Cliente e Profissional devem ser informados.");
-        }
-
-        try {
-            Cliente cliente = clienteRepository.findById(dados.clienteId())
-                .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
-
-            Profissional profissional = profissionalRepository.findById(dados.profissionalId())
-                .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
-
-            Agendamento agendamento = new Agendamento(dados, cliente, profissional);
-            agendamentoRepository.save(agendamento);
-            logger.info("✅ Agendamento criado com sucesso: {}", agendamento);
-            return ResponseEntity.ok("Agendamento criado com sucesso.");
-        } catch (Exception e) {
-            logger.error("❌ Erro ao criar agendamento", e);
-            return ResponseEntity.status(500).body("Erro ao criar agendamento.");
-        }
+public ResponseEntity<?> cadastrar(@RequestBody DadosCadastroAgendamento dados, @AuthenticationPrincipal UserDetails userDetails) {
+    if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+        logger.warn("❌ Tentativa de criação de agendamento sem permissão por {}", userDetails.getUsername());
+        return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode criar agendamentos.");
     }
+
+    if (dados.clienteId() == null || dados.profissionalId() == null) {
+        return ResponseEntity.badRequest().body("Erro: Cliente e Profissional devem ser informados.");
+    }
+
+    try {
+        Cliente cliente = clienteRepository.findById(dados.clienteId())
+            .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+
+        Profissional profissional = profissionalRepository.findById(dados.profissionalId())
+            .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+
+        // Converte a string duracao para Duration
+        Duration duracao = Duration.parse(dados.duracao());
+
+        // Cria o agendamento com os dados convertidos
+        Agendamento agendamento = new Agendamento(dados, cliente, profissional);
+        agendamento.setDuracao(duracao); // Define a duração convertida
+
+        agendamentoRepository.save(agendamento);
+        logger.info("✅ Agendamento criado com sucesso: {}", agendamento);
+        return ResponseEntity.ok("Agendamento criado com sucesso.");
+    } catch (Exception e) {
+        logger.error("❌ Erro ao criar agendamento", e);
+        return ResponseEntity.status(500).body("Erro ao criar agendamento.");
+    }
+}
 
     // ✅ Apenas ADMIN pode atualizar agendamentos
 @PutMapping("/{id}")
@@ -151,12 +157,15 @@ public ResponseEntity<?> atualizarAgendamento(
         Profissional profissional = profissionalRepository.findById(dados.profissionalId())
                 .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
 
+        // Converte a string duracao para Duration
+        Duration duracao = Duration.parse(dados.duracao());
+
         agendamento.setCliente(cliente);
         agendamento.setProfissional(profissional);
         agendamento.setServico(dados.servico());
         agendamento.setData(dados.data());
         agendamento.setHora(dados.hora());
-        agendamento.setDuracao(dados.duracao());
+        agendamento.setDuracao(duracao); // Define a duração convertida
         agendamento.setObservacao(dados.observacao());
 
         agendamentoRepository.save(agendamento);
