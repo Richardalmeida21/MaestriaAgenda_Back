@@ -17,7 +17,9 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.time.LocalTime; // Import adicionado aqui
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/agendamento")
@@ -98,6 +100,45 @@ public class AgendamentoController {
         }
 
         return ResponseEntity.ok(agendamentos);
+    }
+    
+    // Endpoint para métricas
+    @GetMapping("/metricas")
+    public ResponseEntity<?> obterMetricas(@AuthenticationPrincipal UserDetails userDetails) {
+        logger.info("🔍 Solicitando métricas de agendamentos por {}", userDetails.getUsername());
+
+        // Apenas ADMIN pode acessar as métricas
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            logger.warn("❌ Tentativa de acesso às métricas sem permissão por {}", userDetails.getUsername());
+            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode acessar métricas.");
+        }
+
+        try {
+            // Total de agendamentos
+            long totalAgendamentos = agendamentoRepository.count();
+
+            // Agendamentos por profissional
+            List<Object[]> agendamentosPorProfissional = agendamentoRepository.countAgendamentosPorProfissional();
+
+            // Agendamentos por cliente
+            List<Object[]> agendamentosPorCliente = agendamentoRepository.countAgendamentosPorCliente();
+
+            // Agendamentos por data
+            List<Object[]> agendamentosPorData = agendamentoRepository.countAgendamentosPorData();
+
+            // Montando a resposta
+            Map<String, Object> metricas = new HashMap<>();
+            metricas.put("totalAgendamentos", totalAgendamentos);
+            metricas.put("agendamentosPorProfissional", agendamentosPorProfissional);
+            metricas.put("agendamentosPorCliente", agendamentosPorCliente);
+            metricas.put("agendamentosPorData", agendamentosPorData);
+
+            logger.info("✅ Métricas geradas com sucesso.");
+            return ResponseEntity.ok(metricas);
+        } catch (Exception e) {
+            logger.error("❌ Erro ao gerar métricas", e);
+            return ResponseEntity.status(500).body("Erro ao gerar métricas.");
+        }
     }
 
     // ✅ Apenas ADMIN pode criar agendamentos

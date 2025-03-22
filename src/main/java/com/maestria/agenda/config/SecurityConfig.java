@@ -1,6 +1,5 @@
 package com.maestria.agenda.config;
 
-import com.maestria.agenda.profissional.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -23,40 +22,40 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))  // Configuração de CORS
-            .csrf(csrf -> csrf.disable())  // Desativando CSRF pois usamos JWT
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))  // API Stateless, sem sessão
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))  
+            .csrf(csrf -> csrf.disable())  
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))  
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/login", "/auth/register", "/public/**", "/generate-password").permitAll()  // Rotas públicas
-                .requestMatchers("/profissional/teste-login/**").permitAll()  // Libera apenas o teste de login para todos
-                .requestMatchers("/auth/me", "/agendamento/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")  // Apenas ADMIN e PROFISSIONAL podem acessar
-                .requestMatchers("/cliente/**").hasAuthority("ADMIN")  // Apenas ADMIN pode acessar clientes
-                .requestMatchers("/profissional/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")  // ADMIN e PROFISSIONAL podem acessar profissional
-                .anyRequest().authenticated()  // Todas as outras rotas precisam de autenticação
+                .requestMatchers("/auth/login", "/auth/register", "/public/**", "/generate-password").permitAll() 
+                .requestMatchers("/auth/me", "/agendamento/**").hasAnyAuthority("ADMIN", "PROFISSIONAL") 
+                .requestMatchers("/cliente/**").hasAuthority("ADMIN") 
+                .requestMatchers("/profissional/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")  
+                .requestMatchers("/agendamento/metricas").hasAuthority("ADMIN")
+                .anyRequest().authenticated()  
             )
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);  // Adiciona filtro JWT
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);  
 
         return http.build();
     }
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
-        return authenticationConfiguration.getAuthenticationManager();  // Gerenciamento de autenticação
+        return authenticationConfiguration.getAuthenticationManager();  
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();  // Senhas criptografadas com BCrypt
+        return new BCryptPasswordEncoder();  
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.setAllowedOrigins(List.of("http://localhost:8080", "https://maestria-agenda.netlify.app")); // Certifique-se de usar a porta correta
+        corsConfig.setAllowedOrigins(List.of("http://localhost:8080", "https://maestria-agenda.netlify.app")); 
         corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        corsConfig.setAllowedHeaders(List.of("*"));  // Permitir todos os cabeçalhos
+        corsConfig.setAllowedHeaders(List.of("*"));  
         corsConfig.setExposedHeaders(List.of("Authorization"));
-        corsConfig.setAllowCredentials(false); // Se permitir "*", precisa ser false
+        corsConfig.setAllowCredentials(false); 
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", corsConfig);

@@ -3,7 +3,6 @@ package com.maestria.agenda.controller;
 import com.maestria.agenda.cliente.Cliente;
 import com.maestria.agenda.cliente.ClienteRepository;
 import com.maestria.agenda.cliente.DadosCliente;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +19,7 @@ public class ClienteController {
 
     private final ClienteRepository clienteRepository;
 
-    @Autowired
+
     public ClienteController(ClienteRepository clienteRepository) {
         this.clienteRepository = clienteRepository;
     }
