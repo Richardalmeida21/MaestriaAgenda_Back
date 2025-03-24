@@ -9,6 +9,7 @@ import com.maestria.agenda.profissional.Profissional;
 import com.maestria.agenda.profissional.ProfissionalRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -32,7 +33,11 @@ public class AgendamentoController {
     private final ClienteRepository clienteRepository;
     private final ProfissionalRepository profissionalRepository;
 
-    public AgendamentoController(AgendamentoRepository agendamentoRepository, ClienteRepository clienteRepository, ProfissionalRepository profissionalRepository) {
+    @Value("${comissao.percentual}")
+    private double comissaoPercentual;
+
+    public AgendamentoController(AgendamentoRepository agendamentoRepository, ClienteRepository clienteRepository,
+            ProfissionalRepository profissionalRepository) {
         this.agendamentoRepository = agendamentoRepository;
         this.clienteRepository = clienteRepository;
         this.profissionalRepository = profissionalRepository;
@@ -76,7 +81,8 @@ public class AgendamentoController {
 
     // ✅ NOVA ROTA: Listar agendamentos por data
     @GetMapping("/dia")
-    public ResponseEntity<?> listarPorData(@RequestParam String data, @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<?> listarPorData(@RequestParam String data,
+            @AuthenticationPrincipal UserDetails userDetails) {
         logger.info("🔍 Solicitando agendamentos para o dia {} por {}", data, userDetails.getUsername());
 
         // Parse da data para LocalDate
@@ -96,12 +102,13 @@ public class AgendamentoController {
                 return ResponseEntity.status(403).body("Profissional não encontrado.");
             }
             agendamentos = agendamentoRepository.findByProfissionalAndData(profissional, dataFormatada);
-            logger.info("🔍 PROFISSIONAL {} solicitou agendamentos para o dia {}: {}", profissional.getNome(), dataFormatada, agendamentos.size());
+            logger.info("🔍 PROFISSIONAL {} solicitou agendamentos para o dia {}: {}", profissional.getNome(),
+                    dataFormatada, agendamentos.size());
         }
 
         return ResponseEntity.ok(agendamentos);
     }
-    
+
     // Endpoint para métricas
     @GetMapping("/metricas")
     public ResponseEntity<?> obterMetricas(@AuthenticationPrincipal UserDetails userDetails) {
@@ -141,9 +148,63 @@ public class AgendamentoController {
         }
     }
 
+    @GetMapping("/comissoes")
+    public ResponseEntity<?> calcularComissoes(@AuthenticationPrincipal UserDetails userDetails) {
+        logger.info("🔍 Solicitando cálculo de comissões por {}", userDetails.getUsername());
+
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            logger.warn("❌ Tentativa de acesso às comissões sem permissão por {}", userDetails.getUsername());
+            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode acessar as comissões.");
+        }
+
+        try {
+            List<Object[]> comissoes = agendamentoRepository.calcularComissaoPorProfissional(comissaoPercentual / 100);
+            return ResponseEntity.ok(comissoes);
+        } catch (Exception e) {
+            logger.error("❌ Erro ao calcular comissões", e);
+            return ResponseEntity.status(500).body("Erro ao calcular comissões.");
+        }
+    }
+
+    @GetMapping("/comissoes/total")
+    public ResponseEntity<?> calcularComissaoTotalPorPeriodo(
+            @RequestParam Long profissionalId,
+            @RequestParam String dataInicio,
+            @RequestParam String dataFim,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        logger.info("🔍 Solicitando cálculo de comissão total para o profissional {} entre {} e {} por {}",
+                profissionalId, dataInicio, dataFim, userDetails.getUsername());
+
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            logger.warn("❌ Tentativa de acesso às comissões sem permissão por {}", userDetails.getUsername());
+            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode acessar as comissões.");
+        }
+
+        try {
+            
+            LocalDate inicio = LocalDate.parse(dataInicio);
+            LocalDate fim = LocalDate.parse(dataFim);
+
+        
+            Double comissaoTotal = agendamentoRepository.calcularComissaoTotalPorPeriodo(
+                    profissionalId, inicio, fim, comissaoPercentual / 100);
+
+            if (comissaoTotal == null) {
+                comissaoTotal = 0.0; 
+            }
+
+            logger.info("✅ Comissão total calculada: R$ {}", comissaoTotal);
+            return ResponseEntity.ok(Map.of("profissionalId", profissionalId, "comissaoTotal", comissaoTotal));
+        } catch (Exception e) {
+            logger.error("❌ Erro ao calcular comissão total", e);
+            return ResponseEntity.status(500).body("Erro ao calcular comissão total.");
+        }
+    }
+
     // ✅ Apenas ADMIN pode criar agendamentos
     @PostMapping
-    public ResponseEntity<?> cadastrar(@RequestBody DadosCadastroAgendamento dados, @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<?> cadastrar(@RequestBody DadosCadastroAgendamento dados,
+            @AuthenticationPrincipal UserDetails userDetails) {
         if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
             logger.warn("❌ Tentativa de criação de agendamento sem permissão por {}", userDetails.getUsername());
             return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode criar agendamentos.");
@@ -155,16 +216,17 @@ public class AgendamentoController {
 
         try {
             Cliente cliente = clienteRepository.findById(dados.clienteId())
-                .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+                    .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
 
             Profissional profissional = profissionalRepository.findById(dados.profissionalId())
-                .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+                    .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
 
             // Converte a string duracao para Duration
             Duration duracao = Duration.parse(dados.duracao());
 
             // Verifica conflitos de horário
-            List<Agendamento> agendamentosExistentes = agendamentoRepository.findByProfissionalAndData(profissional, dados.data());
+            List<Agendamento> agendamentosExistentes = agendamentoRepository.findByProfissionalAndData(profissional,
+                    dados.data());
 
             LocalTime horaInicio = dados.hora();
             LocalTime horaFim = horaInicio.plus(duracao);
@@ -175,13 +237,15 @@ public class AgendamentoController {
 
                 // Verifica se há sobreposição de horários
                 if (horaInicio.isBefore(existenteHoraFim) && horaFim.isAfter(existenteHoraInicio)) {
-                    return ResponseEntity.badRequest().body("Conflito de horário: Já existe um agendamento para este horário.");
+                    return ResponseEntity.badRequest()
+                            .body("Conflito de horário: Já existe um agendamento para este horário.");
                 }
             }
 
             // Cria o agendamento
             Agendamento agendamento = new Agendamento(dados, cliente, profissional);
-            agendamento.setDuracao(duracao); // Define a duração convertida
+            agendamento.setDuracao(duracao);
+            agendamento.setValor(dados.valor());
 
             agendamentoRepository.save(agendamento);
             logger.info("✅ Agendamento criado com sucesso: {}", agendamento);
@@ -218,8 +282,10 @@ public class AgendamentoController {
             // Converte a string duracao para Duration
             Duration duracao = Duration.parse(dados.duracao());
 
-            // Verifica conflitos de horário (exceto o próprio agendamento que está sendo atualizado)
-            List<Agendamento> agendamentosExistentes = agendamentoRepository.findByProfissionalAndData(profissional, dados.data())
+            // Verifica conflitos de horário (exceto o próprio agendamento que está sendo
+            // atualizado)
+            List<Agendamento> agendamentosExistentes = agendamentoRepository
+                    .findByProfissionalAndData(profissional, dados.data())
                     .stream()
                     .filter(a -> !a.getId().equals(id)) // Funciona se `a.getId()` retornar `Long`
                     .toList();
@@ -233,7 +299,8 @@ public class AgendamentoController {
 
                 // Verifica se há sobreposição de horários
                 if (horaInicio.isBefore(existenteHoraFim) && horaFim.isAfter(existenteHoraInicio)) {
-                    return ResponseEntity.badRequest().body("Conflito de horário: Já existe um agendamento para este horário.");
+                    return ResponseEntity.badRequest()
+                            .body("Conflito de horário: Já existe um agendamento para este horário.");
                 }
             }
 
@@ -256,7 +323,8 @@ public class AgendamentoController {
 
     // ✅ Apenas ADMIN pode excluir agendamentos
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> excluirAgendamento(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<?> excluirAgendamento(@PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
         if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
             logger.warn("❌ Tentativa de exclusão de agendamento sem permissão por {}", userDetails.getUsername());
             return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode excluir agendamentos.");

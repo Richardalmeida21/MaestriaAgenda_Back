@@ -13,6 +13,7 @@ public record DadosCadastroAgendamento(
         @NotNull Servicos servico,
         @NotNull @FutureOrPresent LocalDate data,
         @NotNull LocalTime hora,
-        @NotNull String duracao, // Alterado para String (formato ISO 8601)
-        String observacao
+        @NotNull String duracao, 
+        String observacao,
+        @NotNull Double valor
 ) {}

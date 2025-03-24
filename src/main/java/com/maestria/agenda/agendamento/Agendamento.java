@@ -37,6 +37,9 @@ public class Agendamento {
     @Column(columnDefinition = "TEXT")
     private String observacao;
 
+    @Column(nullable = false)
+private Double valor;
+
     // Construtor com DadosCadastroAgendamento
     public Agendamento(DadosCadastroAgendamento dados, Cliente cliente, Profissional profissional) {
         this.cliente = cliente;
@@ -46,6 +49,7 @@ public class Agendamento {
         this.hora = dados.hora();
         this.duracao = Duration.parse(dados.duracao()); // Converte a string para Duration
         this.observacao = dados.observacao();
+        this.valor = dados.valor();
     }
 
     // Construtor padrão necessário para o JPA
@@ -114,6 +118,14 @@ public class Agendamento {
 
     public void setObservacao(String observacao) {
         this.observacao = observacao;
+    }
+
+    public Double getValor() {
+        return valor;
+    }
+    
+    public void setValor(Double valor) {
+        this.valor = valor;
     }
 
     // Método para formatar a duração
