@@ -28,6 +28,9 @@ public class AgendamentoFixo {
     @Column(columnDefinition = "TEXT")
     private String observacao;
 
+    @Column(nullable = false)
+    private Double valor; // Novo atributo para o valor do agendamento fixo
+
     // Getters e Setters
     public Long getId() {
         return id;
@@ -83,5 +86,13 @@ public class AgendamentoFixo {
 
     public void setObservacao(String observacao) {
         this.observacao = observacao;
+    }
+
+    public Double getValor() {
+        return valor;
+    }
+
+    public void setValor(Double valor) {
+        this.valor = valor;
     }
 }
