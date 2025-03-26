@@ -166,40 +166,40 @@ public ResponseEntity<?> obterMetricas(
         }
     }
 
-    @GetMapping("/comissoes/total")
-    public ResponseEntity<?> calcularComissaoTotalPorPeriodo(
-            @RequestParam Long profissionalId,
-            @RequestParam String dataInicio,
-            @RequestParam String dataFim,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        logger.info("🔍 Solicitando cálculo de comissão total para o profissional {} entre {} e {} por {}",
-                profissionalId, dataInicio, dataFim, userDetails.getUsername());
+    @GetMapping("/comissoes/total/{id}")
+public ResponseEntity<?> calcularComissaoTotalPorPeriodo(
+        @PathVariable Long id,
+        @RequestParam String dataInicio,
+        @RequestParam String dataFim,
+        @AuthenticationPrincipal UserDetails userDetails) {
+    logger.info("🔍 Solicitando cálculo de comissão total para o profissional {} entre {} e {} por {}",
+            id, dataInicio, dataFim, userDetails.getUsername());
 
-        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-            logger.warn("❌ Tentativa de acesso às comissões sem permissão por {}", userDetails.getUsername());
-            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode acessar as comissões.");
-        }
-
-        try {
-            
-            LocalDate inicio = LocalDate.parse(dataInicio);
-            LocalDate fim = LocalDate.parse(dataFim);
-
-        
-            Double comissaoTotal = agendamentoRepository.calcularComissaoTotalPorPeriodo(
-                    profissionalId, inicio, fim, comissaoPercentual / 100);
-
-            if (comissaoTotal == null) {
-                comissaoTotal = 0.0; 
-            }
-
-            logger.info("✅ Comissão total calculada: R$ {}", comissaoTotal);
-            return ResponseEntity.ok(Map.of("profissionalId", profissionalId, "comissaoTotal", comissaoTotal));
-        } catch (Exception e) {
-            logger.error("❌ Erro ao calcular comissão total", e);
-            return ResponseEntity.status(500).body("Erro ao calcular comissão total.");
-        }
+    if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+        logger.warn("❌ Tentativa de acesso às comissões sem permissão por {}", userDetails.getUsername());
+        return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode acessar as comissões.");
     }
+
+    try {
+        LocalDate inicio = LocalDate.parse(dataInicio);
+        LocalDate fim = LocalDate.parse(dataFim);
+
+        logger.info("🔍 Parâmetros recebidos: profissionalId={}, dataInicio={}, dataFim={}", id, inicio, fim);
+
+        Double comissaoTotal = agendamentoRepository.calcularComissaoTotalPorPeriodo(
+                id, inicio, fim, comissaoPercentual / 100);
+
+        if (comissaoTotal == null) {
+            comissaoTotal = 0.0; 
+        }
+
+        logger.info("✅ Comissão total calculada: R$ {}", comissaoTotal);
+        return ResponseEntity.ok(Map.of("profissionalId", id, "comissaoTotal", comissaoTotal));
+    } catch (Exception e) {
+        logger.error("❌ Erro ao calcular comissão total", e);
+        return ResponseEntity.status(500).body("Erro ao calcular comissão total.");
+    }
+}
 
     // ✅ Apenas ADMIN pode criar agendamentos
     @PostMapping
