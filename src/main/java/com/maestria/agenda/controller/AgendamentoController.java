@@ -79,6 +79,44 @@ public class AgendamentoController {
         return ResponseEntity.ok(agendamentos);
     }
 
+    @GetMapping("/profissional/{id}")
+public ResponseEntity<?> listarAgendamentosPorProfissional(
+        @PathVariable Long id,
+        @RequestParam String dataInicio,
+        @RequestParam String dataFim,
+        @AuthenticationPrincipal UserDetails userDetails) {
+    logger.info("🔍 Solicitando agendamentos para o profissional {} entre {} e {} por {}",
+            id, dataInicio, dataFim, userDetails.getUsername());
+
+    // Verifica se o usuário é ADMIN ou o próprio profissional
+    if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+        Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
+        if (profissional == null || !profissional.getId().equals(id)) {
+            logger.warn("❌ Acesso negado para o profissional {}.", id);
+            return ResponseEntity.status(403).body("Acesso negado.");
+        }
+    }
+
+    try {
+        LocalDate inicio = LocalDate.parse(dataInicio);
+        LocalDate fim = LocalDate.parse(dataFim);
+
+        logger.info("🔍 Parâmetros recebidos: profissionalId={}, dataInicio={}, dataFim={}", id, inicio, fim);
+
+        List<Agendamento> agendamentos = agendamentoRepository.findByProfissionalAndDataBetween(
+                profissionalRepository.findById(id).orElseThrow(() -> new RuntimeException("Profissional não encontrado")),
+                inicio,
+                fim
+        );
+
+        logger.info("✅ Retornando {} agendamentos para o profissional {}.", agendamentos.size(), id);
+        return ResponseEntity.ok(agendamentos);
+    } catch (Exception e) {
+        logger.error("❌ Erro ao buscar agendamentos", e);
+        return ResponseEntity.status(500).body("Erro ao buscar agendamentos.");
+    }
+}
+
     // ✅ NOVA ROTA: Listar agendamentos por data
     @GetMapping("/dia")
     public ResponseEntity<?> listarPorData(@RequestParam String data,
