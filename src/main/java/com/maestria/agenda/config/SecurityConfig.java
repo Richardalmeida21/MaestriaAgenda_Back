@@ -31,6 +31,7 @@ public class SecurityConfig {
                 .requestMatchers("/cliente/**").hasAuthority("ADMIN") 
                 .requestMatchers("/profissional/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")  
                 .requestMatchers("/agendamento/metricas").hasAuthority("ADMIN")
+                .requestMatchers("/agendamento/comissoes/total").hasAuthority("ADMIN")
                 .anyRequest().authenticated()  
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);  
