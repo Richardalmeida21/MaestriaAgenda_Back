@@ -1,6 +1,8 @@
 package com.maestria.agenda.controller;
 
 import com.maestria.agenda.agendamento.Agendamento;
+import com.maestria.agenda.agendamento.AgendamentoFixo;
+import com.maestria.agenda.agendamento.AgendamentoFixoRepository;
 import com.maestria.agenda.agendamento.AgendamentoRepository;
 import com.maestria.agenda.agendamento.DadosCadastroAgendamento;
 import com.maestria.agenda.cliente.Cliente;
@@ -30,17 +32,106 @@ public class AgendamentoController {
     private static final Logger logger = LoggerFactory.getLogger(AgendamentoController.class);
 
     private final AgendamentoRepository agendamentoRepository;
+    private final AgendamentoFixoRepository agendamentoFixoRepository;
     private final ClienteRepository clienteRepository;
     private final ProfissionalRepository profissionalRepository;
 
     @Value("${comissao.percentual}")
     private double comissaoPercentual;
 
-    public AgendamentoController(AgendamentoRepository agendamentoRepository, ClienteRepository clienteRepository,
+    public AgendamentoController(AgendamentoRepository agendamentoRepository,
+            AgendamentoFixoRepository agendamentoFixoRepository,
+            ClienteRepository clienteRepository,
             ProfissionalRepository profissionalRepository) {
         this.agendamentoRepository = agendamentoRepository;
+        this.agendamentoFixoRepository = agendamentoFixoRepository;
         this.clienteRepository = clienteRepository;
         this.profissionalRepository = profissionalRepository;
+    }
+
+    // ✅ Endpoint para criar agendamentos fixos
+    @PostMapping("/fixo")
+    public ResponseEntity<?> cadastrarAgendamentoFixo(
+            @RequestBody AgendamentoFixo agendamentoFixo,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            logger.warn("❌ Tentativa de criação de agendamento fixo sem permissão por {}", userDetails.getUsername());
+            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode criar agendamentos fixos.");
+        }
+
+        try {
+            agendamentoFixoRepository.save(agendamentoFixo);
+            logger.info("✅ Agendamento fixo criado com sucesso: {}", agendamentoFixo);
+            return ResponseEntity.ok("Agendamento fixo criado com sucesso.");
+        } catch (Exception e) {
+            logger.error("❌ Erro ao criar agendamento fixo", e);
+            return ResponseEntity.status(500).body("Erro ao criar agendamento fixo.");
+        }
+    }
+
+    // ✅ Endpoint para listar agendamentos fixos
+    @GetMapping("/fixo")
+    public ResponseEntity<?> listarAgendamentosFixos(@AuthenticationPrincipal UserDetails userDetails) {
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            logger.warn("❌ Tentativa de acesso a agendamentos fixos sem permissão por {}", userDetails.getUsername());
+            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode visualizar agendamentos fixos.");
+        }
+
+        List<AgendamentoFixo> agendamentosFixos = agendamentoFixoRepository.findAll();
+        logger.info("✅ Listando {} agendamentos fixos.", agendamentosFixos.size());
+        return ResponseEntity.ok(agendamentosFixos);
+    }
+
+    // ✅ Endpoint para gerar agendamentos com base nos fixos
+    @PostMapping("/fixo/gerar")
+    public ResponseEntity<?> gerarAgendamentosFixos(@AuthenticationPrincipal UserDetails userDetails) {
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            logger.warn("❌ Tentativa de geração de agendamentos fixos sem permissão por {}", userDetails.getUsername());
+            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode gerar agendamentos fixos.");
+        }
+
+        try {
+            List<AgendamentoFixo> agendamentosFixos = agendamentoFixoRepository.findAll();
+            LocalDate hoje = LocalDate.now();
+
+            for (AgendamentoFixo agendamentoFixo : agendamentosFixos) {
+                if (hoje.getDayOfMonth() == agendamentoFixo.getDiaDoMes()) {
+                    // Verifica conflitos de horário
+                    List<Agendamento> agendamentosExistentes = agendamentoRepository.findByProfissionalAndData(
+                            agendamentoFixo.getProfissional(), hoje);
+
+                    LocalTime horaInicio = agendamentoFixo.getHora();
+                    LocalTime horaFim = horaInicio.plus(Duration.parse(agendamentoFixo.getDuracao()));
+
+                    boolean conflito = agendamentosExistentes.stream().anyMatch(agendamento -> {
+                        LocalTime existenteHoraInicio = agendamento.getHora();
+                        LocalTime existenteHoraFim = existenteHoraInicio.plus(agendamento.getDuracao());
+                        return horaInicio.isBefore(existenteHoraFim) && horaFim.isAfter(existenteHoraInicio);
+                    });
+
+                    if (!conflito) {
+                        // Cria o agendamento
+                        Agendamento agendamento = new Agendamento();
+                        agendamento.setCliente(agendamentoFixo.getCliente());
+                        agendamento.setProfissional(agendamentoFixo.getProfissional());
+                        agendamento.setData(hoje);
+                        agendamento.setHora(horaInicio);
+                        agendamento.setDuracao(Duration.parse(agendamentoFixo.getDuracao()));
+                        agendamento.setObservacao(agendamentoFixo.getObservacao());
+
+                        agendamentoRepository.save(agendamento);
+                        logger.info("✅ Agendamento gerado com sucesso: {}", agendamento);
+                    } else {
+                        logger.warn("⚠️ Conflito de horário ao gerar agendamento fixo para {}", agendamentoFixo);
+                    }
+                }
+            }
+
+            return ResponseEntity.ok("Agendamentos fixos gerados com sucesso.");
+        } catch (Exception e) {
+            logger.error("❌ Erro ao gerar agendamentos fixos", e);
+            return ResponseEntity.status(500).body("Erro ao gerar agendamentos fixos.");
+        }
     }
 
     // ✅ ADMIN vê todos os agendamentos, PROFISSIONAL vê apenas os seus
@@ -80,112 +171,129 @@ public class AgendamentoController {
     }
 
     @GetMapping("/profissional/{id}")
-public ResponseEntity<?> listarAgendamentosPorProfissional(
-        @PathVariable Long id,
-        @RequestParam String dataInicio,
-        @RequestParam String dataFim,
-        @AuthenticationPrincipal UserDetails userDetails) {
-    logger.info("🔍 Solicitando agendamentos para o profissional {} entre {} e {} por {}",
-            id, dataInicio, dataFim, userDetails.getUsername());
+    public ResponseEntity<?> listarAgendamentosPorProfissional(
+            @PathVariable Long id,
+            @RequestParam String dataInicio,
+            @RequestParam String dataFim,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        logger.info("🔍 Solicitando agendamentos para o profissional {} entre {} e {} por {}",
+                id, dataInicio, dataFim, userDetails.getUsername());
 
-    // Verifica se o usuário é ADMIN ou o próprio profissional
-    if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-        Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
-        if (profissional == null || profissional.getId() != id) {
-            logger.warn("❌ Acesso negado para o profissional {}.", id);
-            return ResponseEntity.status(403).body("Acesso negado.");
+        // Verifica se o usuário é ADMIN ou o próprio profissional
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
+            if (profissional == null || profissional.getId() != id) {
+                logger.warn("❌ Acesso negado para o profissional {}.", id);
+                return ResponseEntity.status(403).body("Acesso negado.");
+            }
+        }
+
+        try {
+            LocalDate inicio = LocalDate.parse(dataInicio);
+            LocalDate fim = LocalDate.parse(dataFim);
+
+            logger.info("🔍 Parâmetros recebidos: profissionalId={}, dataInicio={}, dataFim={}", id, inicio, fim);
+
+            List<Agendamento> agendamentos = agendamentoRepository.findByProfissionalAndDataBetween(
+                    profissionalRepository.findById(id)
+                            .orElseThrow(() -> new RuntimeException("Profissional não encontrado")),
+                    inicio,
+                    fim);
+
+            logger.info("✅ Retornando {} agendamentos para o profissional {}.", agendamentos.size(), id);
+            return ResponseEntity.ok(agendamentos);
+        } catch (Exception e) {
+            logger.error("❌ Erro ao buscar agendamentos", e);
+            return ResponseEntity.status(500).body("Erro ao buscar agendamentos.");
         }
     }
 
-    try {
-        LocalDate inicio = LocalDate.parse(dataInicio);
-        LocalDate fim = LocalDate.parse(dataFim);
-
-        logger.info("🔍 Parâmetros recebidos: profissionalId={}, dataInicio={}, dataFim={}", id, inicio, fim);
-
-        List<Agendamento> agendamentos = agendamentoRepository.findByProfissionalAndDataBetween(
-                profissionalRepository.findById(id).orElseThrow(() -> new RuntimeException("Profissional não encontrado")),
-                inicio,
-                fim
-        );
-
-        logger.info("✅ Retornando {} agendamentos para o profissional {}.", agendamentos.size(), id);
-        return ResponseEntity.ok(agendamentos);
-    } catch (Exception e) {
-        logger.error("❌ Erro ao buscar agendamentos", e);
-        return ResponseEntity.status(500).body("Erro ao buscar agendamentos.");
-    }
-}
-
-    // ✅ NOVA ROTA: Listar agendamentos por data
     @GetMapping("/dia")
     public ResponseEntity<?> listarPorData(@RequestParam String data,
-            @AuthenticationPrincipal UserDetails userDetails) {
+                                           @AuthenticationPrincipal UserDetails userDetails) {
         logger.info("🔍 Solicitando agendamentos para o dia {} por {}", data, userDetails.getUsername());
-
-        // Parse da data para LocalDate
-        LocalDate dataFormatada = LocalDate.parse(data);
-
-        List<Agendamento> agendamentos;
-
-        if (userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-            // ADMIN pode ver todos os agendamentos
-            agendamentos = agendamentoRepository.findByData(dataFormatada);
-            logger.info("🔍 ADMIN solicitou agendamentos para o dia {}: {}", dataFormatada, agendamentos.size());
-        } else {
-            // PROFISSIONAL pode ver apenas seus próprios agendamentos
-            Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
-            if (profissional == null) {
-                logger.warn("❌ Profissional não encontrado: {}", userDetails.getUsername());
-                return ResponseEntity.status(403).body("Profissional não encontrado.");
+    
+        try {
+            // Parse da data para LocalDate
+            LocalDate dataFormatada = LocalDate.parse(data);
+    
+            List<Agendamento> agendamentosNormais;
+            List<AgendamentoFixo> agendamentosFixosDoDia;
+    
+            if (userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+                // ADMIN pode ver todos os agendamentos normais e fixos do dia
+                agendamentosNormais = agendamentoRepository.findByData(dataFormatada);
+                agendamentosFixosDoDia = agendamentoFixoRepository.findByDiaDoMes(dataFormatada.getDayOfMonth());
+                logger.info("✅ ADMIN solicitou agendamentos para o dia {}: {} normais e {} fixos encontrados",
+                        dataFormatada, agendamentosNormais.size(), agendamentosFixosDoDia.size());
+            } else {
+                // PROFISSIONAL pode ver apenas seus próprios agendamentos normais e fixos
+                Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
+                if (profissional == null) {
+                    logger.warn("❌ Profissional não encontrado: {}", userDetails.getUsername());
+                    return ResponseEntity.status(403).body("Profissional não encontrado.");
+                }
+                agendamentosNormais = agendamentoRepository.findByProfissionalAndData(profissional, dataFormatada);
+                agendamentosFixosDoDia = agendamentoFixoRepository.findByProfissionalAndDiaDoMes(profissional, dataFormatada.getDayOfMonth());
+                logger.info("✅ PROFISSIONAL {} solicitou agendamentos para o dia {}: {} normais e {} fixos encontrados",
+                        profissional.getNome(), dataFormatada, agendamentosNormais.size(), agendamentosFixosDoDia.size());
             }
-            agendamentos = agendamentoRepository.findByProfissionalAndData(profissional, dataFormatada);
-            logger.info("🔍 PROFISSIONAL {} solicitou agendamentos para o dia {}: {}", profissional.getNome(),
-                    dataFormatada, agendamentos.size());
+    
+            // Combine os agendamentos normais e fixos em uma única resposta
+            Map<String, Object> resposta = new HashMap<>();
+            resposta.put("agendamentosNormais", agendamentosNormais);
+            resposta.put("agendamentosFixos", agendamentosFixosDoDia);
+    
+            return ResponseEntity.ok(resposta);
+        } catch (Exception e) {
+            logger.error("❌ Erro ao listar agendamentos para o dia {}", data, e);
+            return ResponseEntity.status(500).body("Erro ao listar agendamentos.");
         }
-
-        return ResponseEntity.ok(agendamentos);
     }
 
-   @GetMapping("/metricas")
-public ResponseEntity<?> obterMetricas(
-        @RequestParam(required = false) String dataInicio,
-        @RequestParam(required = false) String dataFim,
-        @AuthenticationPrincipal UserDetails userDetails) {
-    logger.info("🔍 Solicitando métricas de agendamentos por {} com intervalo de {} a {}", 
+    @GetMapping("/metricas")
+    public ResponseEntity<?> obterMetricas(
+            @RequestParam(required = false) String dataInicio,
+            @RequestParam(required = false) String dataFim,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        logger.info("🔍 Solicitando métricas de agendamentos por {} com intervalo de {} a {}",
                 userDetails.getUsername(), dataInicio, dataFim);
 
-    if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-        logger.warn("❌ Tentativa de acesso às métricas sem permissão por {}", userDetails.getUsername());
-        return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode acessar métricas.");
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            logger.warn("❌ Tentativa de acesso às métricas sem permissão por {}", userDetails.getUsername());
+            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode acessar métricas.");
+        }
+
+        try {
+            // Substituir LocalDate.MIN e LocalDate.MAX por valores válidos para PostgreSQL
+            LocalDate inicio = dataInicio != null && !dataInicio.isEmpty() ? LocalDate.parse(dataInicio)
+                    : LocalDate.of(1900, 1, 1);
+            LocalDate fim = dataFim != null && !dataFim.isEmpty() ? LocalDate.parse(dataFim)
+                    : LocalDate.of(294276, 12, 31);
+
+            logger.info("🔍 Intervalo de datas: {} a {}", inicio, fim);
+
+            long totalAgendamentos = agendamentoRepository.countByDataBetween(inicio, fim);
+            List<Object[]> agendamentosPorProfissional = agendamentoRepository
+                    .countAgendamentosPorProfissionalBetween(inicio, fim);
+            List<Object[]> agendamentosPorCliente = agendamentoRepository.countAgendamentosPorClienteBetween(inicio,
+                    fim);
+            List<Object[]> agendamentosPorData = agendamentoRepository.countAgendamentosPorDataBetween(inicio, fim);
+
+            Map<String, Object> metricas = new HashMap<>();
+            metricas.put("totalAgendamentos", totalAgendamentos);
+            metricas.put("agendamentosPorProfissional", agendamentosPorProfissional);
+            metricas.put("agendamentosPorCliente", agendamentosPorCliente);
+            metricas.put("agendamentosPorData", agendamentosPorData);
+
+            logger.info("✅ Métricas geradas com sucesso.");
+            return ResponseEntity.ok(metricas);
+        } catch (Exception e) {
+            logger.error("❌ Erro ao gerar métricas", e);
+            return ResponseEntity.status(500).body("Erro ao gerar métricas.");
+        }
     }
 
-    try {
-        // Substituir LocalDate.MIN e LocalDate.MAX por valores válidos para PostgreSQL
-        LocalDate inicio = dataInicio != null && !dataInicio.isEmpty() ? LocalDate.parse(dataInicio) : LocalDate.of(1900, 1, 1);
-        LocalDate fim = dataFim != null && !dataFim.isEmpty() ? LocalDate.parse(dataFim) : LocalDate.of(294276, 12, 31);
-
-        logger.info("🔍 Intervalo de datas: {} a {}", inicio, fim);
-
-        long totalAgendamentos = agendamentoRepository.countByDataBetween(inicio, fim);
-        List<Object[]> agendamentosPorProfissional = agendamentoRepository.countAgendamentosPorProfissionalBetween(inicio, fim);
-        List<Object[]> agendamentosPorCliente = agendamentoRepository.countAgendamentosPorClienteBetween(inicio, fim);
-        List<Object[]> agendamentosPorData = agendamentoRepository.countAgendamentosPorDataBetween(inicio, fim);
-
-        Map<String, Object> metricas = new HashMap<>();
-        metricas.put("totalAgendamentos", totalAgendamentos);
-        metricas.put("agendamentosPorProfissional", agendamentosPorProfissional);
-        metricas.put("agendamentosPorCliente", agendamentosPorCliente);
-        metricas.put("agendamentosPorData", agendamentosPorData);
-
-        logger.info("✅ Métricas geradas com sucesso.");
-        return ResponseEntity.ok(metricas);
-    } catch (Exception e) {
-        logger.error("❌ Erro ao gerar métricas", e);
-        return ResponseEntity.status(500).body("Erro ao gerar métricas.");
-    }
-}
-    
     @GetMapping("/comissoes")
     public ResponseEntity<?> calcularComissoes(@AuthenticationPrincipal UserDetails userDetails) {
         logger.info("🔍 Solicitando cálculo de comissões por {}", userDetails.getUsername());
@@ -205,39 +313,39 @@ public ResponseEntity<?> obterMetricas(
     }
 
     @GetMapping("/comissoes/total/{id}")
-public ResponseEntity<?> calcularComissaoTotalPorPeriodo(
-        @PathVariable Long id,
-        @RequestParam String dataInicio,
-        @RequestParam String dataFim,
-        @AuthenticationPrincipal UserDetails userDetails) {
-    logger.info("🔍 Solicitando cálculo de comissão total para o profissional {} entre {} e {} por {}",
-            id, dataInicio, dataFim, userDetails.getUsername());
+    public ResponseEntity<?> calcularComissaoTotalPorPeriodo(
+            @PathVariable Long id,
+            @RequestParam String dataInicio,
+            @RequestParam String dataFim,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        logger.info("🔍 Solicitando cálculo de comissão total para o profissional {} entre {} e {} por {}",
+                id, dataInicio, dataFim, userDetails.getUsername());
 
-    if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-        logger.warn("❌ Tentativa de acesso às comissões sem permissão por {}", userDetails.getUsername());
-        return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode acessar as comissões.");
-    }
-
-    try {
-        LocalDate inicio = LocalDate.parse(dataInicio);
-        LocalDate fim = LocalDate.parse(dataFim);
-
-        logger.info("🔍 Parâmetros recebidos: profissionalId={}, dataInicio={}, dataFim={}", id, inicio, fim);
-
-        Double comissaoTotal = agendamentoRepository.calcularComissaoTotalPorPeriodo(
-                id, inicio, fim, comissaoPercentual / 100);
-
-        if (comissaoTotal == null) {
-            comissaoTotal = 0.0; 
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            logger.warn("❌ Tentativa de acesso às comissões sem permissão por {}", userDetails.getUsername());
+            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode acessar as comissões.");
         }
 
-        logger.info("✅ Comissão total calculada: R$ {}", comissaoTotal);
-        return ResponseEntity.ok(Map.of("profissionalId", id, "comissaoTotal", comissaoTotal));
-    } catch (Exception e) {
-        logger.error("❌ Erro ao calcular comissão total", e);
-        return ResponseEntity.status(500).body("Erro ao calcular comissão total.");
+        try {
+            LocalDate inicio = LocalDate.parse(dataInicio);
+            LocalDate fim = LocalDate.parse(dataFim);
+
+            logger.info("🔍 Parâmetros recebidos: profissionalId={}, dataInicio={}, dataFim={}", id, inicio, fim);
+
+            Double comissaoTotal = agendamentoRepository.calcularComissaoTotalPorPeriodo(
+                    id, inicio, fim, comissaoPercentual / 100);
+
+            if (comissaoTotal == null) {
+                comissaoTotal = 0.0;
+            }
+
+            logger.info("✅ Comissão total calculada: R$ {}", comissaoTotal);
+            return ResponseEntity.ok(Map.of("profissionalId", id, "comissaoTotal", comissaoTotal));
+        } catch (Exception e) {
+            logger.error("❌ Erro ao calcular comissão total", e);
+            return ResponseEntity.status(500).body("Erro ao calcular comissão total.");
+        }
     }
-}
 
     // ✅ Apenas ADMIN pode criar agendamentos
     @PostMapping
