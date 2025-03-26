@@ -109,45 +109,51 @@ public class AgendamentoController {
         return ResponseEntity.ok(agendamentos);
     }
 
-    // Endpoint para métricas
     @GetMapping("/metricas")
-    public ResponseEntity<?> obterMetricas(@AuthenticationPrincipal UserDetails userDetails) {
-        logger.info("🔍 Solicitando métricas de agendamentos por {}", userDetails.getUsername());
+public ResponseEntity<?> obterMetricas(
+        @RequestParam(required = false) String dataInicio,
+        @RequestParam(required = false) String dataFim,
+        @AuthenticationPrincipal UserDetails userDetails) {
+    logger.info("🔍 Solicitando métricas de agendamentos por {} com intervalo de {} a {}", 
+                userDetails.getUsername(), dataInicio, dataFim);
 
-        // Apenas ADMIN pode acessar as métricas
-        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-            logger.warn("❌ Tentativa de acesso às métricas sem permissão por {}", userDetails.getUsername());
-            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode acessar métricas.");
-        }
-
-        try {
-            // Total de agendamentos
-            long totalAgendamentos = agendamentoRepository.count();
-
-            // Agendamentos por profissional
-            List<Object[]> agendamentosPorProfissional = agendamentoRepository.countAgendamentosPorProfissional();
-
-            // Agendamentos por cliente
-            List<Object[]> agendamentosPorCliente = agendamentoRepository.countAgendamentosPorCliente();
-
-            // Agendamentos por data
-            List<Object[]> agendamentosPorData = agendamentoRepository.countAgendamentosPorData();
-
-            // Montando a resposta
-            Map<String, Object> metricas = new HashMap<>();
-            metricas.put("totalAgendamentos", totalAgendamentos);
-            metricas.put("agendamentosPorProfissional", agendamentosPorProfissional);
-            metricas.put("agendamentosPorCliente", agendamentosPorCliente);
-            metricas.put("agendamentosPorData", agendamentosPorData);
-
-            logger.info("✅ Métricas geradas com sucesso.");
-            return ResponseEntity.ok(metricas);
-        } catch (Exception e) {
-            logger.error("❌ Erro ao gerar métricas", e);
-            return ResponseEntity.status(500).body("Erro ao gerar métricas.");
-        }
+    // Apenas ADMIN pode acessar as métricas
+    if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+        logger.warn("❌ Tentativa de acesso às métricas sem permissão por {}", userDetails.getUsername());
+        return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode acessar métricas.");
     }
 
+    try {
+        LocalDate inicio = dataInicio != null ? LocalDate.parse(dataInicio) : LocalDate.MIN;
+        LocalDate fim = dataFim != null ? LocalDate.parse(dataFim) : LocalDate.MAX;
+
+        // Total de agendamentos no intervalo
+        long totalAgendamentos = agendamentoRepository.countByDataBetween(inicio, fim);
+
+        // Agendamentos por profissional no intervalo
+        List<Object[]> agendamentosPorProfissional = agendamentoRepository.countAgendamentosPorProfissionalBetween(inicio, fim);
+
+        // Agendamentos por cliente no intervalo
+        List<Object[]> agendamentosPorCliente = agendamentoRepository.countAgendamentosPorClienteBetween(inicio, fim);
+
+        // Agendamentos por data no intervalo
+        List<Object[]> agendamentosPorData = agendamentoRepository.countAgendamentosPorDataBetween(inicio, fim);
+
+        // Montando a resposta
+        Map<String, Object> metricas = new HashMap<>();
+        metricas.put("totalAgendamentos", totalAgendamentos);
+        metricas.put("agendamentosPorProfissional", agendamentosPorProfissional);
+        metricas.put("agendamentosPorCliente", agendamentosPorCliente);
+        metricas.put("agendamentosPorData", agendamentosPorData);
+
+        logger.info("✅ Métricas geradas com sucesso.");
+        return ResponseEntity.ok(metricas);
+    } catch (Exception e) {
+        logger.error("❌ Erro ao gerar métricas", e);
+        return ResponseEntity.status(500).body("Erro ao gerar métricas.");
+    }
+}
+    
     @GetMapping("/comissoes")
     public ResponseEntity<?> calcularComissoes(@AuthenticationPrincipal UserDetails userDetails) {
         logger.info("🔍 Solicitando cálculo de comissões por {}", userDetails.getUsername());
