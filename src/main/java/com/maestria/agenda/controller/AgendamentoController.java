@@ -109,7 +109,7 @@ public class AgendamentoController {
         return ResponseEntity.ok(agendamentos);
     }
 
-    @GetMapping("/metricas")
+   @GetMapping("/metricas")
 public ResponseEntity<?> obterMetricas(
         @RequestParam(required = false) String dataInicio,
         @RequestParam(required = false) String dataFim,
@@ -117,29 +117,23 @@ public ResponseEntity<?> obterMetricas(
     logger.info("🔍 Solicitando métricas de agendamentos por {} com intervalo de {} a {}", 
                 userDetails.getUsername(), dataInicio, dataFim);
 
-    // Apenas ADMIN pode acessar as métricas
     if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
         logger.warn("❌ Tentativa de acesso às métricas sem permissão por {}", userDetails.getUsername());
         return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode acessar métricas.");
     }
 
     try {
-        LocalDate inicio = dataInicio != null ? LocalDate.parse(dataInicio) : LocalDate.MIN;
-        LocalDate fim = dataFim != null ? LocalDate.parse(dataFim) : LocalDate.MAX;
+        // Substituir LocalDate.MIN e LocalDate.MAX por valores válidos para PostgreSQL
+        LocalDate inicio = dataInicio != null && !dataInicio.isEmpty() ? LocalDate.parse(dataInicio) : LocalDate.of(1900, 1, 1);
+        LocalDate fim = dataFim != null && !dataFim.isEmpty() ? LocalDate.parse(dataFim) : LocalDate.of(294276, 12, 31);
 
-        // Total de agendamentos no intervalo
+        logger.info("🔍 Intervalo de datas: {} a {}", inicio, fim);
+
         long totalAgendamentos = agendamentoRepository.countByDataBetween(inicio, fim);
-
-        // Agendamentos por profissional no intervalo
         List<Object[]> agendamentosPorProfissional = agendamentoRepository.countAgendamentosPorProfissionalBetween(inicio, fim);
-
-        // Agendamentos por cliente no intervalo
         List<Object[]> agendamentosPorCliente = agendamentoRepository.countAgendamentosPorClienteBetween(inicio, fim);
-
-        // Agendamentos por data no intervalo
         List<Object[]> agendamentosPorData = agendamentoRepository.countAgendamentosPorDataBetween(inicio, fim);
 
-        // Montando a resposta
         Map<String, Object> metricas = new HashMap<>();
         metricas.put("totalAgendamentos", totalAgendamentos);
         metricas.put("agendamentosPorProfissional", agendamentosPorProfissional);
