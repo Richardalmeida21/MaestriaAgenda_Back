@@ -11,6 +11,8 @@ import java.util.List;
 
 public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> {
 
+    List<Agendamento> findByProfissionalAndDataBetween(Profissional profissional, LocalDate dataInicio, LocalDate dataFim);
+
     List<Agendamento> findByCliente(Cliente cliente);
 
     List<Agendamento> findByProfissional(Profissional profissional);
