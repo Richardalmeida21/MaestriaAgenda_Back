@@ -305,7 +305,7 @@ public class AgendamentoController {
         // Verifica se o usuário é ADMIN ou o próprio profissional
         if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
             Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
-            if (profissional == null || !profissional.getId().equals(id)) {
+            if (profissional == null || profissional.getId() != id.longValue()) {
                 logger.warn("❌ Acesso negado para o profissional {}.", id);
                 return ResponseEntity.status(403).body("Acesso negado.");
             }
@@ -453,7 +453,7 @@ public class AgendamentoController {
         if (!isAdmin) {
             // Verificar se é o próprio profissional acessando seus dados
             Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
-            if (profissional != null && profissional.getId().equals(id)) {
+            if (profissional != null && profissional.getId() == id.longValue()) {
                 isProfissionalAcessandoPropriosDados = true;
                 logger.info("✅ Profissional {} acessando suas próprias comissões", userDetails.getUsername());
             }
