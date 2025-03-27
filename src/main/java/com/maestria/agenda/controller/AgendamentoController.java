@@ -79,29 +79,83 @@ public ResponseEntity<?> listarTodos(@AuthenticationPrincipal UserDetails userDe
 }
 
     // ✅ Endpoint para criar agendamentos fixos
-    @PostMapping("/fixo")
-    public ResponseEntity<?> cadastrarAgendamentoFixo(
-            @RequestBody AgendamentoFixo agendamentoFixo,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-            logger.warn("❌ Tentativa de criação de agendamento fixo sem permissão por {}", userDetails.getUsername());
-            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode criar agendamentos fixos.");
-        }
-
-        try {
-            if (agendamentoFixo.getValor() == null || agendamentoFixo.getValor() <= 0) {
-                return ResponseEntity.badRequest()
-                        .body("Erro: O valor do agendamento fixo deve ser informado e maior que zero.");
-            }
-
-            agendamentoFixoRepository.save(agendamentoFixo);
-            logger.info("✅ Agendamento fixo criado com sucesso: {}", agendamentoFixo);
-            return ResponseEntity.ok("Agendamento fixo criado com sucesso.");
-        } catch (Exception e) {
-            logger.error("❌ Erro ao criar agendamento fixo", e);
-            return ResponseEntity.status(500).body("Erro ao criar agendamento fixo.");
-        }
+@PostMapping("/fixo")
+public ResponseEntity<?> cadastrarAgendamentoFixo(
+        @RequestBody Map<String, Object> requestData,
+        @AuthenticationPrincipal UserDetails userDetails) {
+    if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+        logger.warn("❌ Tentativa de criação de agendamento fixo sem permissão por {}", userDetails.getUsername());
+        return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode criar agendamentos fixos.");
     }
+
+    try {
+        logger.info("📥 Dados recebidos: {}", requestData);
+        
+        // Validações
+        if (requestData.get("valor") == null) {
+            return ResponseEntity.badRequest()
+                    .body("Erro: O valor do agendamento fixo deve ser informado.");
+        }
+        
+        if (requestData.get("clienteId") == null || requestData.get("profissionalId") == null) {
+            return ResponseEntity.badRequest()
+                    .body("Erro: Cliente e Profissional são obrigatórios.");
+        }
+        
+        if (requestData.get("diaDoMes") == null) {
+            return ResponseEntity.badRequest()
+                    .body("Erro: Dia do mês é obrigatório.");
+        }
+        
+        if (requestData.get("hora") == null) {
+            return ResponseEntity.badRequest()
+                    .body("Erro: Hora é obrigatória.");
+        }
+        
+        if (requestData.get("duracao") == null) {
+            return ResponseEntity.badRequest()
+                    .body("Erro: Duração é obrigatória.");
+        }
+        
+        if (requestData.get("servico") == null) {
+            return ResponseEntity.badRequest()
+                    .body("Erro: Serviço é obrigatório.");
+        }
+
+        // Buscar cliente e profissional
+        Cliente cliente = clienteRepository.findById(Long.valueOf(requestData.get("clienteId").toString()))
+                .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+                
+        Profissional profissional = profissionalRepository.findById(Long.valueOf(requestData.get("profissionalId").toString()))
+                .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+
+        // Criar agendamento fixo
+        AgendamentoFixo agendamentoFixo = new AgendamentoFixo();
+        agendamentoFixo.setCliente(cliente);
+        agendamentoFixo.setProfissional(profissional);
+        agendamentoFixo.setDiaDoMes(Integer.valueOf(requestData.get("diaDoMes").toString()));
+        agendamentoFixo.setHora(LocalTime.parse(requestData.get("hora").toString()));
+        agendamentoFixo.setDuracao(requestData.get("duracao").toString());
+        agendamentoFixo.setObservacao(requestData.get("observacao") != null ? requestData.get("observacao").toString() : null);
+        agendamentoFixo.setValor(Double.valueOf(requestData.get("valor").toString()));
+        
+        // Definir o serviço (usando a enum Servicos)
+        try {
+            agendamentoFixo.setServico(com.maestria.agenda.servicos.Servicos.valueOf(requestData.get("servico").toString()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body("Erro: Serviço inválido. Valores permitidos: " + 
+                          Arrays.toString(com.maestria.agenda.servicos.Servicos.values()));
+        }
+
+        agendamentoFixoRepository.save(agendamentoFixo);
+        logger.info("✅ Agendamento fixo criado com sucesso: {}", agendamentoFixo);
+        return ResponseEntity.ok(agendamentoFixo);
+    } catch (Exception e) {
+        logger.error("❌ Erro ao criar agendamento fixo", e);
+        return ResponseEntity.status(500).body("Erro ao criar agendamento fixo: " + e.getMessage());
+    }
+}
 
     // ✅ Endpoint para listar agendamentos fixos
     @GetMapping("/fixo")
@@ -484,6 +538,30 @@ public ResponseEntity<?> listarTodos(@AuthenticationPrincipal UserDetails userDe
             return ResponseEntity.status(500).body("Erro ao atualizar agendamento.");
         }
     }
+
+    // ✅ Endpoint para excluir agendamentos fixos
+@DeleteMapping("/fixo/{id}")
+public ResponseEntity<?> excluirAgendamentoFixo(
+        @PathVariable Long id,
+        @AuthenticationPrincipal UserDetails userDetails) {
+    if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+        logger.warn("❌ Tentativa de exclusão de agendamento fixo sem permissão por {}", userDetails.getUsername());
+        return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode excluir agendamentos fixos.");
+    }
+
+    try {
+        if (!agendamentoFixoRepository.existsById(id)) {
+            return ResponseEntity.badRequest().body("Erro: Agendamento fixo não encontrado.");
+        }
+
+        agendamentoFixoRepository.deleteById(id);
+        logger.info("✅ Agendamento fixo excluído com sucesso. ID: {}", id);
+        return ResponseEntity.ok("Agendamento fixo excluído com sucesso.");
+    } catch (Exception e) {
+        logger.error("❌ Erro ao excluir agendamento fixo", e);
+        return ResponseEntity.status(500).body("Erro ao excluir agendamento fixo.");
+    }
+}
 
     // ✅ Apenas ADMIN pode excluir agendamentos
     @DeleteMapping("/{id}")
