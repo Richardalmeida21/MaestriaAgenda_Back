@@ -49,6 +49,35 @@ public class AgendamentoController {
         this.profissionalRepository = profissionalRepository;
     }
 
+    // ✅ Listar todos os agendamentos - ADMIN pode ver todos
+@GetMapping
+public ResponseEntity<?> listarTodos(@AuthenticationPrincipal UserDetails userDetails) {
+    logger.info("🔍 Solicitando todos os agendamentos por {}", userDetails.getUsername());
+
+    try {
+        if (userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            // ADMIN pode ver todos os agendamentos
+            List<Agendamento> agendamentos = agendamentoRepository.findAll();
+            logger.info("✅ ADMIN - Retornando {} agendamentos.", agendamentos.size());
+            return ResponseEntity.ok(agendamentos);
+        } else {
+            // PROFISSIONAL pode ver apenas seus próprios agendamentos
+            Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
+            if (profissional == null) {
+                logger.warn("❌ Profissional não encontrado: {}", userDetails.getUsername());
+                return ResponseEntity.status(403).body("Profissional não encontrado.");
+            }
+            
+            List<Agendamento> agendamentos = agendamentoRepository.findByProfissional(profissional);
+            logger.info("✅ PROFISSIONAL {} - Retornando {} agendamentos", profissional.getNome(), agendamentos.size());
+            return ResponseEntity.ok(agendamentos);
+        }
+    } catch (Exception e) {
+        logger.error("❌ Erro ao listar agendamentos", e);
+        return ResponseEntity.status(500).body("Erro ao listar agendamentos.");
+    }
+}
+
     // ✅ Endpoint para criar agendamentos fixos
     @PostMapping("/fixo")
     public ResponseEntity<?> cadastrarAgendamentoFixo(
