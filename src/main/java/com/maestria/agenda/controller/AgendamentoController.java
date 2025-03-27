@@ -50,6 +50,41 @@ public class AgendamentoController {
         this.profissionalRepository = profissionalRepository;
     }
 
+    // Método para calcular comissões de agendamentos fixos
+private Double calcularComissaoAgendamentosFixos(Long profissionalId, LocalDate inicio, LocalDate fim) {
+    try {
+        // Buscar o profissional
+        Profissional profissional = profissionalRepository.findById(profissionalId)
+                .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+        
+        // Buscar todos os agendamentos fixos do profissional
+        List<AgendamentoFixo> agendamentosFixos = agendamentoFixoRepository.findByProfissional(profissional);
+        
+        double comissaoTotal = 0.0;
+        
+        // Para cada agendamento fixo
+        for (AgendamentoFixo agendamentoFixo : agendamentosFixos) {
+            int diaDoMes = agendamentoFixo.getDiaDoMes();
+            double valorAgendamento = agendamentoFixo.getValor();
+            
+            // Verificar cada mês no intervalo e contar quantas vezes o dia do mês ocorre
+            LocalDate dataAtual = inicio;
+            while (!dataAtual.isAfter(fim)) {
+                if (dataAtual.getDayOfMonth() == diaDoMes) {
+                    // Dia do agendamento fixo encontrado no período
+                    comissaoTotal += valorAgendamento * (comissaoPercentual / 100);
+                }
+                dataAtual = dataAtual.plusDays(1);
+            }
+        }
+        
+        return comissaoTotal;
+    } catch (Exception e) {
+        logger.error("❌ Erro ao calcular comissão de agendamentos fixos", e);
+        return 0.0;
+    }
+}
+
     // ✅ Listar todos os agendamentos - ADMIN pode ver todos
 @GetMapping
 public ResponseEntity<?> listarTodos(@AuthenticationPrincipal UserDetails userDetails) {
