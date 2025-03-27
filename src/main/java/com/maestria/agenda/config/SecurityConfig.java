@@ -32,7 +32,7 @@ public class SecurityConfig {
                 .requestMatchers("/profissional/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")  
                 .requestMatchers("/agendamento/metricas").hasAuthority("ADMIN")
                 .requestMatchers("/agendamento/comissoes/total").hasAuthority("ADMIN")
-                .requestMatchers("/agendamento/fixos/**").hasAuthority("ADMIN")
+                .requestMatchers("/agendamento/fixo").hasAuthority("ADMIN")
                 .anyRequest().authenticated()  
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);  
