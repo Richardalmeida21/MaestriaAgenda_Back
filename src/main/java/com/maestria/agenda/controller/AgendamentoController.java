@@ -56,11 +56,18 @@ public ResponseEntity<?> listarTodos(@AuthenticationPrincipal UserDetails userDe
     logger.info("🔍 Solicitando todos os agendamentos por {}", userDetails.getUsername());
 
     try {
+        Map<String, Object> response = new HashMap<>();
+        
         if (userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-            // ADMIN pode ver todos os agendamentos
-            List<Agendamento> agendamentos = agendamentoRepository.findAll();
-            logger.info("✅ ADMIN - Retornando {} agendamentos.", agendamentos.size());
-            return ResponseEntity.ok(agendamentos);
+            // ADMIN pode ver todos os agendamentos normais e fixos
+            List<Agendamento> agendamentosNormais = agendamentoRepository.findAll();
+            List<AgendamentoFixo> agendamentosFixos = agendamentoFixoRepository.findAll();
+            
+            response.put("agendamentosNormais", agendamentosNormais);
+            response.put("agendamentosFixos", agendamentosFixos);
+            
+            logger.info("✅ ADMIN - Retornando {} agendamentos normais e {} agendamentos fixos.", 
+                    agendamentosNormais.size(), agendamentosFixos.size());
         } else {
             // PROFISSIONAL pode ver apenas seus próprios agendamentos
             Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
@@ -69,16 +76,25 @@ public ResponseEntity<?> listarTodos(@AuthenticationPrincipal UserDetails userDe
                 return ResponseEntity.status(403).body("Profissional não encontrado.");
             }
             
-            List<Agendamento> agendamentos = agendamentoRepository.findByProfissional(profissional);
-            logger.info("✅ PROFISSIONAL {} - Retornando {} agendamentos", profissional.getNome(), agendamentos.size());
-            return ResponseEntity.ok(agendamentos);
+            // Buscar agendamentos normais do profissional
+            List<Agendamento> agendamentosNormais = agendamentoRepository.findByProfissional(profissional);
+            
+            // Buscar agendamentos fixos do profissional
+            List<AgendamentoFixo> agendamentosFixos = agendamentoFixoRepository.findByProfissional(profissional);
+            
+            response.put("agendamentosNormais", agendamentosNormais);
+            response.put("agendamentosFixos", agendamentosFixos);
+            
+            logger.info("✅ PROFISSIONAL {} - Retornando {} agendamentos normais e {} agendamentos fixos", 
+                    profissional.getNome(), agendamentosNormais.size(), agendamentosFixos.size());
         }
+        
+        return ResponseEntity.ok(response);
     } catch (Exception e) {
         logger.error("❌ Erro ao listar agendamentos", e);
         return ResponseEntity.status(500).body("Erro ao listar agendamentos.");
     }
 }
-
     // ✅ Endpoint para criar agendamentos fixos
 @PostMapping("/fixo")
 public ResponseEntity<?> cadastrarAgendamentoFixo(
