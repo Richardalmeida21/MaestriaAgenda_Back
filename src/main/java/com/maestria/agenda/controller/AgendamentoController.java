@@ -386,39 +386,89 @@ public ResponseEntity<?> cadastrarAgendamentoFixo(
     }
 
     @GetMapping("/comissoes/total/{id}")
-    public ResponseEntity<?> calcularComissaoTotalPorPeriodo(
-            @PathVariable Long id,
-            @RequestParam String dataInicio,
-            @RequestParam String dataFim,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        logger.info("🔍 Solicitando cálculo de comissão total para o profissional {} entre {} e {} por {}",
-                id, dataInicio, dataFim, userDetails.getUsername());
+public ResponseEntity<?> calcularComissaoTotalPorPeriodo(
+        @PathVariable Long id,
+        @RequestParam String dataInicio,
+        @RequestParam String dataFim,
+        @AuthenticationPrincipal UserDetails userDetails) {
+    logger.info("🔍 Solicitando cálculo de comissão total para o profissional {} entre {} e {} por {}",
+            id, dataInicio, dataFim, userDetails.getUsername());
 
-        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-            logger.warn("❌ Tentativa de acesso às comissões sem permissão por {}", userDetails.getUsername());
-            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode acessar as comissões.");
-        }
-
-        try {
-            LocalDate inicio = LocalDate.parse(dataInicio);
-            LocalDate fim = LocalDate.parse(dataFim);
-
-            logger.info("🔍 Parâmetros recebidos: profissionalId={}, dataInicio={}, dataFim={}", id, inicio, fim);
-
-            Double comissaoTotal = agendamentoRepository.calcularComissaoTotalPorPeriodo(
-                    id, inicio, fim, comissaoPercentual / 100);
-
-            if (comissaoTotal == null) {
-                comissaoTotal = 0.0;
-            }
-
-            logger.info("✅ Comissão total calculada: R$ {}", comissaoTotal);
-            return ResponseEntity.ok(Map.of("profissionalId", id, "comissaoTotal", comissaoTotal));
-        } catch (Exception e) {
-            logger.error("❌ Erro ao calcular comissão total", e);
-            return ResponseEntity.status(500).body("Erro ao calcular comissão total.");
-        }
+    if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+        logger.warn("❌ Tentativa de acesso às comissões sem permissão por {}", userDetails.getUsername());
+        return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode acessar as comissões.");
     }
+
+    try {
+        LocalDate inicio = LocalDate.parse(dataInicio);
+        LocalDate fim = LocalDate.parse(dataFim);
+
+        logger.info("🔍 Parâmetros recebidos: profissionalId={}, dataInicio={}, dataFim={}", id, inicio, fim);
+
+        // 1. Calcular comissão dos agendamentos normais
+        Double comissaoAgendamentosNormais = agendamentoRepository.calcularComissaoTotalPorPeriodo(
+                id, inicio, fim, comissaoPercentual / 100);
+
+        if (comissaoAgendamentosNormais == null) {
+            comissaoAgendamentosNormais = 0.0;
+        }
+
+        // 2. Buscar e calcular a comissão dos agendamentos fixos no período
+        Double comissaoAgendamentosFixos = calcularComissaoAgendamentosFixos(id, inicio, fim);
+        
+        // 3. Somar as comissões
+        Double comissaoTotal = comissaoAgendamentosNormais + comissaoAgendamentosFixos;
+
+        logger.info("✅ Comissão total calculada: R$ {} (Agendamentos normais: R$ {}, Agendamentos fixos: R$ {})", 
+                comissaoTotal, comissaoAgendamentosNormais, comissaoAgendamentosFixos);
+                
+        Map<String, Object> response = new HashMap<>();
+        response.put("profissionalId", id);
+        response.put("comissaoTotal", comissaoTotal);
+        response.put("comissaoAgendamentosNormais", comissaoAgendamentosNormais);
+        response.put("comissaoAgendamentosFixos", comissaoAgendamentosFixos);
+
+        return ResponseEntity.ok(response);
+    } catch (Exception e) {
+        logger.error("❌ Erro ao calcular comissão total", e);
+        return ResponseEntity.status(500).body("Erro ao calcular comissão total: " + e.getMessage());
+    }
+}
+
+// Novo método para calcular comissão de agendamentos fixos
+private Double calcularComissaoAgendamentosFixos(Long profissionalId, LocalDate inicio, LocalDate fim) {
+    try {
+        // Buscar o profissional
+        Profissional profissional = profissionalRepository.findById(profissionalId)
+                .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+        
+        // Buscar todos os agendamentos fixos do profissional
+        List<AgendamentoFixo> agendamentosFixos = agendamentoFixoRepository.findByProfissional(profissional);
+        
+        double comissaoTotal = 0.0;
+        
+        // Para cada agendamento fixo
+        for (AgendamentoFixo agendamentoFixo : agendamentosFixos) {
+            int diaDoMes = agendamentoFixo.getDiaDoMes();
+            double valorAgendamento = agendamentoFixo.getValor();
+            
+            // Verificar cada mês no intervalo e contar quantas vezes o dia do mês ocorre
+            LocalDate dataAtual = inicio;
+            while (!dataAtual.isAfter(fim)) {
+                if (dataAtual.getDayOfMonth() == diaDoMes) {
+                    // Dia do agendamento fixo encontrado no período
+                    comissaoTotal += valorAgendamento * (comissaoPercentual / 100);
+                }
+                dataAtual = dataAtual.plusDays(1);
+            }
+        }
+        
+        return comissaoTotal;
+    } catch (Exception e) {
+        logger.error("❌ Erro ao calcular comissão de agendamentos fixos", e);
+        return 0.0;
+    }
+}
 
     // ✅ Apenas ADMIN pode criar agendamentos
     @PostMapping
