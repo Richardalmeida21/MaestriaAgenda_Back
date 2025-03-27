@@ -51,163 +51,164 @@ public class AgendamentoController {
     }
 
     // Método para calcular comissões de agendamentos fixos
-private Double calcularComissaoAgendamentosFixos(Long profissionalId, LocalDate inicio, LocalDate fim) {
-    try {
-        // Buscar o profissional
-        Profissional profissional = profissionalRepository.findById(profissionalId)
-                .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
-        
-        // Buscar todos os agendamentos fixos do profissional
-        List<AgendamentoFixo> agendamentosFixos = agendamentoFixoRepository.findByProfissional(profissional);
-        
-        double comissaoTotal = 0.0;
-        
-        // Para cada agendamento fixo
-        for (AgendamentoFixo agendamentoFixo : agendamentosFixos) {
-            int diaDoMes = agendamentoFixo.getDiaDoMes();
-            double valorAgendamento = agendamentoFixo.getValor();
+    private Double calcularComissaoAgendamentosFixos(Long profissionalId, LocalDate inicio, LocalDate fim) {
+        try {
+            // Buscar o profissional
+            Profissional profissional = profissionalRepository.findById(profissionalId)
+                    .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
             
-            // Verificar cada mês no intervalo e contar quantas vezes o dia do mês ocorre
-            LocalDate dataAtual = inicio;
-            while (!dataAtual.isAfter(fim)) {
-                if (dataAtual.getDayOfMonth() == diaDoMes) {
-                    // Dia do agendamento fixo encontrado no período
-                    comissaoTotal += valorAgendamento * (comissaoPercentual / 100);
-                }
-                dataAtual = dataAtual.plusDays(1);
-            }
-        }
-        
-        return comissaoTotal;
-    } catch (Exception e) {
-        logger.error("❌ Erro ao calcular comissão de agendamentos fixos", e);
-        return 0.0;
-    }
-}
-
-    // ✅ Listar todos os agendamentos - ADMIN pode ver todos
-@GetMapping
-public ResponseEntity<?> listarTodos(@AuthenticationPrincipal UserDetails userDetails) {
-    logger.info("🔍 Solicitando todos os agendamentos por {}", userDetails.getUsername());
-
-    try {
-        Map<String, Object> response = new HashMap<>();
-        
-        if (userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-            // ADMIN pode ver todos os agendamentos normais e fixos
-            List<Agendamento> agendamentosNormais = agendamentoRepository.findAll();
-            List<AgendamentoFixo> agendamentosFixos = agendamentoFixoRepository.findAll();
-            
-            response.put("agendamentosNormais", agendamentosNormais);
-            response.put("agendamentosFixos", agendamentosFixos);
-            
-            logger.info("✅ ADMIN - Retornando {} agendamentos normais e {} agendamentos fixos.", 
-                    agendamentosNormais.size(), agendamentosFixos.size());
-        } else {
-            // PROFISSIONAL pode ver apenas seus próprios agendamentos
-            Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
-            if (profissional == null) {
-                logger.warn("❌ Profissional não encontrado: {}", userDetails.getUsername());
-                return ResponseEntity.status(403).body("Profissional não encontrado.");
-            }
-            
-            // Buscar agendamentos normais do profissional
-            List<Agendamento> agendamentosNormais = agendamentoRepository.findByProfissional(profissional);
-            
-            // Buscar agendamentos fixos do profissional
+            // Buscar todos os agendamentos fixos do profissional
             List<AgendamentoFixo> agendamentosFixos = agendamentoFixoRepository.findByProfissional(profissional);
             
-            response.put("agendamentosNormais", agendamentosNormais);
-            response.put("agendamentosFixos", agendamentosFixos);
+            double comissaoTotal = 0.0;
             
-            logger.info("✅ PROFISSIONAL {} - Retornando {} agendamentos normais e {} agendamentos fixos", 
-                    profissional.getNome(), agendamentosNormais.size(), agendamentosFixos.size());
-        }
-        
-        return ResponseEntity.ok(response);
-    } catch (Exception e) {
-        logger.error("❌ Erro ao listar agendamentos", e);
-        return ResponseEntity.status(500).body("Erro ao listar agendamentos.");
-    }
-}
-    // ✅ Endpoint para criar agendamentos fixos
-@PostMapping("/fixo")
-public ResponseEntity<?> cadastrarAgendamentoFixo(
-        @RequestBody Map<String, Object> requestData,
-        @AuthenticationPrincipal UserDetails userDetails) {
-    if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-        logger.warn("❌ Tentativa de criação de agendamento fixo sem permissão por {}", userDetails.getUsername());
-        return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode criar agendamentos fixos.");
-    }
-
-    try {
-        logger.info("📥 Dados recebidos: {}", requestData);
-        
-        // Validações
-        if (requestData.get("valor") == null) {
-            return ResponseEntity.badRequest()
-                    .body("Erro: O valor do agendamento fixo deve ser informado.");
-        }
-        
-        if (requestData.get("clienteId") == null || requestData.get("profissionalId") == null) {
-            return ResponseEntity.badRequest()
-                    .body("Erro: Cliente e Profissional são obrigatórios.");
-        }
-        
-        if (requestData.get("diaDoMes") == null) {
-            return ResponseEntity.badRequest()
-                    .body("Erro: Dia do mês é obrigatório.");
-        }
-        
-        if (requestData.get("hora") == null) {
-            return ResponseEntity.badRequest()
-                    .body("Erro: Hora é obrigatória.");
-        }
-        
-        if (requestData.get("duracao") == null) {
-            return ResponseEntity.badRequest()
-                    .body("Erro: Duração é obrigatória.");
-        }
-        
-        if (requestData.get("servico") == null) {
-            return ResponseEntity.badRequest()
-                    .body("Erro: Serviço é obrigatório.");
-        }
-
-        // Buscar cliente e profissional
-        Cliente cliente = clienteRepository.findById(Long.valueOf(requestData.get("clienteId").toString()))
-                .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+            // Para cada agendamento fixo
+            for (AgendamentoFixo agendamentoFixo : agendamentosFixos) {
+                int diaDoMes = agendamentoFixo.getDiaDoMes();
+                double valorAgendamento = agendamentoFixo.getValor();
                 
-        Profissional profissional = profissionalRepository.findById(Long.valueOf(requestData.get("profissionalId").toString()))
-                .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+                // Verificar cada mês no intervalo e contar quantas vezes o dia do mês ocorre
+                LocalDate dataAtual = inicio;
+                while (!dataAtual.isAfter(fim)) {
+                    if (dataAtual.getDayOfMonth() == diaDoMes) {
+                        // Dia do agendamento fixo encontrado no período
+                        comissaoTotal += valorAgendamento * (comissaoPercentual / 100);
+                    }
+                    dataAtual = dataAtual.plusDays(1);
+                }
+            }
+            
+            return comissaoTotal;
+        } catch (Exception e) {
+            logger.error("❌ Erro ao calcular comissão de agendamentos fixos", e);
+            return 0.0;
+        }
+    }
 
-        // Criar agendamento fixo
-        AgendamentoFixo agendamentoFixo = new AgendamentoFixo();
-        agendamentoFixo.setCliente(cliente);
-        agendamentoFixo.setProfissional(profissional);
-        agendamentoFixo.setDiaDoMes(Integer.valueOf(requestData.get("diaDoMes").toString()));
-        agendamentoFixo.setHora(LocalTime.parse(requestData.get("hora").toString()));
-        agendamentoFixo.setDuracao(requestData.get("duracao").toString());
-        agendamentoFixo.setObservacao(requestData.get("observacao") != null ? requestData.get("observacao").toString() : null);
-        agendamentoFixo.setValor(Double.valueOf(requestData.get("valor").toString()));
-        
-        // Definir o serviço (usando a enum Servicos)
+    // ✅ Listar todos os agendamentos - ADMIN pode ver todos
+    @GetMapping
+    public ResponseEntity<?> listarTodos(@AuthenticationPrincipal UserDetails userDetails) {
+        logger.info("🔍 Solicitando todos os agendamentos por {}", userDetails.getUsername());
+
         try {
-            agendamentoFixo.setServico(com.maestria.agenda.servicos.Servicos.valueOf(requestData.get("servico").toString()));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest()
-                    .body("Erro: Serviço inválido. Valores permitidos: " + 
-                          Arrays.toString(com.maestria.agenda.servicos.Servicos.values()));
+            Map<String, Object> response = new HashMap<>();
+            
+            if (userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+                // ADMIN pode ver todos os agendamentos normais e fixos
+                List<Agendamento> agendamentosNormais = agendamentoRepository.findAll();
+                List<AgendamentoFixo> agendamentosFixos = agendamentoFixoRepository.findAll();
+                
+                response.put("agendamentosNormais", agendamentosNormais);
+                response.put("agendamentosFixos", agendamentosFixos);
+                
+                logger.info("✅ ADMIN - Retornando {} agendamentos normais e {} agendamentos fixos.", 
+                        agendamentosNormais.size(), agendamentosFixos.size());
+            } else {
+                // PROFISSIONAL pode ver apenas seus próprios agendamentos
+                Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
+                if (profissional == null) {
+                    logger.warn("❌ Profissional não encontrado: {}", userDetails.getUsername());
+                    return ResponseEntity.status(403).body("Profissional não encontrado.");
+                }
+                
+                // Buscar agendamentos normais do profissional
+                List<Agendamento> agendamentosNormais = agendamentoRepository.findByProfissional(profissional);
+                
+                // Buscar agendamentos fixos do profissional
+                List<AgendamentoFixo> agendamentosFixos = agendamentoFixoRepository.findByProfissional(profissional);
+                
+                response.put("agendamentosNormais", agendamentosNormais);
+                response.put("agendamentosFixos", agendamentosFixos);
+                
+                logger.info("✅ PROFISSIONAL {} - Retornando {} agendamentos normais e {} agendamentos fixos", 
+                        profissional.getNome(), agendamentosNormais.size(), agendamentosFixos.size());
+            }
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("❌ Erro ao listar agendamentos", e);
+            return ResponseEntity.status(500).body("Erro ao listar agendamentos.");
+        }
+    }
+
+    // ✅ Endpoint para criar agendamentos fixos
+    @PostMapping("/fixo")
+    public ResponseEntity<?> cadastrarAgendamentoFixo(
+            @RequestBody Map<String, Object> requestData,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            logger.warn("❌ Tentativa de criação de agendamento fixo sem permissão por {}", userDetails.getUsername());
+            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode criar agendamentos fixos.");
         }
 
-        agendamentoFixoRepository.save(agendamentoFixo);
-        logger.info("✅ Agendamento fixo criado com sucesso: {}", agendamentoFixo);
-        return ResponseEntity.ok(agendamentoFixo);
-    } catch (Exception e) {
-        logger.error("❌ Erro ao criar agendamento fixo", e);
-        return ResponseEntity.status(500).body("Erro ao criar agendamento fixo: " + e.getMessage());
+        try {
+            logger.info("📥 Dados recebidos: {}", requestData);
+            
+            // Validações
+            if (requestData.get("valor") == null) {
+                return ResponseEntity.badRequest()
+                        .body("Erro: O valor do agendamento fixo deve ser informado.");
+            }
+            
+            if (requestData.get("clienteId") == null || requestData.get("profissionalId") == null) {
+                return ResponseEntity.badRequest()
+                        .body("Erro: Cliente e Profissional são obrigatórios.");
+            }
+            
+            if (requestData.get("diaDoMes") == null) {
+                return ResponseEntity.badRequest()
+                        .body("Erro: Dia do mês é obrigatório.");
+            }
+            
+            if (requestData.get("hora") == null) {
+                return ResponseEntity.badRequest()
+                        .body("Erro: Hora é obrigatória.");
+            }
+            
+            if (requestData.get("duracao") == null) {
+                return ResponseEntity.badRequest()
+                        .body("Erro: Duração é obrigatória.");
+            }
+            
+            if (requestData.get("servico") == null) {
+                return ResponseEntity.badRequest()
+                        .body("Erro: Serviço é obrigatório.");
+            }
+
+            // Buscar cliente e profissional
+            Cliente cliente = clienteRepository.findById(Long.valueOf(requestData.get("clienteId").toString()))
+                    .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+                    
+            Profissional profissional = profissionalRepository.findById(Long.valueOf(requestData.get("profissionalId").toString()))
+                    .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+
+            // Criar agendamento fixo
+            AgendamentoFixo agendamentoFixo = new AgendamentoFixo();
+            agendamentoFixo.setCliente(cliente);
+            agendamentoFixo.setProfissional(profissional);
+            agendamentoFixo.setDiaDoMes(Integer.valueOf(requestData.get("diaDoMes").toString()));
+            agendamentoFixo.setHora(LocalTime.parse(requestData.get("hora").toString()));
+            agendamentoFixo.setDuracao(requestData.get("duracao").toString());
+            agendamentoFixo.setObservacao(requestData.get("observacao") != null ? requestData.get("observacao").toString() : null);
+            agendamentoFixo.setValor(Double.valueOf(requestData.get("valor").toString()));
+            
+            // Definir o serviço (usando a enum Servicos)
+            try {
+                agendamentoFixo.setServico(com.maestria.agenda.servicos.Servicos.valueOf(requestData.get("servico").toString()));
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest()
+                        .body("Erro: Serviço inválido. Valores permitidos: " + 
+                              Arrays.toString(com.maestria.agenda.servicos.Servicos.values()));
+            }
+
+            agendamentoFixoRepository.save(agendamentoFixo);
+            logger.info("✅ Agendamento fixo criado com sucesso: {}", agendamentoFixo);
+            return ResponseEntity.ok(agendamentoFixo);
+        } catch (Exception e) {
+            logger.error("❌ Erro ao criar agendamento fixo", e);
+            return ResponseEntity.status(500).body("Erro ao criar agendamento fixo: " + e.getMessage());
+        }
     }
-}
 
     // ✅ Endpoint para listar agendamentos fixos
     @GetMapping("/fixo")
@@ -304,7 +305,7 @@ public ResponseEntity<?> cadastrarAgendamentoFixo(
         // Verifica se o usuário é ADMIN ou o próprio profissional
         if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
             Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
-            if (profissional == null || !profissional.getId().equals(id)) { {
+            if (profissional == null || !profissional.getId().equals(id)) {
                 logger.warn("❌ Acesso negado para o profissional {}.", id);
                 return ResponseEntity.status(403).body("Acesso negado.");
             }
@@ -437,126 +438,126 @@ public ResponseEntity<?> cadastrarAgendamentoFixo(
     }
 
     @GetMapping("/comissoes/total/{id}")
-public ResponseEntity<?> calcularComissaoTotalPorPeriodo(
-        @PathVariable Long id,
-        @RequestParam String dataInicio,
-        @RequestParam String dataFim,
-        @AuthenticationPrincipal UserDetails userDetails) {
-    logger.info("🔍 Solicitando cálculo de comissão total para o profissional {} entre {} e {} por {}",
-            id, dataInicio, dataFim, userDetails.getUsername());
+    public ResponseEntity<?> calcularComissaoTotalPorPeriodo(
+            @PathVariable Long id,
+            @RequestParam String dataInicio,
+            @RequestParam String dataFim,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        logger.info("🔍 Solicitando cálculo de comissão total para o profissional {} entre {} e {} por {}",
+                id, dataInicio, dataFim, userDetails.getUsername());
 
-    // Verificar se o usuário é ADMIN ou se é o próprio profissional acessando seus dados
-    boolean isAdmin = userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"));
-    boolean isProfissionalAcessandoPropriosDados = false;
-    
-    if (!isAdmin) {
-        // Verificar se é o próprio profissional acessando seus dados
-        Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
-        if (profissional != null && profissional.getId().equals(id)) {
-            isProfissionalAcessandoPropriosDados = true;
-            logger.info("✅ Profissional {} acessando suas próprias comissões", userDetails.getUsername());
-        }
-    }
-    
-    if (!isAdmin && !isProfissionalAcessandoPropriosDados) {
-        logger.warn("❌ Tentativa de acesso às comissões sem permissão por {}", userDetails.getUsername());
-        return ResponseEntity.status(403).body("Acesso negado. Você pode acessar apenas suas próprias comissões.");
-    }
-
-    try {
-        LocalDate inicio = LocalDate.parse(dataInicio);
-        LocalDate fim = LocalDate.parse(dataFim);
-
-        logger.info("🔍 Parâmetros recebidos: profissionalId={}, dataInicio={}, dataFim={}", id, inicio, fim);
-
-        // 1. Calcular comissão dos agendamentos normais
-        Double comissaoAgendamentosNormais = agendamentoRepository.calcularComissaoTotalPorPeriodo(
-                id, inicio, fim, comissaoPercentual / 100);
-
-        if (comissaoAgendamentosNormais == null) {
-            comissaoAgendamentosNormais = 0.0;
-        }
-
-        // 2. Buscar e calcular a comissão dos agendamentos fixos no período
-        Double comissaoAgendamentosFixos = calcularComissaoAgendamentosFixos(id, inicio, fim);
+        // Verificar se o usuário é ADMIN ou se é o próprio profissional acessando seus dados
+        boolean isAdmin = userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"));
+        boolean isProfissionalAcessandoPropriosDados = false;
         
-        // 3. Somar as comissões
-        Double comissaoTotal = comissaoAgendamentosNormais + comissaoAgendamentosFixos;
+        if (!isAdmin) {
+            // Verificar se é o próprio profissional acessando seus dados
+            Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
+            if (profissional != null && profissional.getId().equals(id)) {
+                isProfissionalAcessandoPropriosDados = true;
+                logger.info("✅ Profissional {} acessando suas próprias comissões", userDetails.getUsername());
+            }
+        }
+        
+        if (!isAdmin && !isProfissionalAcessandoPropriosDados) {
+            logger.warn("❌ Tentativa de acesso às comissões sem permissão por {}", userDetails.getUsername());
+            return ResponseEntity.status(403).body("Acesso negado. Você pode acessar apenas suas próprias comissões.");
+        }
 
-        logger.info("✅ Comissão total calculada: R$ {} (Agendamentos normais: R$ {}, Agendamentos fixos: R$ {})", 
-                comissaoTotal, comissaoAgendamentosNormais, comissaoAgendamentosFixos);
-                
-        Map<String, Object> response = new HashMap<>();
-        response.put("profissionalId", id);
-        response.put("comissaoTotal", comissaoTotal);
-        response.put("comissaoAgendamentosNormais", comissaoAgendamentosNormais);
-        response.put("comissaoAgendamentosFixos", comissaoAgendamentosFixos);
+        try {
+            LocalDate inicio = LocalDate.parse(dataInicio);
+            LocalDate fim = LocalDate.parse(dataFim);
 
-        return ResponseEntity.ok(response);
-    } catch (Exception e) {
-        logger.error("❌ Erro ao calcular comissão total", e);
-        return ResponseEntity.status(500).body("Erro ao calcular comissão total: " + e.getMessage());
+            logger.info("🔍 Parâmetros recebidos: profissionalId={}, dataInicio={}, dataFim={}", id, inicio, fim);
+
+            // 1. Calcular comissão dos agendamentos normais
+            Double comissaoAgendamentosNormais = agendamentoRepository.calcularComissaoTotalPorPeriodo(
+                    id, inicio, fim, comissaoPercentual / 100);
+
+            if (comissaoAgendamentosNormais == null) {
+                comissaoAgendamentosNormais = 0.0;
+            }
+
+            // 2. Buscar e calcular a comissão dos agendamentos fixos no período
+            Double comissaoAgendamentosFixos = calcularComissaoAgendamentosFixos(id, inicio, fim);
+            
+            // 3. Somar as comissões
+            Double comissaoTotal = comissaoAgendamentosNormais + comissaoAgendamentosFixos;
+
+            logger.info("✅ Comissão total calculada: R$ {} (Agendamentos normais: R$ {}, Agendamentos fixos: R$ {})", 
+                    comissaoTotal, comissaoAgendamentosNormais, comissaoAgendamentosFixos);
+                    
+            Map<String, Object> response = new HashMap<>();
+            response.put("profissionalId", id);
+            response.put("comissaoTotal", comissaoTotal);
+            response.put("comissaoAgendamentosNormais", comissaoAgendamentosNormais);
+            response.put("comissaoAgendamentosFixos", comissaoAgendamentosFixos);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("❌ Erro ao calcular comissão total", e);
+            return ResponseEntity.status(500).body("Erro ao calcular comissão total: " + e.getMessage());
+        }
     }
-}
 
     // Novo endpoint para profissionais consultarem suas comissões
-@GetMapping("/minhas-comissoes")
-public ResponseEntity<?> consultarMinhasComissoes(
-        @RequestParam String dataInicio,
-        @RequestParam String dataFim,
-        @AuthenticationPrincipal UserDetails userDetails) {
-    logger.info("🔍 Profissional {} solicitando suas comissões entre {} e {}", 
-            userDetails.getUsername(), dataInicio, dataFim);
-    
-    try {
-        // Buscar o profissional pelo nome de usuário
-        Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
+    @GetMapping("/minhas-comissoes")
+    public ResponseEntity<?> consultarMinhasComissoes(
+            @RequestParam String dataInicio,
+            @RequestParam String dataFim,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        logger.info("🔍 Profissional {} solicitando suas comissões entre {} e {}", 
+                userDetails.getUsername(), dataInicio, dataFim);
         
-        if (profissional == null) {
-            logger.warn("❌ Profissional não encontrado: {}", userDetails.getUsername());
-            return ResponseEntity.status(403).body("Profissional não encontrado.");
+        try {
+            // Buscar o profissional pelo nome de usuário
+            Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
+            
+            if (profissional == null) {
+                logger.warn("❌ Profissional não encontrado: {}", userDetails.getUsername());
+                return ResponseEntity.status(403).body("Profissional não encontrado.");
+            }
+            
+            // Formatar datas
+            LocalDate inicio = LocalDate.parse(dataInicio);
+            LocalDate fim = LocalDate.parse(dataFim);
+            
+            logger.info("🔍 Calculando comissões para profissional ID={}", profissional.getId());
+            
+            // 1. Calcular comissão dos agendamentos normais
+            Double comissaoAgendamentosNormais = agendamentoRepository.calcularComissaoTotalPorPeriodo(
+                    profissional.getId(), inicio, fim, comissaoPercentual / 100);
+            
+            if (comissaoAgendamentosNormais == null) {
+                comissaoAgendamentosNormais = 0.0;
+            }
+            
+            // 2. Buscar e calcular a comissão dos agendamentos fixos no período
+            Double comissaoAgendamentosFixos = calcularComissaoAgendamentosFixos(profissional.getId(), inicio, fim);
+            
+            // 3. Somar as comissões
+            Double comissaoTotal = comissaoAgendamentosNormais + comissaoAgendamentosFixos;
+            
+            logger.info("✅ Comissão total calculada para profissional {}: R$ {}", 
+                    profissional.getNome(), comissaoTotal);
+                    
+            Map<String, Object> response = new HashMap<>();
+            response.put("profissionalId", profissional.getId());
+            response.put("nome", profissional.getNome());
+            response.put("periodo", Map.of(
+                "inicio", dataInicio,
+                "fim", dataFim
+            ));
+            response.put("comissaoTotal", comissaoTotal);
+            response.put("comissaoAgendamentosNormais", comissaoAgendamentosNormais);
+            response.put("comissaoAgendamentosFixos", comissaoAgendamentosFixos);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("❌ Erro ao calcular comissões do profissional", e);
+            return ResponseEntity.status(500).body("Erro ao calcular comissões: " + e.getMessage());
         }
-        
-        // Formatar datas
-        LocalDate inicio = LocalDate.parse(dataInicio);
-        LocalDate fim = LocalDate.parse(dataFim);
-        
-        logger.info("🔍 Calculando comissões para profissional ID={}", profissional.getId());
-        
-        // 1. Calcular comissão dos agendamentos normais
-        Double comissaoAgendamentosNormais = agendamentoRepository.calcularComissaoTotalPorPeriodo(
-                profissional.getId(), inicio, fim, comissaoPercentual / 100);
-        
-        if (comissaoAgendamentosNormais == null) {
-            comissaoAgendamentosNormais = 0.0;
-        }
-        
-        // 2. Buscar e calcular a comissão dos agendamentos fixos no período
-        Double comissaoAgendamentosFixos = calcularComissaoAgendamentosFixos(profissional.getId(), inicio, fim);
-        
-        // 3. Somar as comissões
-        Double comissaoTotal = comissaoAgendamentosNormais + comissaoAgendamentosFixos;
-        
-        logger.info("✅ Comissão total calculada para profissional {}: R$ {}", 
-                profissional.getNome(), comissaoTotal);
-                
-        Map<String, Object> response = new HashMap<>();
-        response.put("profissionalId", profissional.getId());
-        response.put("nome", profissional.getNome());
-        response.put("periodo", Map.of(
-            "inicio", dataInicio,
-            "fim", dataFim
-        ));
-        response.put("comissaoTotal", comissaoTotal);
-        response.put("comissaoAgendamentosNormais", comissaoAgendamentosNormais);
-        response.put("comissaoAgendamentosFixos", comissaoAgendamentosFixos);
-        
-        return ResponseEntity.ok(response);
-    } catch (Exception e) {
-        logger.error("❌ Erro ao calcular comissões do profissional", e);
-        return ResponseEntity.status(500).body("Erro ao calcular comissões: " + e.getMessage());
     }
-}
 
     // ✅ Apenas ADMIN pode criar agendamentos
     @PostMapping
@@ -679,28 +680,28 @@ public ResponseEntity<?> consultarMinhasComissoes(
     }
 
     // ✅ Endpoint para excluir agendamentos fixos
-@DeleteMapping("/fixo/{id}")
-public ResponseEntity<?> excluirAgendamentoFixo(
-        @PathVariable Long id,
-        @AuthenticationPrincipal UserDetails userDetails) {
-    if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-        logger.warn("❌ Tentativa de exclusão de agendamento fixo sem permissão por {}", userDetails.getUsername());
-        return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode excluir agendamentos fixos.");
-    }
-
-    try {
-        if (!agendamentoFixoRepository.existsById(id)) {
-            return ResponseEntity.badRequest().body("Erro: Agendamento fixo não encontrado.");
+    @DeleteMapping("/fixo/{id}")
+    public ResponseEntity<?> excluirAgendamentoFixo(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            logger.warn("❌ Tentativa de exclusão de agendamento fixo sem permissão por {}", userDetails.getUsername());
+            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode excluir agendamentos fixos.");
         }
 
-        agendamentoFixoRepository.deleteById(id);
-        logger.info("✅ Agendamento fixo excluído com sucesso. ID: {}", id);
-        return ResponseEntity.ok("Agendamento fixo excluído com sucesso.");
-    } catch (Exception e) {
-        logger.error("❌ Erro ao excluir agendamento fixo", e);
-        return ResponseEntity.status(500).body("Erro ao excluir agendamento fixo.");
+        try {
+            if (!agendamentoFixoRepository.existsById(id)) {
+                return ResponseEntity.badRequest().body("Erro: Agendamento fixo não encontrado.");
+            }
+
+            agendamentoFixoRepository.deleteById(id);
+            logger.info("✅ Agendamento fixo excluído com sucesso. ID: {}", id);
+            return ResponseEntity.ok("Agendamento fixo excluído com sucesso.");
+        } catch (Exception e) {
+            logger.error("❌ Erro ao excluir agendamento fixo", e);
+            return ResponseEntity.status(500).body("Erro ao excluir agendamento fixo.");
+        }
     }
-}
 
     // ✅ Apenas ADMIN pode excluir agendamentos
     @DeleteMapping("/{id}")
