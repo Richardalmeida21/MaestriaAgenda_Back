@@ -21,9 +21,12 @@ public class AgendamentoFixo {
     @JoinColumn(name = "profissional_id", nullable = false)
     private Profissional profissional;
 
-    private int diaDoMes; // Dia fixo do mês
-    private LocalTime hora; // Horário fixo
-    private String duracao; // Duração no formato ISO-8601 (ex: PT1H30M)
+    @Enumerated(EnumType.STRING)  
+    private Servicos servico;
+
+    private int diaDoMes; 
+    private LocalTime hora; 
+    private String duracao; 
 
     @Column(columnDefinition = "TEXT")
     private String observacao;
@@ -94,5 +97,13 @@ public class AgendamentoFixo {
 
     public void setValor(Double valor) {
         this.valor = valor;
+    }
+    
+    public Servicos getServico() {
+        return servico;
+    }
+
+    public void setServico(Servicos servico) {
+        this.servico = servico;
     }
 }
