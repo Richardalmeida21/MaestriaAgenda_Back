@@ -410,9 +410,22 @@ public ResponseEntity<?> calcularComissaoTotalPorPeriodo(
     logger.info("🔍 Solicitando cálculo de comissão total para o profissional {} entre {} e {} por {}",
             id, dataInicio, dataFim, userDetails.getUsername());
 
-    if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+    // Verificar se o usuário é ADMIN ou se é o próprio profissional acessando seus dados
+    boolean isAdmin = userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"));
+    boolean isProfissionalAcessandoPropriosDados = false;
+    
+    if (!isAdmin) {
+        // Verificar se é o próprio profissional acessando seus dados
+        Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
+        if (profissional != null && profissional.getId().equals(id)) {
+            isProfissionalAcessandoPropriosDados = true;
+            logger.info("✅ Profissional {} acessando suas próprias comissões", userDetails.getUsername());
+        }
+    }
+    
+    if (!isAdmin && !isProfissionalAcessandoPropriosDados) {
         logger.warn("❌ Tentativa de acesso às comissões sem permissão por {}", userDetails.getUsername());
-        return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode acessar as comissões.");
+        return ResponseEntity.status(403).body("Acesso negado. Você pode acessar apenas suas próprias comissões.");
     }
 
     try {
@@ -451,38 +464,62 @@ public ResponseEntity<?> calcularComissaoTotalPorPeriodo(
     }
 }
 
-// Novo método para calcular comissão de agendamentos fixos
-private Double calcularComissaoAgendamentosFixos(Long profissionalId, LocalDate inicio, LocalDate fim) {
+    // Novo endpoint para profissionais consultarem suas comissões
+@GetMapping("/minhas-comissoes")
+public ResponseEntity<?> consultarMinhasComissoes(
+        @RequestParam String dataInicio,
+        @RequestParam String dataFim,
+        @AuthenticationPrincipal UserDetails userDetails) {
+    logger.info("🔍 Profissional {} solicitando suas comissões entre {} e {}", 
+            userDetails.getUsername(), dataInicio, dataFim);
+    
     try {
-        // Buscar o profissional
-        Profissional profissional = profissionalRepository.findById(profissionalId)
-                .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+        // Buscar o profissional pelo nome de usuário
+        Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
         
-        // Buscar todos os agendamentos fixos do profissional
-        List<AgendamentoFixo> agendamentosFixos = agendamentoFixoRepository.findByProfissional(profissional);
-        
-        double comissaoTotal = 0.0;
-        
-        // Para cada agendamento fixo
-        for (AgendamentoFixo agendamentoFixo : agendamentosFixos) {
-            int diaDoMes = agendamentoFixo.getDiaDoMes();
-            double valorAgendamento = agendamentoFixo.getValor();
-            
-            // Verificar cada mês no intervalo e contar quantas vezes o dia do mês ocorre
-            LocalDate dataAtual = inicio;
-            while (!dataAtual.isAfter(fim)) {
-                if (dataAtual.getDayOfMonth() == diaDoMes) {
-                    // Dia do agendamento fixo encontrado no período
-                    comissaoTotal += valorAgendamento * (comissaoPercentual / 100);
-                }
-                dataAtual = dataAtual.plusDays(1);
-            }
+        if (profissional == null) {
+            logger.warn("❌ Profissional não encontrado: {}", userDetails.getUsername());
+            return ResponseEntity.status(403).body("Profissional não encontrado.");
         }
         
-        return comissaoTotal;
+        // Formatar datas
+        LocalDate inicio = LocalDate.parse(dataInicio);
+        LocalDate fim = LocalDate.parse(dataFim);
+        
+        logger.info("🔍 Calculando comissões para profissional ID={}", profissional.getId());
+        
+        // 1. Calcular comissão dos agendamentos normais
+        Double comissaoAgendamentosNormais = agendamentoRepository.calcularComissaoTotalPorPeriodo(
+                profissional.getId(), inicio, fim, comissaoPercentual / 100);
+        
+        if (comissaoAgendamentosNormais == null) {
+            comissaoAgendamentosNormais = 0.0;
+        }
+        
+        // 2. Buscar e calcular a comissão dos agendamentos fixos no período
+        Double comissaoAgendamentosFixos = calcularComissaoAgendamentosFixos(profissional.getId(), inicio, fim);
+        
+        // 3. Somar as comissões
+        Double comissaoTotal = comissaoAgendamentosNormais + comissaoAgendamentosFixos;
+        
+        logger.info("✅ Comissão total calculada para profissional {}: R$ {}", 
+                profissional.getNome(), comissaoTotal);
+                
+        Map<String, Object> response = new HashMap<>();
+        response.put("profissionalId", profissional.getId());
+        response.put("nome", profissional.getNome());
+        response.put("periodo", Map.of(
+            "inicio", dataInicio,
+            "fim", dataFim
+        ));
+        response.put("comissaoTotal", comissaoTotal);
+        response.put("comissaoAgendamentosNormais", comissaoAgendamentosNormais);
+        response.put("comissaoAgendamentosFixos", comissaoAgendamentosFixos);
+        
+        return ResponseEntity.ok(response);
     } catch (Exception e) {
-        logger.error("❌ Erro ao calcular comissão de agendamentos fixos", e);
-        return 0.0;
+        logger.error("❌ Erro ao calcular comissões do profissional", e);
+        return ResponseEntity.status(500).body("Erro ao calcular comissões: " + e.getMessage());
     }
 }
 
