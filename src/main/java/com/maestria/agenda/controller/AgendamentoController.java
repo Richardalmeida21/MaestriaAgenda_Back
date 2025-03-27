@@ -304,7 +304,7 @@ public ResponseEntity<?> cadastrarAgendamentoFixo(
         // Verifica se o usuário é ADMIN ou o próprio profissional
         if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
             Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
-            if (profissional == null || profissional.getId() != id) {
+            if (profissional == null || !profissional.getId().equals(id)) { {
                 logger.warn("❌ Acesso negado para o profissional {}.", id);
                 return ResponseEntity.status(403).body("Acesso negado.");
             }
