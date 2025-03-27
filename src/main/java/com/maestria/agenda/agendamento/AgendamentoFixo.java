@@ -4,6 +4,7 @@ import com.maestria.agenda.cliente.Cliente;
 import com.maestria.agenda.profissional.Profissional;
 import jakarta.persistence.*;
 import java.time.LocalTime;
+import com.maestria.agenda.servicos.Servicos;
 
 @Entity
 @Table(name = "agendamento_fixo")
