@@ -16,10 +16,10 @@ import java.util.Optional;
 @CrossOrigin(origins = "*")
 public class ProfissionalController {
 
-    private final ProfessionalRepository profissionalRepository;
+    private final ProfissionalRepository profissionalRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public ProfessionalController(ProfessionalRepository profissionalRepository,
+    public ProfissionalController(ProfissionalRepository profissionalRepository,
                                  PasswordEncoder passwordEncoder) {
         this.profissionalRepository = profissionalRepository;
         this.passwordEncoder = passwordEncoder;
