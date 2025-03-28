@@ -70,21 +70,20 @@ public class ProfissionalController {
     public ResponseEntity<?> atualizarProfissional(@PathVariable Long id, @Valid @RequestBody Profissional profissionalAtualizado) {
         return profissionalRepository.findById(id)
             .map(profissionalExistente -> {
-                // Atualizar dados do profissional
+                // Atualizar dados do profissional (apenas campos que existem no modelo)
                 profissionalExistente.setNome(profissionalAtualizado.getNome());
                 profissionalExistente.setLogin(profissionalAtualizado.getLogin());
                 
-                // Se houver uma nova senha e ela não estiver vazia, criptografe-a antes de salvar
+                // Se houver uma nova senha e ela não estiver vazia, criptografe-a
                 if (profissionalAtualizado.getSenha() != null && !profissionalAtualizado.getSenha().isEmpty()) {
                     String senhaCriptografada = passwordEncoder.encode(profissionalAtualizado.getSenha());
                     profissionalExistente.setSenha(senhaCriptografada);
                 }
                 
-                // Atualizar outros campos
-                profissionalExistente.setTelefone(profissionalAtualizado.getTelefone());
-                profissionalExistente.setEmail(profissionalAtualizado.getEmail());
-                profissionalExistente.setEspecialidade(profissionalAtualizado.getEspecialidade());
-                profissionalExistente.setPercentualComissao(profissionalAtualizado.getPercentualComissao());
+                // Atualizar o role se fornecido
+                if (profissionalAtualizado.getRole() != null) {
+                    profissionalExistente.setRole(profissionalAtualizado.getRole());
+                }
                 
                 // Salvar as alterações
                 Profissional updated = profissionalRepository.save(profissionalExistente);
