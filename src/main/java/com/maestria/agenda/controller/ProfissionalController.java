@@ -9,16 +9,17 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/profissional")
 @CrossOrigin(origins = "*")
 public class ProfissionalController {
 
-    private final ProfissionalRepository profissionalRepository;
+    private final ProfessionalRepository profissionalRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public ProfissionalController(ProfissionalRepository profissionalRepository,
+    public ProfessionalController(ProfessionalRepository profissionalRepository,
                                  PasswordEncoder passwordEncoder) {
         this.profissionalRepository = profissionalRepository;
         this.passwordEncoder = passwordEncoder;
@@ -42,13 +43,16 @@ public class ProfissionalController {
         return ResponseEntity.ok(profissionalRepository.findAll());
     }
 
-    // ✅ Buscar profissional por ID
+    // ✅ Buscar profissional por ID - Corrigido
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'PROFISSIONAL')")
     public ResponseEntity<?> buscarProfissionalPorId(@PathVariable Long id) {
-        return profissionalRepository.findById(id)
-            .map(ResponseEntity::ok)
-            .orElse(ResponseEntity.status(404).body("❌ Profissional não encontrado!"));
+        Optional<Profissional> profissionalOptional = profissionalRepository.findById(id);
+        if (profissionalOptional.isPresent()) {
+            return ResponseEntity.ok(profissionalOptional.get());
+        } else {
+            return ResponseEntity.status(404).body("❌ Profissional não encontrado!");
+        }
     }
 
     // ✅ Apenas ADMIN pode cadastrar profissionais
@@ -64,32 +68,36 @@ public class ProfissionalController {
         return ResponseEntity.ok(novoProfissional);
     }
 
-    // ✅ Apenas ADMIN pode atualizar profissionais
+    // ✅ Apenas ADMIN pode atualizar profissionais - Corrigido
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<?> atualizarProfissional(@PathVariable Long id, @Valid @RequestBody Profissional profissionalAtualizado) {
-        return profissionalRepository.findById(id)
-            .map(profissionalExistente -> {
-                // Atualizar dados do profissional (apenas campos que existem no modelo)
-                profissionalExistente.setNome(profissionalAtualizado.getNome());
-                profissionalExistente.setLogin(profissionalAtualizado.getLogin());
-                
-                // Se houver uma nova senha e ela não estiver vazia, criptografe-a
-                if (profissionalAtualizado.getSenha() != null && !profissionalAtualizado.getSenha().isEmpty()) {
-                    String senhaCriptografada = passwordEncoder.encode(profissionalAtualizado.getSenha());
-                    profissionalExistente.setSenha(senhaCriptografada);
-                }
-                
-                // Atualizar o role se fornecido
-                if (profissionalAtualizado.getRole() != null) {
-                    profissionalExistente.setRole(profissionalAtualizado.getRole());
-                }
-                
-                // Salvar as alterações
-                Profissional updated = profissionalRepository.save(profissionalExistente);
-                return ResponseEntity.ok(updated);
-            })
-            .orElse(ResponseEntity.status(404).body("❌ Profissional não encontrado!"));
+        Optional<Profissional> profissionalOptional = profissionalRepository.findById(id);
+        
+        if (profissionalOptional.isPresent()) {
+            Profissional profissionalExistente = profissionalOptional.get();
+            
+            // Atualizar dados do profissional
+            profissionalExistente.setNome(profissionalAtualizado.getNome());
+            profissionalExistente.setLogin(profissionalAtualizado.getLogin());
+            
+            // Se houver uma nova senha e ela não estiver vazia, criptografe-a
+            if (profissionalAtualizado.getSenha() != null && !profissionalAtualizado.getSenha().isEmpty()) {
+                String senhaCriptografada = passwordEncoder.encode(profissionalAtualizado.getSenha());
+                profissionalExistente.setSenha(senhaCriptografada);
+            }
+            
+            // Atualizar o role se fornecido
+            if (profissionalAtualizado.getRole() != null) {
+                profissionalExistente.setRole(profissionalAtualizado.getRole());
+            }
+            
+            // Salvar as alterações
+            Profissional updated = profissionalRepository.save(profissionalExistente);
+            return ResponseEntity.ok(updated);
+        } else {
+            return ResponseEntity.status(404).body("❌ Profissional não encontrado!");
+        }
     }
 
     // ✅ Apenas ADMIN pode excluir profissionais
