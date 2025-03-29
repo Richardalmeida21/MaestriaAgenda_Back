@@ -761,4 +761,32 @@ public ResponseEntity<?> atualizarAgendamento(
         logger.info("✅ Agendamento excluído com sucesso. ID: {}", id);
         return ResponseEntity.ok("Agendamento excluído com sucesso.");
     }
+
+private boolean verificarConflitoComAgendamentosFixos(
+        Profissional profissional,
+        LocalDate data,
+        LocalTime horaInicio,
+        LocalTime horaFim) {
+    
+    // Obter o dia do mês para verificar agendamentos fixos
+    int diaDoMes = data.getDayOfMonth();
+    
+    // Buscar agendamentos fixos para este profissional neste dia do mês
+    List<AgendamentoFixo> agendamentosFixos = agendamentoFixoRepository.findByProfissionalAndDiaDoMes(
+            profissional, diaDoMes);
+    
+    // Verificar se há sobreposição de horários com algum agendamento fixo
+    for (AgendamentoFixo agendamentoFixo : agendamentosFixos) {
+        LocalTime fixoHoraInicio = agendamentoFixo.getHora();
+        LocalTime fixoHoraFim = fixoHoraInicio.plus(Duration.parse(agendamentoFixo.getDuracao()));
+        
+        // Verifica se há sobreposição de horários
+        if (horaInicio.isBefore(fixoHoraFim) && horaFim.isAfter(fixoHoraInicio)) {
+            logger.warn("⚠️ Conflito de horário detectado com agendamento fixo: {}", agendamentoFixo);
+            return true;
+        }
+    }
+    
+    return false;
+}
 }
