@@ -12,6 +12,4 @@ public interface AgendamentoFixoRepository extends JpaRepository<AgendamentoFixo
     // Busca agendamentos fixos pelo profissional e dia do mês
     List<AgendamentoFixo> findByProfissionalAndDiaDoMes(Profissional profissional, int diaDoMes);
     List<AgendamentoFixo> findByProfissional(Profissional profissional);
-    // Adicione isto ao AgendamentoFixoRepository
-    List<AgendamentoFixo> findByProfissionalAndDiaDoMes(Profissional profissional, int diaDoMes);
 }
