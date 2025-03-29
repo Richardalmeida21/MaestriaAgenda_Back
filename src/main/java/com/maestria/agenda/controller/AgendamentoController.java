@@ -559,63 +559,6 @@ public class AgendamentoController {
         }
     }
 
-    /**
- * Endpoint para verificar se há conflito de horário
- */
-@GetMapping("/verificar-conflito")
-public ResponseEntity<?> verificarConflito(
-        @RequestParam Long profissionalId,
-        @RequestParam String data,
-        @RequestParam String hora,
-        @RequestParam String duracao,
-        @RequestParam(required = false) Long agendamentoId) {
-    
-    try {
-        Profissional profissional = profissionalRepository.findById(profissionalId)
-                .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
-        
-        LocalDate dataFormatada = LocalDate.parse(data);
-        LocalTime horaInicio = LocalTime.parse(hora);
-        Duration duracaoParsed = Duration.parse(duracao);
-        LocalTime horaFim = horaInicio.plus(duracaoParsed);
-        
-        // Verifica conflitos com agendamentos normais
-        boolean temConflitoNormal = false;
-        List<Agendamento> agendamentosExistentes = agendamentoRepository
-                .findByProfissionalAndData(profissional, dataFormatada);
-        
-        if (agendamentoId != null) {
-            // Se estivermos verificando para atualização, excluir o próprio agendamento
-            agendamentosExistentes = agendamentosExistentes.stream()
-                    .filter(a -> !a.getId().equals(agendamentoId))
-                    .toList();
-        }
-        
-        for (Agendamento agendamentoExistente : agendamentosExistentes) {
-            LocalTime existenteHoraInicio = agendamentoExistente.getHora();
-            LocalTime existenteHoraFim = existenteHoraInicio.plus(agendamentoExistente.getDuracao());
-            
-            if (horaInicio.isBefore(existenteHoraFim) && horaFim.isAfter(existenteHoraInicio)) {
-                temConflitoNormal = true;
-                break;
-            }
-        }
-        
-        // Verifica conflitos com agendamentos fixos
-        boolean temConflitoFixo = verificarConflitoComAgendamentosFixos(
-                profissional, dataFormatada, horaInicio, horaFim);
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("temConflito", temConflitoNormal || temConflitoFixo);
-        response.put("conflitoNormal", temConflitoNormal);
-        response.put("conflitoFixo", temConflitoFixo);
-        
-        return ResponseEntity.ok(response);
-    } catch (Exception e) {
-        logger.error("❌ Erro ao verificar conflito", e);
-        return ResponseEntity.status(500).body("Erro ao verificar conflito: " + e.getMessage());
-    }
-}
 
     // ✅ Apenas ADMIN pode criar agendamentos
 @PostMapping
