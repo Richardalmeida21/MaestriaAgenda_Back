@@ -6,7 +6,7 @@ import java.time.Duration;
 import java.util.Objects;
 import com.maestria.agenda.cliente.Cliente;
 import com.maestria.agenda.profissional.Profissional;
-import com.maestria.agenda.servicos.Servicos;
+import com.maestria.agenda.servico.Servico; 
 import jakarta.persistence.*;
 
 @Entity
@@ -15,7 +15,7 @@ public class Agendamento {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id; // Tipo Long (classe wrapper)
+    private Long id;
 
     @ManyToOne
     @JoinColumn(name = "cliente_id", nullable = false)
@@ -25,29 +25,31 @@ public class Agendamento {
     @JoinColumn(name = "profissional_id", nullable = false)
     private Profissional profissional;
 
-    @Enumerated(EnumType.STRING)
-    private Servicos servico;
+    // Alteração: ManyToOne em vez de Enum
+    @ManyToOne
+    @JoinColumn(name = "servico_id", nullable = false)
+    private Servico servico;
 
     private LocalDate data;
     private LocalTime hora;
 
-    @Convert(converter = DurationConverter.class) // Aplica o conversor
+    @Convert(converter = DurationConverter.class)
     private Duration duracao;
 
     @Column(columnDefinition = "TEXT")
     private String observacao;
 
     @Column(nullable = false)
-private Double valor;
+    private Double valor;
 
     // Construtor com DadosCadastroAgendamento
-    public Agendamento(DadosCadastroAgendamento dados, Cliente cliente, Profissional profissional) {
+    public Agendamento(DadosCadastroAgendamento dados, Cliente cliente, Profissional profissional, Servico servico) {
         this.cliente = cliente;
         this.profissional = profissional;
-        this.servico = dados.servico();
+        this.servico = servico;
         this.data = dados.data();
         this.hora = dados.hora();
-        this.duracao = Duration.parse(dados.duracao()); // Converte a string para Duration
+        this.duracao = Duration.parse(dados.duracao());
         this.observacao = dados.observacao();
         this.valor = dados.valor();
     }
@@ -55,12 +57,12 @@ private Double valor;
     // Construtor padrão necessário para o JPA
     public Agendamento() {}
 
-    // Getters e Setters
-    public Long getId() { // Retorna Long, não long
+    // Getters e Setters - atualizados para Servico
+    public Long getId() {
         return id;
     }
 
-    public void setId(Long id) { // Aceita Long, não long
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -80,11 +82,11 @@ private Double valor;
         this.profissional = profissional;
     }
 
-    public Servicos getServico() {
+    public Servico getServico() {
         return servico;
     }
 
-    public void setServico(Servicos servico) {
+    public void setServico(Servico servico) {
         this.servico = servico;
     }
 
@@ -143,12 +145,12 @@ private Double valor;
                 "id=" + id +
                 ", cliente=" + cliente +
                 ", profissional=" + profissional +
-                ", servico=" + servico +
+                ", servico=" + (servico != null ? servico.getNome() : "null") +
                 ", data=" + data +
                 ", hora=" + hora +
-                ", duracao=" + getDuracaoFormatada() + // Usando o método formatado
+                ", duracao=" + getDuracaoFormatada() +
                 ", observacao='" + observacao + '\'' +
-                '}';
+                "}";
     }
 
     @Override
@@ -156,10 +158,10 @@ private Double valor;
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Agendamento that = (Agendamento) o;
-        return Objects.equals(id, that.id) && // Usando Objects.equals para comparar Long
+        return Objects.equals(id, that.id) &&
                 Objects.equals(cliente, that.cliente) &&
                 Objects.equals(profissional, that.profissional) &&
-                servico == that.servico &&
+                Objects.equals(servico, that.servico) &&
                 Objects.equals(data, that.data) &&
                 Objects.equals(hora, that.hora) &&
                 Objects.equals(duracao, that.duracao) &&
