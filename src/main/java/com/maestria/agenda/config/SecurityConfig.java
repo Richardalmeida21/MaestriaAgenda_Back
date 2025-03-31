@@ -20,7 +20,8 @@ import java.util.List;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter)
+            throws Exception {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))  
             .csrf(csrf -> csrf.disable())  
@@ -31,9 +32,11 @@ public class SecurityConfig {
                 .requestMatchers("/auth/me", "/agendamento/**").hasAnyAuthority("ADMIN", "PROFISSIONAL") 
                 .requestMatchers("/cliente/**").hasAuthority("ADMIN") 
                 .requestMatchers("/profissional/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")  
+                .requestMatchers("/servico/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+                .requestMatchers("/bloqueio/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
                 .requestMatchers("/agendamento/metricas").hasAuthority("ADMIN")
-                .requestMatchers("/agendamento/comissoes/total").hasAuthority("ADMIN")
-                .requestMatchers("/agendamento/fixo").hasAuthority("ADMIN")
+                .requestMatchers("/agendamento/comissoes/total/**").hasAuthority("ADMIN")
+                .requestMatchers("/agendamento/fixo/**").hasAuthority("ADMIN")
                 .anyRequest().authenticated()  
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);  
@@ -42,23 +45,25 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
-        return authenticationConfiguration.getAuthenticationManager();  
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration)
+            throws Exception {
+        return authenticationConfiguration.getAuthenticationManager();
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();  
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.setAllowedOrigins(List.of("*")); 
+        // Configuração para desenvolvimento e produção
+        corsConfig.setAllowedOrigins(List.of("http://localhost:8080", "https://maestria-agenda.netlify.app"));
         corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        corsConfig.setAllowedHeaders(List.of("*"));  
+        corsConfig.setAllowedHeaders(List.of("*"));
         corsConfig.setExposedHeaders(List.of("Authorization"));
-        corsConfig.setAllowCredentials(false); 
+        corsConfig.setAllowCredentials(false);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", corsConfig);
