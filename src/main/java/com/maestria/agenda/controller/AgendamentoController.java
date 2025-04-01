@@ -434,18 +434,14 @@ public ResponseEntity<?> listarPorData(@RequestParam String data,
                 case DIARIA:
                     return true;
                 case SEMANAL:
-                    if (fix.getValorRepeticao() != null) {
-                        // Considera que para agendamentos semanais, 'valorRepeticao' é um bit mask;
-                        // verifica se o bit referente ao dia atual está setado
-                        return (fix.getValorRepeticao() & (1 << (dayOfWeek - 1))) != 0;
-                    }
-                    return false;
+                    // Para agendamentos semanais, assume-se que 'valorRepeticao' representa um bit mask
+                    return (fix.getValorRepeticao() & (1 << (dayOfWeek - 1))) != 0;
                 case MENSAL:
-                    if (fix.getValorRepeticao() != null && fix.getValorRepeticao() == -1) {
+                    if (fix.getValorRepeticao() == -1) {
                         // Valor -1 indica o último dia do mês
                         return isLastDayOfMonth;
                     }
-                    return fix.getDiaDoMes() != null && fix.getDiaDoMes().equals(currentDay);
+                    return fix.getDiaDoMes() == currentDay;
                 default:
                     return false;
             }
