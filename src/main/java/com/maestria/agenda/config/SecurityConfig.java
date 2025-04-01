@@ -23,23 +23,27 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter)
             throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))  
-            .csrf(csrf -> csrf.disable())  
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))  
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/ping").permitAll() 
-                .requestMatchers("/auth/login", "/auth/register", "/public/**", "/generate-password").permitAll() 
-                .requestMatchers("/auth/me", "/agendamento/**").hasAnyAuthority("ADMIN", "PROFISSIONAL") 
-                .requestMatchers("/cliente/**").hasAuthority("ADMIN") 
-                .requestMatchers("/profissional/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")  
-                .requestMatchers("/servico/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
-                .requestMatchers("/bloqueio/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
-                .requestMatchers("/agendamento/metricas").hasAuthority("ADMIN")
-                .requestMatchers("/agendamento/comissoes/total/**").hasAuthority("ADMIN")
-                .requestMatchers("/agendamento/fixo/**").hasAuthority("ADMIN")
-                .anyRequest().authenticated()  
-            )
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);  
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/ping").permitAll()
+                        .requestMatchers("/auth/login", "/auth/register", "/public/**", "/generate-password")
+                        .permitAll()
+                        .requestMatchers("/auth/me", "/agendamento/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+                        .requestMatchers("/cliente/**").hasAuthority("ADMIN")
+                        .requestMatchers("/profissional/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+                        .requestMatchers("/servico/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+                        .requestMatchers("/bloqueio/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+                        .requestMatchers("/agendamento/metricas").hasAuthority("ADMIN")
+                        .requestMatchers("/agendamento/comissoes/total/**").hasAuthority("ADMIN")
+                        .requestMatchers("/agendamento/fixo/**").hasAuthority("ADMIN")
+                        .requestMatchers("/financeiro/comissoes").hasAuthority("ADMIN")
+                        .requestMatchers("/financeiro/comissoes/profissional/**")
+                        .hasAnyAuthority("ADMIN", "PROFISSIONAL")
+                        .requestMatchers("/financeiro/comissoes/minhas").hasAuthority("PROFISSIONAL")
+                        .anyRequest().authenticated())
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

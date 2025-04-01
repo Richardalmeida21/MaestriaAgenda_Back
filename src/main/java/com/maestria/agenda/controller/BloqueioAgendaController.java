@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/bloqueio")
@@ -40,75 +41,89 @@ public class BloqueioAgendaController {
      * PROFISSIONAL pode bloquear apenas sua própria agenda
      */
     @PostMapping
-    public ResponseEntity<?> cadastrarBloqueio(
-            @RequestBody DadosCadastroBloqueio dados,
-            @AuthenticationPrincipal UserDetails userDetails) {
+public ResponseEntity<?> cadastrarBloqueio(
+        @RequestBody Map<String, Object> rawData,
+        @AuthenticationPrincipal UserDetails userDetails) {
+
+    logger.info("🔍 Solicitação para criar bloqueio de agenda por: {}", userDetails.getUsername());
+
+    try {
+        // Parse manual dos dados do request
+        Long profissionalId = Long.valueOf(rawData.get("profissionalId").toString());
+        LocalDate dataInicio = LocalDate.parse((String) rawData.get("dataInicio"));
+        LocalDate dataFim = rawData.get("dataFim") != null ? 
+                          LocalDate.parse((String) rawData.get("dataFim")) : 
+                          dataInicio;
         
-        logger.info("🔍 Solicitação para criar bloqueio de agenda por: {}", userDetails.getUsername());
+        boolean diaTodo = Boolean.parseBoolean(rawData.get("diaTodo").toString());
         
-        try {
-            boolean isAdmin = userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"));
-            Profissional profissional;
-            
-            if (isAdmin) {
-                // Admin pode bloquear para qualquer profissional
-                profissional = profissionalRepository.findById(dados.profissionalId())
-                        .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
-                logger.info("✅ ADMIN criando bloqueio para o profissional: {}", profissional.getNome());
-            } else {
-                // Profissional só pode bloquear para si mesmo
-                profissional = profissionalRepository.findByLogin(userDetails.getUsername());
-                if (profissional == null) {
-                    logger.warn("❌ Profissional não encontrado para o usuário: {}", userDetails.getUsername());
-                    return ResponseEntity.status(403).body("Profissional não encontrado.");
-                }
-                
-                // Verificar se o profissionalId no request corresponde ao profissional logado
-                if (!Long.valueOf(profissional.getId()).equals(dados.profissionalId())) {
-                    logger.warn("❌ Profissional tentando criar bloqueio para outro profissional: {}",
-                            dados.profissionalId());
-                    return ResponseEntity.status(403).body("Você só pode bloquear sua própria agenda.");
-                }
-                logger.info("✅ PROFISSIONAL {} bloqueando sua própria agenda", profissional.getNome());
-            }
-            
-            // Validar datas e horários
-            if (dados.dataFim().isBefore(dados.dataInicio())) {
-                return ResponseEntity.badRequest().body("A data final não pode ser anterior à data inicial.");
-            }
-            
-            // Se não for dia todo, validar horários
-            if (!dados.diaTodo()) {
-                if (dados.horaInicio() == null || dados.horaFim() == null) {
-                    return ResponseEntity.badRequest().body("Horário de início e fim são obrigatórios quando não é dia todo.");
-                }
-                
-                if (dados.horaFim().isBefore(dados.horaInicio())) {
-                    return ResponseEntity.badRequest().body("A hora final não pode ser anterior à hora inicial.");
-                }
-            }
-            
-            // Criar o bloqueio
-            BloqueioAgenda bloqueio = new BloqueioAgenda(
-                    profissional,
-                    dados.dataInicio(),
-                    dados.dataFim(),
-                    dados.diaTodo() ? LocalTime.of(0, 0) : dados.horaInicio(),
-                    dados.diaTodo() ? LocalTime.of(23, 59, 59) : dados.horaFim(),
-                    dados.diaTodo(),
-                    dados.motivo()
-            );
-            
-            bloqueioRepository.save(bloqueio);
-            
-            String usuarioTipo = isAdmin ? "ADMIN" : "PROFISSIONAL";
-            logger.info("✅ Bloqueio de agenda criado com sucesso por {}: {}", usuarioTipo, bloqueio);
-            return ResponseEntity.ok(bloqueio);
-        } catch (Exception e) {
-            logger.error("❌ Erro ao criar bloqueio de agenda", e);
-            return ResponseEntity.status(500).body("Erro ao criar bloqueio de agenda: " + e.getMessage());
+        LocalTime horaInicio = null;
+        LocalTime horaFim = null;
+        
+        if (!diaTodo) {
+            horaInicio = LocalTime.parse((String) rawData.get("horaInicio"));
+            horaFim = LocalTime.parse((String) rawData.get("horaFim"));
+        } else {
+            horaInicio = LocalTime.of(0, 0);
+            horaFim = LocalTime.of(23, 59, 59);
         }
+        
+        String motivo = (String) rawData.get("motivo");
+
+        // Verificação de segurança (código existente)...
+        boolean isAdmin = userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"));
+        Profissional profissional;
+
+        if (isAdmin) {
+            // Admin pode bloquear para qualquer profissional
+            profissional = profissionalRepository.findById(profissionalId)
+                    .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+            logger.info("✅ ADMIN criando bloqueio para o profissional: {}", profissional.getNome());
+        } else {
+            // Profissional só pode bloquear para si mesmo
+            profissional = profissionalRepository.findByLogin(userDetails.getUsername());
+            if (profissional == null) {
+                logger.warn("❌ Profissional não encontrado para o usuário: {}", userDetails.getUsername());
+                return ResponseEntity.status(403).body("Profissional não encontrado.");
+            }
+            
+            // Verificar se o profissionalId no request corresponde ao profissional logado
+            if (!Long.valueOf(profissional.getId()).equals(profissionalId)) {
+                logger.warn("❌ Profissional tentando criar bloqueio para outro profissional: {}",
+                        profissionalId);
+                return ResponseEntity.status(403).body("Você só pode criar bloqueios para sua própria agenda.");
+            }
+            logger.info("✅ Profissional {} criando bloqueio para si mesmo", profissional.getNome());
+        }
+
+        // Criar um novo bloqueio de agenda
+        BloqueioAgenda bloqueio = new BloqueioAgenda();
+        bloqueio.setProfissional(profissional);
+        bloqueio.setDataInicio(dataInicio);
+        bloqueio.setDataFim(dataFim);
+        bloqueio.setDiaTodo(diaTodo);
+        bloqueio.setMotivo(motivo);
+        bloqueio.setHoraInicio(horaInicio);
+        bloqueio.setHoraFim(horaFim);
+        
+        if (dataFim.isBefore(dataInicio)) {
+            return ResponseEntity.badRequest().body("A data final não pode ser anterior à data inicial.");
+        }
+        
+        if (!diaTodo && horaFim.isBefore(horaInicio)) {
+            return ResponseEntity.badRequest().body("O horário final não pode ser anterior ao horário inicial.");
+        }
+        
+        // Salvar o bloqueio
+        bloqueioRepository.save(bloqueio);
+        
+        logger.info("✅ Bloqueio de agenda criado com sucesso: {}", bloqueio);
+        return ResponseEntity.ok(bloqueio);
+    } catch (Exception e) {
+        logger.error("❌ Erro ao criar bloqueio de agenda", e);
+        return ResponseEntity.status(500).body("Erro ao criar bloqueio de agenda: " + e.getMessage());
     }
+}
     
     /**
      * Lista todos os bloqueios de agenda

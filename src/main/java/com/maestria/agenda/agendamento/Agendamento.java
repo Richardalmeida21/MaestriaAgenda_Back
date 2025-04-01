@@ -25,7 +25,6 @@ public class Agendamento {
     @JoinColumn(name = "profissional_id", nullable = false)
     private Profissional profissional;
 
-    // Alteração: ManyToOne em vez de Enum
     @ManyToOne
     @JoinColumn(name = "servico_id", nullable = false)
     private Servico servico;
@@ -33,14 +32,12 @@ public class Agendamento {
     private LocalDate data;
     private LocalTime hora;
 
-    @Convert(converter = DurationConverter.class)
-    private Duration duracao;
+    // Removemos o campo duracao, pois será obtido do serviço
 
     @Column(columnDefinition = "TEXT")
     private String observacao;
 
-    @Column(nullable = false)
-    private Double valor;
+    // Removemos o campo valor, pois será obtido do serviço
 
     // Construtor com DadosCadastroAgendamento
     public Agendamento(DadosCadastroAgendamento dados, Cliente cliente, Profissional profissional, Servico servico) {
@@ -49,15 +46,13 @@ public class Agendamento {
         this.servico = servico;
         this.data = dados.data();
         this.hora = dados.hora();
-        this.duracao = Duration.parse(dados.duracao());
         this.observacao = dados.observacao();
-        this.valor = dados.valor();
     }
 
     // Construtor padrão necessário para o JPA
     public Agendamento() {}
 
-    // Getters e Setters - atualizados para Servico
+    // Getters e Setters - atualizados para refletir as mudanças
     public Long getId() {
         return id;
     }
@@ -106,13 +101,11 @@ public class Agendamento {
         this.hora = hora;
     }
 
+    // Método para obter a duração diretamente do serviço
     public Duration getDuracao() {
-        return duracao;
+        return servico != null ? servico.getDuracaoAsObject() : null;
     }
 
-    public void setDuracao(Duration duracao) {
-        this.duracao = duracao;
-    }
 
     public String getObservacao() {
         return observacao;
@@ -122,16 +115,14 @@ public class Agendamento {
         this.observacao = observacao;
     }
 
+    // Método para obter o valor diretamente do serviço
     public Double getValor() {
-        return valor;
-    }
-    
-    public void setValor(Double valor) {
-        this.valor = valor;
+        return servico != null ? servico.getValor() : null;
     }
 
     // Método para formatar a duração
     public String getDuracaoFormatada() {
+        Duration duracao = getDuracao();
         if (duracao == null) {
             return "0 min";
         }
@@ -164,12 +155,11 @@ public class Agendamento {
                 Objects.equals(servico, that.servico) &&
                 Objects.equals(data, that.data) &&
                 Objects.equals(hora, that.hora) &&
-                Objects.equals(duracao, that.duracao) &&
                 Objects.equals(observacao, that.observacao);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, cliente, profissional, servico, data, hora, duracao, observacao);
+        return Objects.hash(id, cliente, profissional, servico, data, hora, observacao);
     }
 }

@@ -29,7 +29,6 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Arrays;
 
 @RestController
 @RequestMapping("/agendamento")
@@ -46,116 +45,6 @@ public class AgendamentoController {
 
     @Value("${comissao.percentual}")
     private double comissaoPercentual;
-
-    // Método auxiliar para calcular comissão de agendamentos fixos
-    private Double calcularComissaoAgendamentosFixos(Long profissionalId, LocalDate inicio, LocalDate fim) {
-        logger.info("🔍 Calculando comissão de agendamentos fixos para o profissional {} entre {} e {}",
-                profissionalId, inicio, fim);
-
-        try {
-            // Buscar o profissional
-            Profissional profissional = profissionalRepository.findById(profissionalId)
-                    .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
-
-            // Buscar agendamentos fixos ativos no período
-            List<AgendamentoFixo> agendamentosFixos = agendamentoFixoRepository.findByProfissional(profissional)
-                    .stream()
-                    .filter(af -> af.getDataInicio().compareTo(fim) <= 0 &&
-                            (af.getDataFim() == null || af.getDataFim().compareTo(inicio) >= 0))
-                    .toList();
-
-            // Calcular comissão
-            Double comissaoTotal = 0.0;
-            for (AgendamentoFixo agendamentoFixo : agendamentosFixos) {
-                // Considerar apenas os dias que o agendamento fixo seria executado no período
-                int diasExecutados = calcularDiasExecutadosNoPeriodo(agendamentoFixo, inicio, fim);
-
-                // Calcular comissão para este agendamento fixo
-                Double valorComissao = agendamentoFixo.getValor() * (comissaoPercentual / 100) * diasExecutados;
-                comissaoTotal += valorComissao;
-            }
-
-            logger.info("✅ Comissão de agendamentos fixos calculada: R$ {}", comissaoTotal);
-            return comissaoTotal;
-        } catch (Exception e) {
-            logger.error("❌ Erro ao calcular comissão de agendamentos fixos", e);
-            return 0.0; // Em caso de erro, retorna zero
-        }
-    }
-
-    // Método auxiliar para calcular quantas vezes um agendamento fixo seria
-    // executado em um período
-    private int calcularDiasExecutadosNoPeriodo(AgendamentoFixo agendamento, LocalDate inicio, LocalDate fim) {
-        int diasExecutados = 0;
-
-        // Ajustar início e fim para não ultrapassar os limites do agendamento fixo
-        LocalDate inicioEfetivo = inicio.isBefore(agendamento.getDataInicio()) ? agendamento.getDataInicio() : inicio;
-
-        LocalDate fimEfetivo = (agendamento.getDataFim() != null && fim.isAfter(agendamento.getDataFim()))
-                ? agendamento.getDataFim()
-                : fim;
-
-        // Se o período não é válido, retorna 0
-        if (inicioEfetivo.isAfter(fimEfetivo)) {
-            return 0;
-        }
-
-        // Calcular baseado no tipo de repetição
-        switch (agendamento.getTipoRepeticao()) {
-            case DIARIA:
-                // Para repetição diária, calcular quantos dias no intervalo são execuções
-                // válidas
-                long totalDias = fimEfetivo.toEpochDay() - inicioEfetivo.toEpochDay() + 1;
-                diasExecutados = (int) (totalDias / agendamento.getIntervaloRepeticao());
-                break;
-
-            case SEMANAL:
-                // Para repetição semanal, contar semanas e verificar o dia da semana
-                LocalDate atual = inicioEfetivo;
-                while (!atual.isAfter(fimEfetivo)) {
-                    // Verificar se o dia da semana corresponde ao valorRepeticao
-                    if (atual.getDayOfWeek().getValue() == agendamento.getValorRepeticao()) {
-                        // Verificar se a semana está no intervalo correto
-                        long semanasDesdoInicio = (atual.toEpochDay() - agendamento.getDataInicio().toEpochDay()) / 7;
-                        if (semanasDesdoInicio % agendamento.getIntervaloRepeticao() == 0) {
-                            diasExecutados++;
-                        }
-                    }
-                    atual = atual.plusDays(1);
-                }
-                break;
-
-            case MENSAL:
-                // Para repetição mensal, verificar cada mês no período
-                LocalDate atualMensal = inicioEfetivo;
-                while (!atualMensal.isAfter(fimEfetivo)) {
-                    boolean executa = false;
-
-                    // Verificar se é o último dia do mês quando valorRepeticao é -1
-                    if (agendamento.getValorRepeticao() == -1) {
-                        executa = atualMensal.getDayOfMonth() == atualMensal.getMonth().length(atualMensal.isLeapYear());
-                    }
-                    // Verificar se é o dia específico do mês
-                    else if (atualMensal.getDayOfMonth() == agendamento.getValorRepeticao()) {
-                        executa = true;
-                    }
-
-                    if (executa) {
-                        // Verificar se o mês está no intervalo correto
-                        int mesesDesdoInicio = (atualMensal.getYear() - agendamento.getDataInicio().getYear()) * 12 +
-                                atualMensal.getMonthValue() - agendamento.getDataInicio().getMonthValue();
-                        if (mesesDesdoInicio % agendamento.getIntervaloRepeticao() == 0) {
-                            diasExecutados++;
-                        }
-                    }
-
-                    atualMensal = atualMensal.plusDays(1);
-                }
-                break;
-        }
-
-        return diasExecutados;
-    }
 
     public AgendamentoController(AgendamentoRepository agendamentoRepository,
             AgendamentoFixoRepository agendamentoFixoRepository,
@@ -205,11 +94,23 @@ public class AgendamentoController {
             agendamentoFixo.setDataInicio(dados.dataInicio());
             agendamentoFixo.setDataFim(dados.dataFim());
             agendamentoFixo.setHora(dados.hora());
-            agendamentoFixo.setDuracao(dados.duracao());
             agendamentoFixo.setObservacao(dados.observacao());
-            agendamentoFixo.setValor(dados.valor());
 
+            // Para agendamentos mensais, usar o valorRepeticao como diaDoMes se não for
+            // fornecido
+            // Cerca da linha 101
+            // Para agendamentos mensais, usar o valorRepeticao como diaDoMes se não for
+            // fornecido
+            if (dados.tipoRepeticao() == AgendamentoFixo.TipoRepeticao.MENSAL) {
+                agendamentoFixo.setDiaDoMes(dados.diaDoMes() != null ? dados.diaDoMes() : dados.valorRepeticao());
+            } else {
+                // Para outros tipos de repetição, usar o primeiro dia do mês como padrão
+                agendamentoFixo.setDiaDoMes(1); // Valor padrão para não-nulo
+            }
+
+            // Salvar o agendamento fixo
             agendamentoFixoRepository.save(agendamentoFixo);
+
             logger.info("✅ Agendamento fixo criado com sucesso: {}", agendamentoFixo);
             return ResponseEntity.ok(agendamentoFixo);
         } catch (Exception e) {
@@ -339,9 +240,7 @@ public class AgendamentoController {
         agendamento.setServico(agendamentoFixo.getServico());
         agendamento.setData(data);
         agendamento.setHora(agendamentoFixo.getHora());
-        agendamento.setDuracao(Duration.parse(agendamentoFixo.getDuracao()));
         agendamento.setObservacao(agendamentoFixo.getObservacao());
-        agendamento.setValor(agendamentoFixo.getValor());
 
         agendamentoRepository.save(agendamento);
         logger.info("✅ Agendamento gerado a partir do agendamento fixo {}: {}", agendamentoFixo.getId(), agendamento);
@@ -512,146 +411,6 @@ public class AgendamentoController {
         }
     }
 
-    @GetMapping("/comissoes")
-    public ResponseEntity<?> calcularComissoes(@AuthenticationPrincipal UserDetails userDetails) {
-        logger.info("🔍 Solicitando cálculo de comissões por {}", userDetails.getUsername());
-
-        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-            logger.warn("❌ Tentativa de acesso às comissões sem permissão por {}", userDetails.getUsername());
-            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode acessar as comissões.");
-        }
-
-        try {
-            List<Object[]> comissoes = agendamentoRepository.calcularComissaoPorProfissional(comissaoPercentual / 100);
-            return ResponseEntity.ok(comissoes);
-        } catch (Exception e) {
-            logger.error("❌ Erro ao calcular comissões", e);
-            return ResponseEntity.status(500).body("Erro ao calcular comissões.");
-        }
-    }
-
-    @GetMapping("/comissoes/total/{id}")
-    public ResponseEntity<?> calcularComissaoTotalPorPeriodo(
-            @PathVariable Long id,
-            @RequestParam String dataInicio,
-            @RequestParam String dataFim,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        logger.info("🔍 Solicitando cálculo de comissão total para o profissional {} entre {} e {} por {}",
-                id, dataInicio, dataFim, userDetails.getUsername());
-
-        // Verificar se o usuário é ADMIN ou se é o próprio profissional acessando seus
-        // dados
-        boolean isAdmin = userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"));
-        boolean isProfissionalAcessandoPropriosDados = false;
-
-        if (!isAdmin) {
-            // Verificar se é o próprio profissional acessando seus dados
-            Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
-            if (profissional != null && profissional.getId() == id.longValue()) {
-                isProfissionalAcessandoPropriosDados = true;
-                logger.info("✅ Profissional {} acessando suas próprias comissões", userDetails.getUsername());
-            }
-        }
-
-        if (!isAdmin && !isProfissionalAcessandoPropriosDados) {
-            logger.warn("❌ Tentativa de acesso às comissões sem permissão por {}", userDetails.getUsername());
-            return ResponseEntity.status(403).body("Acesso negado. Você pode acessar apenas suas próprias comissões.");
-        }
-
-        try {
-            LocalDate inicio = LocalDate.parse(dataInicio);
-            LocalDate fim = LocalDate.parse(dataFim);
-
-            logger.info("🔍 Parâmetros recebidos: profissionalId={}, dataInicio={}, dataFim={}", id, inicio, fim);
-
-            // 1. Calcular comissão dos agendamentos normais
-            Double comissaoAgendamentosNormais = agendamentoRepository.calcularComissaoTotalPorPeriodo(
-                    id, inicio, fim, comissaoPercentual / 100);
-
-            if (comissaoAgendamentosNormais == null) {
-                comissaoAgendamentosNormais = 0.0;
-            }
-
-            // 2. Buscar e calcular a comissão dos agendamentos fixos no período
-            Double comissaoAgendamentosFixos = calcularComissaoAgendamentosFixos(id, inicio, fim);
-
-            // 3. Somar as comissões
-            Double comissaoTotal = comissaoAgendamentosNormais + comissaoAgendamentosFixos;
-
-            logger.info("✅ Comissão total calculada: R$ {} (Agendamentos normais: R$ {}, Agendamentos fixos: R$ {})",
-                    comissaoTotal, comissaoAgendamentosNormais, comissaoAgendamentosFixos);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("profissionalId", id);
-            response.put("comissaoTotal", comissaoTotal);
-            response.put("comissaoAgendamentosNormais", comissaoAgendamentosNormais);
-            response.put("comissaoAgendamentosFixos", comissaoAgendamentosFixos);
-
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            logger.error("❌ Erro ao calcular comissão total", e);
-            return ResponseEntity.status(500).body("Erro ao calcular comissão total: " + e.getMessage());
-        }
-    }
-
-    // Novo endpoint para profissionais consultarem suas comissões
-    @GetMapping("/minhas-comissoes")
-    public ResponseEntity<?> consultarMinhasComissoes(
-            @RequestParam String dataInicio,
-            @RequestParam String dataFim,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        logger.info("🔍 Profissional {} solicitando suas comissões entre {} e {}",
-                userDetails.getUsername(), dataInicio, dataFim);
-
-        try {
-            // Buscar o profissional pelo nome de usuário
-            Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
-
-            if (profissional == null) {
-                logger.warn("❌ Profissional não encontrado: {}", userDetails.getUsername());
-                return ResponseEntity.status(403).body("Profissional não encontrado.");
-            }
-
-            // Formatar datas
-            LocalDate inicio = LocalDate.parse(dataInicio);
-            LocalDate fim = LocalDate.parse(dataFim);
-
-            logger.info("🔍 Calculando comissões para profissional ID={}", profissional.getId());
-
-            // 1. Calcular comissão dos agendamentos normais
-            Double comissaoAgendamentosNormais = agendamentoRepository.calcularComissaoTotalPorPeriodo(
-                    profissional.getId(), inicio, fim, comissaoPercentual / 100);
-
-            if (comissaoAgendamentosNormais == null) {
-                comissaoAgendamentosNormais = 0.0;
-            }
-
-            // 2. Buscar e calcular a comissão dos agendamentos fixos no período
-            Double comissaoAgendamentosFixos = calcularComissaoAgendamentosFixos(profissional.getId(), inicio, fim);
-
-            // 3. Somar as comissões
-            Double comissaoTotal = comissaoAgendamentosNormais + comissaoAgendamentosFixos;
-
-            logger.info("✅ Comissão total calculada para profissional {}: R$ {}",
-                    profissional.getNome(), comissaoTotal);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("profissionalId", profissional.getId());
-            response.put("nome", profissional.getNome());
-            response.put("periodo", Map.of(
-                    "inicio", dataInicio,
-                    "fim", dataFim));
-            response.put("comissaoTotal", comissaoTotal);
-            response.put("comissaoAgendamentosNormais", comissaoAgendamentosNormais);
-            response.put("comissaoAgendamentosFixos", comissaoAgendamentosFixos);
-
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            logger.error("❌ Erro ao calcular comissões do profissional", e);
-            return ResponseEntity.status(500).body("Erro ao calcular comissões: " + e.getMessage());
-        }
-    }
-
     // ✅ ADMIN pode criar agendamentos para todos, PROFISSIONAL apenas para si
     @PostMapping
     public ResponseEntity<?> cadastrar(@RequestBody DadosCadastroAgendamento dados,
@@ -706,7 +465,8 @@ public class AgendamentoController {
 
                 // Verificar se o horário solicitado está dentro do período bloqueado
                 LocalTime horaInicio = dados.hora();
-                LocalTime horaFim = dados.hora().plus(Duration.parse(dados.duracao()));
+                // MODIFICADO: Usa a duração do serviço - ERRO AQUI
+                LocalTime horaFim = dados.hora().plus(servico.getDuracaoAsObject());
 
                 if ((horaInicio.isBefore(bloqueio.getHoraFim()) && horaFim.isAfter(bloqueio.getHoraInicio()))) {
                     return ResponseEntity.badRequest().body(
@@ -714,17 +474,19 @@ public class AgendamentoController {
                 }
             }
 
-            // Converte a string duracao para Duration
-            Duration duracao = Duration.parse(dados.duracao());
-
             // NOTA: A verificação de conflito de horário com outros agendamentos foi
             // removida
             // Agora permitimos agendamentos simultâneos
 
-            // Cria o agendamento com o serviço
-            Agendamento agendamento = new Agendamento(dados, cliente, profissional, servico);
-            agendamento.setDuracao(duracao);
-            agendamento.setValor(dados.valor());
+            // Cria o agendamento com o serviço - não precisa mais definir duração/valor
+            // explicitamente
+            Agendamento agendamento = new Agendamento();
+            agendamento.setCliente(cliente);
+            agendamento.setProfissional(profissional);
+            agendamento.setServico(servico);
+            agendamento.setData(dados.data());
+            agendamento.setHora(dados.hora());
+            agendamento.setObservacao(dados.observacao());
 
             agendamentoRepository.save(agendamento);
 
@@ -789,20 +551,15 @@ public class AgendamentoController {
             Servico servico = servicoRepository.findById(dados.servicoId())
                     .orElseThrow(() -> new RuntimeException("Serviço não encontrado"));
 
-            // Converte a string duracao para Duration
-            Duration duracao = Duration.parse(dados.duracao());
-
             // NOTA: A verificação de conflito de horário foi removida
             // Agora permitimos agendamentos simultâneos
 
             agendamento.setCliente(cliente);
             agendamento.setProfissional(profissional);
-            agendamento.setServico(servico);
+            agendamento.setServico(servico); // O serviço já contém valor e duração
             agendamento.setData(dados.data());
             agendamento.setHora(dados.hora());
-            agendamento.setDuracao(duracao);
             agendamento.setObservacao(dados.observacao());
-            agendamento.setValor(dados.valor());
 
             agendamentoRepository.save(agendamento);
             String usuarioTipo = isAdmin ? "ADMIN" : "PROFISSIONAL";

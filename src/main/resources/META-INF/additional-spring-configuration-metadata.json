@@ -8,5 +8,10 @@
     "name": "comissao.percentual",
     "type": "java.lang.String",
     "description": "A description for 'comissao.percentual'"
+  },
+  {
+    "name": "spring.datasource.connection-properties",
+    "type": "java.lang.String",
+    "description": "A description for 'spring.datasource.connection-properties'"
   }
 ]}

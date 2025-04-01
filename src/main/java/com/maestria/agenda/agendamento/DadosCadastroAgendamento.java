@@ -8,10 +8,8 @@ import java.time.LocalTime;
 public record DadosCadastroAgendamento(
         @NotNull Long clienteId,
         @NotNull Long profissionalId,
-        @NotNull Long servicoId, // Mudou de enum Servicos para Long servicoId
+        @NotNull Long servicoId, 
         @NotNull @FutureOrPresent LocalDate data,
         @NotNull LocalTime hora,
-        @NotNull String duracao,
-        String observacao,
-        @NotNull Double valor
+        String observacao
 ) {}

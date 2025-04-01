@@ -6,6 +6,7 @@ import com.maestria.agenda.servico.Servico;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.Duration;
 
 @Entity
 @Table(name = "agendamento_fixo")
@@ -32,12 +33,27 @@ public class AgendamentoFixo {
     @Column(nullable = false)
     private TipoRepeticao tipoRepeticao;
 
-    // Valor numérico para repetição (intervalo)
-    private int intervaloRepeticao = 1; // Por padrão, a cada 1 (dia, semana ou mês)
+    @Column(name = "dia_do_mes", nullable = false)
+    private Integer diaDoMes = 1;
+
+    @PrePersist
+    @PreUpdate
+    private void preparaParaSalvar() {
+        // Garante que diaDoMes nunca será nulo
+        if (diaDoMes == null) {
+            diaDoMes = 1;
+        }
+    }
+
+    // MODIFICADO: Mudou de int para Integer
+    @Column(name = "intervalo_repeticao")
+    private Integer intervaloRepeticao = 1; // Por padrão, a cada 1 (dia, semana ou mês)
 
     // Para repetição DIARIA: não precisa de valor adicional
-    // Para repetição SEMANAL: dias da semana (bit flags: 1=domingo, 2=segunda, 4=terça, etc)
+    // Para repetição SEMANAL: dias da semana (bit flags: 1=domingo, 2=segunda,
+    // 4=terça, etc)
     // Para repetição MENSAL: dia do mês (1-31) ou -1 para último dia do mês
+    @Column(name = "valor_repeticao")
     private Integer valorRepeticao;
 
     // Data de início da repetição
@@ -49,27 +65,38 @@ public class AgendamentoFixo {
     // Horário do agendamento
     private LocalTime hora;
 
-    // Duração no formato ISO-8601 (ex: PT1H30M)
-    private String duracao;
+    // Removido o campo duracao, pois será obtido do serviço
 
     @Column(columnDefinition = "TEXT")
     private String observacao;
 
-    // Valor do serviço
-    @Column(nullable = false)
-    private Double valor;
+    // Removido o campo valor, pois será obtido do serviço
 
     // Enumeração para tipos de repetição
     public enum TipoRepeticao {
-        DIARIA,   // Repete diariamente (ex: todos os dias, a cada 2 dias, etc)
-        SEMANAL,  // Repete semanalmente em dias específicos (ex: todas segundas e quartas)
-        MENSAL    // Repete mensalmente em dias específicos (ex: todo dia 15, último dia do mês)
+        DIARIA, // Repete diariamente (ex: todos os dias, a cada 2 dias, etc)
+        SEMANAL, // Repete semanalmente em dias específicos (ex: todas segundas e quartas)
+        MENSAL // Repete mensalmente em dias específicos (ex: todo dia 15, último dia do mês)
     }
 
     // Construtor padrão
-    public AgendamentoFixo() {}
+    public AgendamentoFixo() {
+        // Valores padrão para evitar NullPointerException
+        this.diaDoMes = 1;
+        this.intervaloRepeticao = 1;
+        this.valorRepeticao = 1;
+    }
 
     // Getters e Setters
+
+    public Integer getDiaDoMes() {
+        return diaDoMes;
+    }
+
+    public void setDiaDoMes(Integer diaDoMes) {
+        this.diaDoMes = diaDoMes != null ? diaDoMes : 1;
+    }
+
     public Long getId() {
         return id;
     }
@@ -110,12 +137,14 @@ public class AgendamentoFixo {
         this.tipoRepeticao = tipoRepeticao;
     }
 
-    public int getIntervaloRepeticao() {
-        return intervaloRepeticao;
+    // MODIFICADO: Alterado para usar Integer
+    public Integer getIntervaloRepeticao() {
+        return intervaloRepeticao != null ? intervaloRepeticao : 1;
     }
 
-    public void setIntervaloRepeticao(int intervaloRepeticao) {
-        this.intervaloRepeticao = intervaloRepeticao;
+    // MODIFICADO: Alterado para usar Integer e evitar valores nulos
+    public void setIntervaloRepeticao(Integer intervaloRepeticao) {
+        this.intervaloRepeticao = intervaloRepeticao != null ? intervaloRepeticao : 1;
     }
 
     public Integer getValorRepeticao() {
@@ -150,12 +179,9 @@ public class AgendamentoFixo {
         this.hora = hora;
     }
 
+    // Método para obter a duração diretamente do serviço
     public String getDuracao() {
-        return duracao;
-    }
-
-    public void setDuracao(String duracao) {
-        this.duracao = duracao;
+        return servico != null ? servico.getDuracao() : null;
     }
 
     public String getObservacao() {
@@ -166,24 +192,61 @@ public class AgendamentoFixo {
         this.observacao = observacao;
     }
 
+    // Método para obter o valor diretamente do serviço
     public Double getValor() {
-        return valor;
+        return servico != null ? servico.getValor() : null;
     }
 
-    public void setValor(Double valor) {
-        this.valor = valor;
+    // Método para obter a duração como objeto Duration
+    public Duration getDuracaoAsObject() {
+        return servico != null ? servico.getDuracaoAsObject() : Duration.ZERO;
+    }
+
+    // Método adicional para cálculos e exibição formatada
+    public String getDuracaoFormatada() {
+        if (servico == null || servico.getDuracao() == null) {
+            return "0min";
+        }
+        
+        Duration d = Duration.parse(servico.getDuracao());
+        long horas = d.toHours();
+        long minutos = d.toMinutesPart();
+        
+        if (horas > 0) {
+            return horas + "h" + (minutos > 0 ? " " + minutos + "min" : "");
+        } else {
+            return minutos + "min";
+        }
     }
 
     @Override
     public String toString() {
         return "AgendamentoFixo{" +
                 "id=" + id +
-                ", cliente=" + cliente.getNome() +
-                ", profissional=" + profissional.getNome() +
+                ", cliente=" + (cliente != null ? cliente.getNome() : "null") +
+                ", profissional=" + (profissional != null ? profissional.getNome() : "null") +
                 ", tipoRepeticao=" + tipoRepeticao +
+                ", intervaloRepeticao=" + intervaloRepeticao +
+                ", valorRepeticao=" + valorRepeticao +
+                ", diaDoMes=" + diaDoMes +
                 ", dataInicio=" + dataInicio +
                 ", dataFim=" + dataFim +
                 ", hora=" + hora +
                 '}';
+    }
+    
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        
+        AgendamentoFixo that = (AgendamentoFixo) o;
+        
+        return id != null ? id.equals(that.id) : that.id == null;
+    }
+    
+    @Override
+    public int hashCode() {
+        return id != null ? id.hashCode() : 0;
     }
 }
