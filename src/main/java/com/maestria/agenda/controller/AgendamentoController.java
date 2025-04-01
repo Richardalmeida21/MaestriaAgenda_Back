@@ -393,52 +393,76 @@ public ResponseEntity<?> deletarAgendamentoFixo(@PathVariable Long id, @Authenti
     }
 
     @GetMapping("/dia")
-    public ResponseEntity<?> listarPorData(@RequestParam String data,
+public ResponseEntity<?> listarPorData(@RequestParam String data,
+        @AuthenticationPrincipal UserDetails userDetails) {
+    logger.info("🔍 Solicitando agendamentos para o dia {} por {}", data, userDetails.getUsername());
+    try {
+        // Converte a data recebida para LocalDate
+        LocalDate dataFormatada = LocalDate.parse(data);
 
-            @AuthenticationPrincipal UserDetails userDetails) {
-        logger.info("🔍 Solicitando agendamentos para o dia {} por {}", data, userDetails.getUsername());
-
-        try {
-            // Parse da data para LocalDate
-            LocalDate dataFormatada = LocalDate.parse(data);
-
-            List<Agendamento> agendamentosNormais;
-            List<AgendamentoFixo> agendamentosFixosDoDia;
-
-            if (userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-                // ADMIN pode ver todos os agendamentos normais e fixos do dia
-                agendamentosNormais = agendamentoRepository.findByData(dataFormatada);
-                agendamentosFixosDoDia = agendamentoFixoRepository.findByDiaDoMes(dataFormatada.getDayOfMonth());
-                logger.info("✅ ADMIN solicitou agendamentos para o dia {}: {} normais e {} fixos encontrados",
-                        dataFormatada, agendamentosNormais.size(), agendamentosFixosDoDia.size());
-            } else {
-                // PROFISSIONAL pode ver apenas seus próprios agendamentos normais e fixos
-                Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
-                if (profissional == null) {
-                    logger.warn("❌ Profissional não encontrado: {}", userDetails.getUsername());
-                    return ResponseEntity.status(403).body("Profissional não encontrado.");
-                }
-                agendamentosNormais = agendamentoRepository.findByProfissionalAndData(profissional, dataFormatada);
-                agendamentosFixosDoDia = agendamentoFixoRepository.findByProfissionalAndDiaDoMes(profissional,
-                        dataFormatada.getDayOfMonth());
-
-                logger.info("✅ PROFISSIONAL {} solicitou agendamentos para o dia {}: {} normais e {} fixos encontrados",
-                        profissional.getNome(), dataFormatada, agendamentosNormais.size(),
-                        agendamentosFixosDoDia.size());
-
+        // Buscar os agendamentos normais
+        List<Agendamento> agendamentosNormais;
+        if (userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            agendamentosNormais = agendamentoRepository.findByData(dataFormatada);
+        } else {
+            Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
+            if (profissional == null) {
+                logger.warn("❌ Profissional não encontrado: {}", userDetails.getUsername());
+                return ResponseEntity.status(403).body("Profissional não encontrado.");
             }
-
-            // Combine os agendamentos normais e fixos em uma única resposta
-            Map<String, Object> resposta = new HashMap<>();
-            resposta.put("agendamentosNormais", agendamentosNormais);
-            resposta.put("agendamentosFixos", agendamentosFixosDoDia);
-
-            return ResponseEntity.ok(resposta);
-        } catch (Exception e) {
-            logger.error("❌ Erro ao listar agendamentos para o dia {}", data, e);
-            return ResponseEntity.status(500).body("Erro ao listar agendamentos.");
+            agendamentosNormais = agendamentoRepository.findByProfissionalAndData(profissional, dataFormatada);
         }
+
+        // Busca todos os agendamentos fixos ativos para a data
+        List<AgendamentoFixo> fixedActive = agendamentoFixoRepository.findActiveSchedulesForDate(dataFormatada);
+
+        // Se o usuário não for ADMIN, filtra apenas os seus próprios fixos
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
+            fixedActive = fixedActive.stream()
+                .filter(f -> f.getProfissional().getId().equals(profissional.getId()))
+                .toList();
+        }
+
+        // Filtra os fixos de acordo com o tipo de recorrência
+        int currentDay = dataFormatada.getDayOfMonth();
+        int dayOfWeek = dataFormatada.getDayOfWeek().getValue() % 7 + 1; // 1 = domingo, 2 = segunda, etc.
+        boolean isLastDayOfMonth = (currentDay == dataFormatada.lengthOfMonth());
+
+        List<AgendamentoFixo> agendamentosFixosDoDia = fixedActive.stream().filter(fix -> {
+            switch(fix.getTipoRepeticao()) {
+                case DIARIA:
+                    return true;
+                case SEMANAL:
+                    if (fix.getValorRepeticao() != null) {
+                        // Considera que para agendamentos semanais, 'valorRepeticao' é um bit mask;
+                        // verifica se o bit referente ao dia atual está setado
+                        return (fix.getValorRepeticao() & (1 << (dayOfWeek - 1))) != 0;
+                    }
+                    return false;
+                case MENSAL:
+                    if (fix.getValorRepeticao() != null && fix.getValorRepeticao() == -1) {
+                        // Valor -1 indica o último dia do mês
+                        return isLastDayOfMonth;
+                    }
+                    return fix.getDiaDoMes() != null && fix.getDiaDoMes().equals(currentDay);
+                default:
+                    return false;
+            }
+        }).toList();
+
+        logger.info("✅ Agendamentos para o dia {}: {} normais e {} fixos encontrados", 
+                dataFormatada, agendamentosNormais.size(), agendamentosFixosDoDia.size());
+
+        Map<String, Object> resposta = new HashMap<>();
+        resposta.put("agendamentosNormais", agendamentosNormais);
+        resposta.put("agendamentosFixos", agendamentosFixosDoDia);
+        return ResponseEntity.ok(resposta);
+    } catch (Exception e) {
+        logger.error("❌ Erro ao listar agendamentos para o dia {}", data, e);
+        return ResponseEntity.status(500).body("Erro ao listar agendamentos.");
     }
+}
 
     @GetMapping("/metricas")
     public ResponseEntity<?> obterMetricas(
