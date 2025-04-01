@@ -246,6 +246,78 @@ public class AgendamentoController {
         logger.info("✅ Agendamento gerado a partir do agendamento fixo {}: {}", agendamentoFixo.getId(), agendamento);
     }
 
+    @PutMapping("/fixo/{id}")
+public ResponseEntity<?> atualizarAgendamentoFixo(
+        @PathVariable Long id,
+        @RequestBody DadosCadastroAgendamentoFixo dados,
+        @AuthenticationPrincipal UserDetails userDetails) {
+    logger.info("🔍 Solicitação para atualizar agendamento fixo ID {} por: {}", id, userDetails.getUsername());
+
+    if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+        logger.warn("❌ Tentativa de atualização sem permissão por {}", userDetails.getUsername());
+        return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode atualizar agendamentos fixos.");
+    }
+
+    try {
+        AgendamentoFixo agendamentoFixo = agendamentoFixoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Agendamento fixo não encontrado"));
+
+        Cliente cliente = clienteRepository.findById(dados.clienteId())
+                .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+        Profissional profissional = profissionalRepository.findById(dados.profissionalId())
+                .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+        Servico servico = servicoRepository.findById(dados.servicoId())
+                .orElseThrow(() -> new RuntimeException("Serviço não encontrado"));
+
+        agendamentoFixo.setCliente(cliente);
+        agendamentoFixo.setProfissional(profissional);
+        agendamentoFixo.setServico(servico);
+        agendamentoFixo.setTipoRepeticao(dados.tipoRepeticao());
+        agendamentoFixo.setIntervaloRepeticao(dados.intervaloRepeticao());
+        agendamentoFixo.setValorRepeticao(dados.valorRepeticao());
+        agendamentoFixo.setDataInicio(dados.dataInicio());
+        agendamentoFixo.setDataFim(dados.dataFim());
+        agendamentoFixo.setHora(dados.hora());
+        agendamentoFixo.setObservacao(dados.observacao());
+        
+        if (dados.tipoRepeticao() == AgendamentoFixo.TipoRepeticao.MENSAL) {
+            agendamentoFixo.setDiaDoMes(dados.diaDoMes() != null ? dados.diaDoMes() : dados.valorRepeticao());
+        } else {
+            agendamentoFixo.setDiaDoMes(1);
+        }
+
+        agendamentoFixoRepository.save(agendamentoFixo);
+        logger.info("✅ Agendamento fixo atualizado com sucesso: {}", agendamentoFixo);
+        return ResponseEntity.ok(agendamentoFixo);
+    } catch (Exception e) {
+        logger.error("❌ Erro ao atualizar agendamento fixo", e);
+        return ResponseEntity.status(500).body("Erro ao atualizar agendamento fixo: " + e.getMessage());
+    }
+}
+
+@DeleteMapping("/fixo/{id}")
+public ResponseEntity<?> deletarAgendamentoFixo(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+    logger.info("🔍 Solicitação para deletar agendamento fixo ID {} por: {}", id, userDetails.getUsername());
+
+    if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+        logger.warn("❌ Tentativa de exclusão sem permissão por {}", userDetails.getUsername());
+        return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode excluir agendamentos fixos.");
+    }
+
+    try {
+        AgendamentoFixo agendamentoFixo = agendamentoFixoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Agendamento fixo não encontrado"));
+
+        agendamentoFixoRepository.delete(agendamentoFixo);
+        logger.info("✅ Agendamento fixo deletado com sucesso: {}", agendamentoFixo);
+        return ResponseEntity.ok("Agendamento fixo deletado com sucesso.");
+    } catch (Exception e) {
+        logger.error("❌ Erro ao deletar agendamento fixo", e);
+        return ResponseEntity.status(500).body("Erro ao deletar agendamento fixo: " + e.getMessage());
+    }
+}
+
+
     // ✅ ADMIN vê todos os agendamentos, PROFISSIONAL vê apenas os seus
     @GetMapping
     public ResponseEntity<?> listarAgendamentos(@AuthenticationPrincipal UserDetails userDetails) {
