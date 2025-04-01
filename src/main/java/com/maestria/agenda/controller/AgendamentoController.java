@@ -33,7 +33,6 @@ import java.util.Arrays;
 
 @RestController
 @RequestMapping("/agendamento")
-@CrossOrigin(origins = "*")
 public class AgendamentoController {
 
     private static final Logger logger = LoggerFactory.getLogger(AgendamentoController.class);
