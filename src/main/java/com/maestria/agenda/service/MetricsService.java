@@ -1,17 +1,26 @@
 package com.maestria.agenda.service;
 
+import com.maestria.agenda.agendamento.Agendamento;
 import com.maestria.agenda.agendamento.AgendamentoRepository;
+import com.maestria.agenda.financeiro.ClientData;
 import com.maestria.agenda.financeiro.MetricasGeraisDTO;
 import com.maestria.agenda.financeiro.RevenueData;
 import com.maestria.agenda.financeiro.ServiceData;
-import com.maestria.agenda.financeiro.ClientData;
+import com.maestria.agenda.financeiro.HorarioData;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.format.TextStyle;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
 @Service
 public class MetricsService {
@@ -37,54 +46,136 @@ public class MetricsService {
         Integer clientsCount = agendamentoRepository.contarTotalDeClientesPorPeriodo(dataInicio, dataFim);
         clientsCount = (clientsCount != null) ? clientsCount : 0;
 
-        Double returnRate = 0.0; // implemente sua regra para a taxa de retorno
+        Double returnRate = calcularTaxaRetorno(dataInicio, dataFim);
 
         return new MetricasGeraisDTO(totalRevenue, servicesCount, avgTicket, newClients, clientsCount, returnRate);
     }
     
-    // Método para obter dados de faturamento mensais
+    // Método para obter faturamento mensal
     public List<RevenueData> obterFaturamentoMensal(LocalDate dataInicio, LocalDate dataFim) {
         List<RevenueData> revenueDataList = new ArrayList<>();
-        LocalDate current = dataInicio.withDayOfMonth(1);
-        int monthsCount = 0;
-        while (!current.isAfter(dataFim)) {
-            monthsCount++;
-            String monthName = current.getMonth().getDisplayName(TextStyle.SHORT, new Locale("pt", "BR"));
-            revenueDataList.add(new RevenueData(monthName, 0.0)); // inicializa com 0.0
-            current = current.plusMonths(1);
+        
+        // Consulta que agrupa o faturamento por mês
+        List<Object[]> queryResult = agendamentoRepository.groupRevenueByMonth(dataInicio, dataFim);
+        Map<Integer, Double> revenueMap = new HashMap<>();
+        for (Object[] row : queryResult) {
+            Integer monthNumber = ((Number) row[0]).intValue();
+            Double revenue = (Double) row[1];
+            revenueMap.put(monthNumber, revenue);
         }
-        // Exemplo: dividir o faturamento total igualmente entre os meses
-        MetricasGeraisDTO metricas = this.obterMetricasGerais(dataInicio, dataFim);
-        if (monthsCount > 0) {
-            double revenuePerMonth = metricas.totalRevenue() / monthsCount;
-            for (RevenueData rd : revenueDataList) {
-                rd = new RevenueData(rd.month(), revenuePerMonth); // ou atualize seu record se for imutável (crie novos records)
-            }
-            // Se seus records forem imutáveis, recrie a lista:
-            List<RevenueData> updatedList = new ArrayList<>();
-            for (RevenueData rd : revenueDataList) {
-                updatedList.add(new RevenueData(rd.month(), revenuePerMonth));
-            }
-            revenueDataList = updatedList;
+        
+        // Itera sobre cada mês do período para preencher os dados, mesmo que haja meses sem faturamento
+        LocalDate current = dataInicio.withDayOfMonth(1);
+        while (!current.isAfter(dataFim)) {
+            int monthNumber = current.getMonthValue();
+            String monthName = current.getMonth().getDisplayName(TextStyle.SHORT, new Locale("pt", "BR"));
+            Double revenue = revenueMap.getOrDefault(monthNumber, 0.0);
+            revenueDataList.add(new RevenueData(monthName, revenue));
+            current = current.plusMonths(1);
         }
         return revenueDataList;
     }
     
-    // Método para obter dados de serviços realizados - aqui você implementa sua lógica real (agrupando por serviço)
+    // Método para obter dados de serviços realizados - agrupando por serviço a partir dos agendamentos
     public List<ServiceData> obterDadosDeServicos(LocalDate dataInicio, LocalDate dataFim) {
         List<ServiceData> list = new ArrayList<>();
-        // Exemplo fictício:
-        list.add(new ServiceData("Corte", 120));
-        list.add(new ServiceData("Depilação", 80));
+        List<Object[]> resultados = agendamentoRepository.findServicosMaisAgendados(dataInicio, dataFim);
+        for (Object[] row : resultados) {
+            String servicoNome = (String) row[0];
+            Long count = (Long) row[1];
+            list.add(new ServiceData(servicoNome, count.intValue()));
+        }
         return list;
     }
     
-    // Método para obter dados de clientes (novos x recorrentes) agrupados por mês
+    // Método para calcular a porcentagem de clientes que retornam dentro de 30 dias
+    public double calcularTaxaRetorno(LocalDate dataInicio, LocalDate dataFim) {
+        List<Agendamento> agendamentos = agendamentoRepository.findByDataBetween(dataInicio, dataFim);
+        Map<Long, List<LocalDate>> agendamentosPorCliente = new HashMap<>();
+        agendamentos.forEach(a -> {
+            Long clienteId = a.getCliente().getId();
+            agendamentosPorCliente.computeIfAbsent(clienteId, k -> new ArrayList<>()).add(a.getData());
+        });
+
+        int totalClientes = agendamentosPorCliente.size();
+        int clientesRetornaram = 0;
+        for (List<LocalDate> datas : agendamentosPorCliente.values()) {
+            if (datas.size() < 2) continue;
+            Collections.sort(datas);
+            boolean retornou = false;
+            for (int i = 1; i < datas.size(); i++) {
+                long diffDays = ChronoUnit.DAYS.between(datas.get(i - 1), datas.get(i));
+                if (diffDays <= 30) {
+                    retornou = true;
+                    break;
+                }
+            }
+            if (retornou) {
+                clientesRetornaram++;
+            }
+        }
+        return totalClientes > 0 ? (clientesRetornaram / (double) totalClientes) * 100.0 : 0.0;
+    }
+    
+    // Método para obter os horários mais procurados a partir dos agendamentos
+    public List<HorarioData> obterHorariosMaisProcurados(LocalDate dataInicio, LocalDate dataFim) {
+        List<HorarioData> horarios = new ArrayList<>();
+        List<Object[]> queryResult = agendamentoRepository.findHorariosMaisProcurados(dataInicio, dataFim);
+        // Total de agendamentos no período (para cálculo de porcentagem)
+        long totalAgendamentos = agendamentoRepository.countByDataBetween(dataInicio, dataFim);
+        for (Object[] row : queryResult) {
+            Integer hour = ((Number) row[0]).intValue();
+            Long count = (Long) row[1];
+            int percentage = totalAgendamentos > 0 ? (int) ((count * 100) / totalAgendamentos) : 0;
+            horarios.add(new HorarioData(hour, count.intValue(), percentage));
+        }
+        return horarios;
+    }
+    
+    // MÉTODO PARA OBTER "CLIENTES NOVOS VS. RECORRENTES"
+    // Para cada mês, definimos clientes novos como aqueles cuja primeira data de agendamento é naquele mês; os demais são recorrentes.
     public List<ClientData> obterDadosDeClientes(LocalDate dataInicio, LocalDate dataFim) {
-        List<ClientData> list = new ArrayList<>();
-        // Exemplo fictício (você deve implementar sua consulta real):
-        list.add(new ClientData("Mar", 20, 30));
-        list.add(new ClientData("Abr", 15, 25));
-        return list;
+        // Recupera todos os agendamentos do período
+        List<Agendamento> agendamentos = agendamentoRepository.findByDataBetween(dataInicio, dataFim);
+        // Mapear a primeira data de agendamento para cada cliente
+        Map<Long, LocalDate> primeiraData = new HashMap<>();
+        for (Agendamento a : agendamentos) {
+            Long clientId = a.getCliente().getId();
+            LocalDate data = a.getData();
+            if (!primeiraData.containsKey(clientId) || data.isBefore(primeiraData.get(clientId))) {
+                primeiraData.put(clientId, data);
+            }
+        }
+        
+        // Agrupar os clientes por mês (usaremos o padrão "yyyy-MM" para distinguir ano e mês)
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM");
+        Map<String, Set<Long>> clientesPorMes = new HashMap<>();
+        for (Agendamento a : agendamentos) {
+            String mesKey = a.getData().format(formatter);
+            clientesPorMes.computeIfAbsent(mesKey, k -> new HashSet<>()).add(a.getCliente().getId());
+        }
+        
+        // Itera sobre cada mês do período para calcular os clientes novos vs. recorrentes
+        List<ClientData> lista = new ArrayList<>();
+        LocalDate current = dataInicio.withDayOfMonth(1);
+        while(!current.isAfter(dataFim)) {
+            String mesKey = current.format(formatter);
+            Set<Long> clientes = clientesPorMes.getOrDefault(mesKey, Collections.emptySet());
+            int novos = 0;
+            for (Long clientId : clientes) {
+                LocalDate primeira = primeiraData.get(clientId);
+                // Se a primeira data de agendamento ocorrer no mesmo mês/ano, o cliente é novo
+                if (primeira != null && primeira.format(formatter).equals(mesKey)) {
+                    novos++;
+                }
+            }
+            int totalClientes = clientes.size();
+            int recorrentes = totalClientes - novos;
+            // Rótulo do mês (ex.: "Jan 2024")
+            String rotuloMes = current.getMonth().getDisplayName(TextStyle.SHORT, new Locale("pt", "BR")) + " " + current.getYear();
+            lista.add(new ClientData(rotuloMes, novos, recorrentes));
+            current = current.plusMonths(1);
+        }
+        return lista;
     }
 }
