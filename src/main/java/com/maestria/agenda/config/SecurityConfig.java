@@ -35,7 +35,8 @@ public class SecurityConfig {
                         .requestMatchers("/profissional/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
                         .requestMatchers("/servico/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
                         .requestMatchers("/bloqueio/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
-                        .requestMatchers("/agendamento/metricas").hasAuthority("ADMIN")
+                        // Se o endpoint de métricas for novo e estiver definido em "/metricas"
+                        .requestMatchers("/metricas").hasAuthority("ADMIN")
                         .requestMatchers("/agendamento/comissoes/total/**").hasAuthority("ADMIN")
                         .requestMatchers("/agendamento/fixo/**").hasAuthority("ADMIN")
                         .requestMatchers("/financeiro/comissoes").hasAuthority("ADMIN")
