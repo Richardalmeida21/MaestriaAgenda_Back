@@ -13,13 +13,13 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     List<Agendamento> findByProfissionalAndDataBetween(Profissional profissional, LocalDate dataInicio,
             LocalDate dataFim);
 
-    @Query("SELECT FUNCTION('HOUR', a.hora) AS horario, COUNT(a) " +
-            "FROM Agendamento a " +
-            "WHERE a.data BETWEEN :dataInicio AND :dataFim " +
-            "GROUP BY FUNCTION('HOUR', a.hora) " +
-            "ORDER BY COUNT(a) DESC")
-    List<Object[]> findHorariosMaisProcurados(@Param("dataInicio") LocalDate dataInicio,
-            @Param("dataFim") LocalDate dataFim);
+    @Query("SELECT EXTRACT(HOUR FROM a.hora) AS horario, COUNT(a) " +
+       "FROM Agendamento a " +
+       "WHERE a.data BETWEEN :dataInicio AND :dataFim " +
+       "GROUP BY EXTRACT(HOUR FROM a.hora) " +
+       "ORDER BY COUNT(a) DESC")
+List<Object[]> findHorariosMaisProcurados(@Param("dataInicio") LocalDate dataInicio,
+        @Param("dataFim") LocalDate dataFim);
 
     List<Agendamento> findByCliente(Cliente cliente);
 
