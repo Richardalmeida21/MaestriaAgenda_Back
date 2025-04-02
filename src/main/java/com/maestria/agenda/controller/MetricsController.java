@@ -4,6 +4,7 @@ import com.maestria.agenda.financeiro.MetricasGeraisDTO;
 import com.maestria.agenda.financeiro.RevenueData;
 import com.maestria.agenda.financeiro.ServiceData;
 import com.maestria.agenda.financeiro.ClientData;
+import com.maestria.agenda.financeiro.HorarioData;
 import com.maestria.agenda.service.MetricsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +49,7 @@ public class MetricsController {
             List<RevenueData> revenueData = metricsService.obterFaturamentoMensal(dataInicio, dataFim);
             List<ServiceData> serviceData = metricsService.obterDadosDeServicos(dataInicio, dataFim);
             List<ClientData> clientData = metricsService.obterDadosDeClientes(dataInicio, dataFim);
+            List<HorarioData> horarioData = metricsService.obterHorariosMaisProcurados(dataInicio, dataFim);
 
             Map<String, Object> response = new HashMap<>();
             response.put("totalRevenue", metricas.totalRevenue());
@@ -56,9 +58,10 @@ public class MetricsController {
             response.put("newClients", metricas.newClients());
             response.put("clientsCount", metricas.clientsCount());
             response.put("returnRate", metricas.returnRate());
-            response.put("revenueData", revenueData);
-            response.put("serviceData", serviceData);
-            response.put("clientData", clientData);
+            response.put("faturamentoMensal", revenueData); // Mudança de nome para corresponder ao frontend
+            response.put("servicosAgendados", serviceData); // Mudança de nome para corresponder ao frontend
+            response.put("clientesNovosRecorrentes", clientData); // Mudança de nome para corresponder ao frontend
+            response.put("horariosMaisProcurados", horarioData); // Adicionado
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
