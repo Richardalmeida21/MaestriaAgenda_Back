@@ -420,7 +420,7 @@ public ResponseEntity<?> listarPorData(@RequestParam String data,
         if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
             Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
             fixedActive = fixedActive.stream()
-                .filter(f -> f.getProfissional().getId() == profissional.getId())
+                .filter(f -> f.getProfissional().getId().equals(profissional.getId()))
                 .toList();
         }
 
