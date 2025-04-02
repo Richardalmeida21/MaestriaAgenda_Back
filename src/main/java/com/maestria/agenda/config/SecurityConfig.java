@@ -31,11 +31,10 @@ public class SecurityConfig {
                         .requestMatchers("/auth/login", "/auth/register", "/public/**", "/generate-password")
                         .permitAll()
                         .requestMatchers("/auth/me", "/agendamento/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
-                        .requestMatchers("/cliente/**").hasAuthority("ADMIN")
+                        .requestMatchers("/cliente/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
                         .requestMatchers("/profissional/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
                         .requestMatchers("/servico/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
                         .requestMatchers("/bloqueio/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
-                        // Se o endpoint de métricas for novo e estiver definido em "/metricas"
                         .requestMatchers("/metricas").hasAuthority("ADMIN")
                         .requestMatchers("/agendamento/comissoes/total/**").hasAuthority("ADMIN")
                         .requestMatchers("/agendamento/fixo/**").hasAuthority("ADMIN")
