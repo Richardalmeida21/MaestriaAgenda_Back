@@ -1,6 +1,9 @@
 package com.maestria.agenda.controller;
 
 import com.maestria.agenda.financeiro.MetricasGeraisDTO;
+import com.maestria.agenda.financeiro.RevenueData;
+import com.maestria.agenda.financeiro.ServiceData;
+import com.maestria.agenda.financeiro.ClientData;
 import com.maestria.agenda.service.MetricsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +15,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/metricas")
@@ -33,14 +39,28 @@ public class MetricsController {
 
         logger.info("Requesting metrics from {} to {} by user {}", dataInicio, dataFim, userDetails.getUsername());
 
-        // Exemplo: somente ADMIN pode acessar essas métricas
         if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
             return ResponseEntity.status(403).body("Access denied. Only ADMIN can access metrics.");
         }
 
         try {
             MetricasGeraisDTO metricas = metricsService.obterMetricasGerais(dataInicio, dataFim);
-            return ResponseEntity.ok(metricas);
+            List<RevenueData> revenueData = metricsService.obterFaturamentoMensal(dataInicio, dataFim);
+            List<ServiceData> serviceData = metricsService.obterDadosDeServicos(dataInicio, dataFim);
+            List<ClientData> clientData = metricsService.obterDadosDeClientes(dataInicio, dataFim);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("totalRevenue", metricas.totalRevenue());
+            response.put("servicesCount", metricas.servicesCount());
+            response.put("avgTicket", metricas.avgTicket());
+            response.put("newClients", metricas.newClients());
+            response.put("clientsCount", metricas.clientsCount());
+            response.put("returnRate", metricas.returnRate());
+            response.put("revenueData", revenueData);
+            response.put("serviceData", serviceData);
+            response.put("clientData", clientData);
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Error fetching metrics", e);
             return ResponseEntity.status(500).body("Error fetching metrics: " + e.getMessage());
