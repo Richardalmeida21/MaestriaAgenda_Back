@@ -67,4 +67,22 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
                         @Param("dataInicio") LocalDate dataInicio,
                         @Param("dataFim") LocalDate dataFim,
                         @Param("comissaoPercentual") double comissaoPercentual);
+
+        @Query("SELECT SUM(a.servico.valor) FROM Agendamento a WHERE a.data BETWEEN :dataInicio AND :dataFim")
+        Double calcularFaturamentoTotalPorPeriodo(@Param("dataInicio") LocalDate dataInicio,
+                        @Param("dataFim") LocalDate dataFim);
+
+        @Query("SELECT COUNT(a) FROM Agendamento a WHERE a.data BETWEEN :dataInicio AND :dataFim")
+        Integer contarServicosRealizadosPorPeriodo(@Param("dataInicio") LocalDate dataInicio,
+                        @Param("dataFim") LocalDate dataFim);
+
+        @Query("SELECT COUNT(DISTINCT a.cliente) FROM Agendamento a " +
+                        "WHERE a.data BETWEEN :dataInicio AND :dataFim " +
+                        "AND a.cliente.dataCadastro BETWEEN :dataInicio AND :dataFim")
+        Integer contarNovosClientesPorPeriodo(@Param("dataInicio") LocalDate dataInicio,
+                        @Param("dataFim") LocalDate dataFim);
+
+        @Query("SELECT COUNT(DISTINCT a.cliente) FROM Agendamento a WHERE a.data BETWEEN :dataInicio AND :dataFim")
+        Integer contarTotalDeClientesPorPeriodo(@Param("dataInicio") LocalDate dataInicio,
+                        @Param("dataFim") LocalDate dataFim);
 }
