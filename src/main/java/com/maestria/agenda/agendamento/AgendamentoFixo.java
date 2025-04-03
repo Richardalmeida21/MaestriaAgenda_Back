@@ -70,13 +70,23 @@ public class AgendamentoFixo {
     @Column(columnDefinition = "TEXT")
     private String observacao;
 
-    // Removido o campo valor, pois será obtido do serviço
+    @Column(name = "forma_pagamento", nullable = false)
+    private String formaPagamento;
+
+    public String getFormaPagamento() {
+        return formaPagamento;
+    }
+
+    public void setFormaPagamento(String formaPagamento) {
+        this.formaPagamento = formaPagamento;
+    }
 
     // Enumeração para tipos de repetição
     public enum TipoRepeticao {
-        DIARIA, // Repete diariamente (ex: todos os dias, a cada 2 dias, etc)
-        SEMANAL, // Repete semanalmente em dias específicos (ex: todas segundas e quartas)
-        MENSAL // Repete mensalmente em dias específicos (ex: todo dia 15, último dia do mês)
+        DIARIA, 
+        SEMANAL, 
+        QUINZENAL,
+        MENSAL 
     }
 
     // Construtor padrão
@@ -88,6 +98,8 @@ public class AgendamentoFixo {
     }
 
     // Getters e Setters
+
+   
 
     public Integer getDiaDoMes() {
         return diaDoMes;
@@ -236,17 +248,96 @@ public class AgendamentoFixo {
     }
     
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        
-        AgendamentoFixo that = (AgendamentoFixo) o;
-        
-        return id != null ? id.equals(that.id) : that.id == null;
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        AgendamentoFixo other = (AgendamentoFixo) obj;
+        if (id == null) {
+            if (other.id != null)
+                return false;
+        } else if (!id.equals(other.id))
+            return false;
+        if (cliente == null) {
+            if (other.cliente != null)
+                return false;
+        } else if (!cliente.equals(other.cliente))
+            return false;
+        if (profissional == null) {
+            if (other.profissional != null)
+                return false;
+        } else if (!profissional.equals(other.profissional))
+            return false;
+        if (servico == null) {
+            if (other.servico != null)
+                return false;
+        } else if (!servico.equals(other.servico))
+            return false;
+        if (tipoRepeticao != other.tipoRepeticao)
+            return false;
+        if (diaDoMes == null) {
+            if (other.diaDoMes != null)
+                return false;
+        } else if (!diaDoMes.equals(other.diaDoMes))
+            return false;
+        if (intervaloRepeticao == null) {
+            if (other.intervaloRepeticao != null)
+                return false;
+        } else if (!intervaloRepeticao.equals(other.intervaloRepeticao))
+            return false;
+        if (valorRepeticao == null) {
+            if (other.valorRepeticao != null)
+                return false;
+        } else if (!valorRepeticao.equals(other.valorRepeticao))
+            return false;
+        if (dataInicio == null) {
+            if (other.dataInicio != null)
+                return false;
+        } else if (!dataInicio.equals(other.dataInicio))
+            return false;
+        if (dataFim == null) {
+            if (other.dataFim != null)
+                return false;
+        } else if (!dataFim.equals(other.dataFim))
+            return false;
+        if (hora == null) {
+            if (other.hora != null)
+                return false;
+        } else if (!hora.equals(other.hora))
+            return false;
+        if (observacao == null) {
+            if (other.observacao != null)
+                return false;
+        } else if (!observacao.equals(other.observacao))
+            return false;
+        if (formaPagamento == null) {
+            if (other.formaPagamento != null)
+                return false;
+        } else if (!formaPagamento.equals(other.formaPagamento))
+            return false;
+        return true;
     }
     
     @Override
     public int hashCode() {
-        return id != null ? id.hashCode() : 0;
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((id == null) ? 0 : id.hashCode());
+        result = prime * result + ((cliente == null) ? 0 : cliente.hashCode());
+        result = prime * result + ((profissional == null) ? 0 : profissional.hashCode());
+        result = prime * result + ((servico == null) ? 0 : servico.hashCode());
+        result = prime * result + ((tipoRepeticao == null) ? 0 : tipoRepeticao.hashCode());
+        result = prime * result + ((diaDoMes == null) ? 0 : diaDoMes.hashCode());
+        result = prime * result + ((intervaloRepeticao == null) ? 0 : intervaloRepeticao.hashCode());
+        result = prime * result + ((valorRepeticao == null) ? 0 : valorRepeticao.hashCode());
+        result = prime * result + ((dataInicio == null) ? 0 : dataInicio.hashCode());
+        result = prime * result + ((dataFim == null) ? 0 : dataFim.hashCode());
+        result = prime * result + ((hora == null) ? 0 : hora.hashCode());
+        result = prime * result + ((observacao == null) ? 0 : observacao.hashCode());
+        result = prime * result + ((formaPagamento == null) ? 0 : formaPagamento.hashCode());
+        return result;
     }
 }

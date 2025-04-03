@@ -15,7 +15,8 @@ public record DadosCadastroAgendamentoFixo(
         int intervaloRepeticao,
         int valorRepeticao,
         String observacao,
-        Integer diaDoMes
+        Integer diaDoMes,
+        String formaPagamento 
 ) {
     // Manter o construtor original para compatibilidade
     public DadosCadastroAgendamentoFixo {

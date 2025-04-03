@@ -14,6 +14,9 @@ public interface AgendamentoFixoRepository extends JpaRepository<AgendamentoFixo
     @Query("SELECT af FROM AgendamentoFixo af WHERE af.tipoRepeticao = 'MENSAL' AND af.valorRepeticao = :diaDoMes")
     List<AgendamentoFixo> findByDiaDoMes(int diaDoMes);
 
+    @Query("SELECT af FROM AgendamentoFixo af WHERE af.tipoRepeticao = 'QUINZENAL' AND (af.dataFim IS NULL OR af.dataFim >= :hoje) AND af.dataInicio <= :hoje")
+List<AgendamentoFixo> findActiveQuinzenalSchedules(@Param("hoje") LocalDate hoje);
+
     // Busca agendamentos fixos mensais pelo profissional e dia do mês
     @Query("SELECT af FROM AgendamentoFixo af WHERE af.profissional = :profissional AND af.tipoRepeticao = 'MENSAL' AND af.valorRepeticao = :diaDoMes")
     List<AgendamentoFixo> findByProfissionalAndDiaDoMes(Profissional profissional, int diaDoMes);

@@ -37,6 +37,9 @@ public class Agendamento {
     @Column(columnDefinition = "TEXT")
     private String observacao;
 
+    @Column(name = "forma_pagamento", nullable = false)
+    private String formaPagamento;
+
     // Removemos o campo valor, pois será obtido do serviço
 
     // Construtor com DadosCadastroAgendamento
@@ -47,12 +50,21 @@ public class Agendamento {
         this.data = dados.data();
         this.hora = dados.hora();
         this.observacao = dados.observacao();
+        this.formaPagamento = dados.formaPagamento();
     }
 
     // Construtor padrão necessário para o JPA
     public Agendamento() {}
 
     // Getters e Setters - atualizados para refletir as mudanças
+
+    public String getFormaPagamento() {
+        return formaPagamento;
+    }
+    public void setFormaPagamento(String formaPagamento) {
+        this.formaPagamento = formaPagamento;
+    }
+
     public Long getId() {
         return id;
     }
@@ -130,7 +142,7 @@ public class Agendamento {
         return minutos + " min";
     }
 
-    @Override
+   @Override
     public String toString() {
         return "Agendamento{" +
                 "id=" + id +
@@ -139,13 +151,14 @@ public class Agendamento {
                 ", servico=" + (servico != null ? servico.getNome() : "null") +
                 ", data=" + data +
                 ", hora=" + hora +
-                ", duracao=" + getDuracaoFormatada() +
                 ", observacao='" + observacao + '\'' +
+                ", formaPagamento='" + formaPagamento + '\'' +
                 "}";
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o) { 
+        // Inclua formaPagamento se necessário
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Agendamento that = (Agendamento) o;
@@ -155,11 +168,12 @@ public class Agendamento {
                 Objects.equals(servico, that.servico) &&
                 Objects.equals(data, that.data) &&
                 Objects.equals(hora, that.hora) &&
-                Objects.equals(observacao, that.observacao);
+                Objects.equals(observacao, that.observacao) &&
+                Objects.equals(formaPagamento, that.formaPagamento);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, cliente, profissional, servico, data, hora, observacao);
+        return Objects.hash(id, cliente, profissional, servico, data, hora, observacao, formaPagamento);
     }
 }
