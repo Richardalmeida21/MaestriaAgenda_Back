@@ -9,23 +9,26 @@ public class ComissaoResponseDTO {
     private LocalDate dataInicio;
     private LocalDate dataFim;
     private Double comissaoTotal;
+    private Double comissaoLiquida;  // 🔹 Novo campo para comissão após desconto
     private Double comissaoAgendamentosNormais;
     private Double comissaoAgendamentosFixos;
 
     public ComissaoResponseDTO(Long profissionalId, String nomeProfissional, 
                               LocalDate dataInicio, LocalDate dataFim,
-                              Double comissaoTotal, Double comissaoAgendamentosNormais, 
+                              Double comissaoTotal, Double comissaoLiquida,
+                              Double comissaoAgendamentosNormais, 
                               Double comissaoAgendamentosFixos) {
         this.profissionalId = profissionalId;
         this.nomeProfissional = nomeProfissional;
         this.dataInicio = dataInicio;
         this.dataFim = dataFim;
         this.comissaoTotal = comissaoTotal;
+        this.comissaoLiquida = comissaoLiquida;  // 🔹 Atribuindo o novo valor
         this.comissaoAgendamentosNormais = comissaoAgendamentosNormais;
         this.comissaoAgendamentosFixos = comissaoAgendamentosFixos;
     }
 
-    // Getters e setters
+    // Getters e Setters
     public Long getProfissionalId() {
         return profissionalId;
     }
@@ -53,7 +56,11 @@ public class ComissaoResponseDTO {
     public Double getComissaoTotal() {
         return comissaoTotal;
     }
-    
+
+    public Double getComissaoLiquida() {   // 🔹 Novo getter para a comissão líquida
+        return comissaoLiquida;
+    }
+
     public Double getComissaoAgendamentosNormais() {
         return comissaoAgendamentosNormais;
     }
