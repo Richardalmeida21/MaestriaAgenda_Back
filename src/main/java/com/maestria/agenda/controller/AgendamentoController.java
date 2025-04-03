@@ -532,7 +532,7 @@ public ResponseEntity<?> cadastrar(@RequestBody DadosCadastroAgendamento dados,
                 logger.warn("❌ Profissional não encontrado para o usuário: {}", userDetails.getUsername());
                 return ResponseEntity.status(403).body("Profissional não encontrado.");
             }
-            if (profissional.getId() != dados.profissionalId()) {
+            if (!profissional.getId().equals(dados.profissionalId())) {
                 logger.warn("❌ Profissional tentando criar agendamento para outro profissional: {}",
                         dados.profissionalId());
                 return ResponseEntity.status(403).body("Você só pode criar agendamentos para você mesmo.");
@@ -540,10 +540,9 @@ public ResponseEntity<?> cadastrar(@RequestBody DadosCadastroAgendamento dados,
             logger.info("✅ PROFISSIONAL {} criando agendamento para si mesmo", profissional.getNome());
         }
 
-        // Validação opcional: Verifica se a forma de pagamento está entre os valores permitidos 
-        // (exemplo simplificado; você pode usar um Enum ou outro método auxiliar)
-        String formaPagamento = dados.formaPagamento().toUpperCase();
-        if (!formaPagamento.matches("(CREDITO_[1-9]X|CREDITO_10X|DEBITO|PIX|DINHEIRO)")) {
+        // Verificação e conversão da forma de pagamento para o Enum PagamentoTipo
+        PagamentoTipo pagamentoTipo = PagamentoTipo.fromString(dados.formaPagamento());
+        if (pagamentoTipo == null) {
             return ResponseEntity.badRequest().body("Forma de pagamento inválida. Opções válidas: " +
                     "CREDITO_1X até CREDITO_10X, DEBITO, PIX, DINHEIRO.");
         }
@@ -558,8 +557,7 @@ public ResponseEntity<?> cadastrar(@RequestBody DadosCadastroAgendamento dados,
             LocalTime horaInicio = dados.hora();
             LocalTime horaFim = dados.hora().plus(servico.getDuracaoAsObject());
 
-            if (horaInicio.isBefore(bloqueio.getHoraFim())
-                    && horaFim.isAfter(bloqueio.getHoraInicio())) {
+            if (horaInicio.isBefore(bloqueio.getHoraFim()) && horaFim.isAfter(bloqueio.getHoraInicio())) {
                 return ResponseEntity.badRequest().body("Este horário está bloqueado na agenda. Motivo: " + bloqueio.getMotivo());
             }
         }
@@ -572,7 +570,7 @@ public ResponseEntity<?> cadastrar(@RequestBody DadosCadastroAgendamento dados,
         agendamento.setData(dados.data());
         agendamento.setHora(dados.hora());
         agendamento.setObservacao(dados.observacao());
-        agendamento.setFormaPagamento(formaPagamento);
+        agendamento.setFormaPagamento(pagamentoTipo); // Agora corretamente convertido para Enum
 
         agendamentoRepository.save(agendamento);
 
@@ -583,6 +581,7 @@ public ResponseEntity<?> cadastrar(@RequestBody DadosCadastroAgendamento dados,
         return ResponseEntity.status(500).body("Erro ao criar agendamento: " + e.getMessage());
     }
 }
+
 
     // ✅ ADMIN pode atualizar qualquer agendamento, PROFISSIONAL apenas os seus
     @PutMapping("/{id}")
