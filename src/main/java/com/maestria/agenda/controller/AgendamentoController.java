@@ -99,8 +99,11 @@ public ResponseEntity<?> cadastrarAgendamentoFixo(
         } else {
             agendamentoFixo.setDiaDoMes(dados.diaDoMes());
         }
-
-        // NOVO: Atribuição da forma de pagamento – normalizando para uppercase
+        
+        // NOVO: Verifica se a forma de pagamento foi informada e atribui (normalizando para uppercase)
+        if (dados.formaPagamento() == null || dados.formaPagamento().isEmpty()) {
+            return ResponseEntity.badRequest().body("Forma de pagamento é obrigatória.");
+        }
         agendamentoFixo.setFormaPagamento(dados.formaPagamento().toUpperCase());
 
         agendamentoFixoRepository.save(agendamentoFixo);
