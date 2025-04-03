@@ -36,6 +36,8 @@ public class Profissional {
     @Column(nullable = false)
     private Role role; // Alterado para o tipo Role
 
+    // Removido o campo comissaoPercentual
+
     // Construtor padrão
     public Profissional() {
         // Role padrão para o profissional, caso não seja passado no cadastro
@@ -83,17 +85,46 @@ public class Profissional {
         this.role = role;
     }
 
-    // Métodos equals e hashCode baseados no 'id' e 'login' para comparações eficientes
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Profissional that = (Profissional) o;
-        return id == that.id && Objects.equals(login, that.login);
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        Profissional other = (Profissional) obj;
+        if (id != other.id)
+            return false;
+        if (nome == null) {
+            if (other.nome != null)
+                return false;
+        } else if (!nome.equals(other.nome))
+            return false;
+        if (login == null) {
+            if (other.login != null)
+                return false;
+        } else if (!login.equals(other.login))
+            return false;
+        if (senha == null) {
+            if (other.senha != null)
+                return false;
+        } else if (!senha.equals(other.senha))
+            return false;
+        if (role != other.role)
+            return false;
+        return true;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, login);
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + (int) (id ^ (id >>> 32));
+        result = prime * result + ((nome == null) ? 0 : nome.hashCode());
+        result = prime * result + ((login == null) ? 0 : login.hashCode());
+        result = prime * result + ((senha == null) ? 0 : senha.hashCode());
+        result = prime * result + ((role == null) ? 0 : role.hashCode());
+        return result;
     }
 }

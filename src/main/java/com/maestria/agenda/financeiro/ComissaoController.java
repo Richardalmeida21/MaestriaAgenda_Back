@@ -29,26 +29,37 @@ public class ComissaoController {
         this.profissionalRepository = profissionalRepository;
     }
 
-    // Lista todas as comissões (apenas ADMIN)
+    /**
+     * Endpoint para listar todas as comissões (apenas ADMIN)
+     * Retorna comissões de todos os profissionais para o mês atual
+     */
     @GetMapping("/comissoes")
     public ResponseEntity<?> listarComissoes(@AuthenticationPrincipal UserDetails userDetails) {
-        logger.info("🔍 Solicitando cálculo de comissões por {}", userDetails.getUsername());
+        logger.info("🔍 Solicitando listagem de comissões por {}", userDetails.getUsername());
 
+        // Verificar permissão ADMIN
         if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-            logger.warn("❌ Tentativa de acesso às comissões sem permissão por {}", userDetails.getUsername());
-            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode acessar as comissões.");
+            logger.warn("❌ Tentativa de acesso não autorizado às comissões por {}", userDetails.getUsername());
+            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode acessar todas as comissões.");
         }
 
         try {
-            List<Object[]> comissoes = comissaoService.listarComissoes();
+            // Define o mês atual como período padrão
+            LocalDate inicio = LocalDate.now().withDayOfMonth(1);
+            LocalDate fim = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
+            
+            List<ComissaoResponseDTO> comissoes = comissaoService.listarTodasComissoesNoPeriodo(inicio, fim);
             return ResponseEntity.ok(comissoes);
         } catch (Exception e) {
-            logger.error("❌ Erro ao calcular comissões", e);
-            return ResponseEntity.status(500).body("Erro ao calcular comissões: " + e.getMessage());
+            logger.error("❌ Erro ao listar comissões: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao listar comissões: " + e.getMessage());
         }
     }
 
-    // Calcula comissão de um profissional específico por período
+    /**
+     * Endpoint para calcular comissão de um profissional específico por período
+     * Permite acesso pelo ADMIN ou pelo próprio profissional
+     */
     @GetMapping("/comissoes/profissional/{id}")
     public ResponseEntity<?> calcularComissaoPorProfissional(
             @PathVariable Long id,
@@ -59,7 +70,7 @@ public class ComissaoController {
         logger.info("🔍 Solicitando comissão para profissional {} entre {} e {} por {}",
                 id, dataInicio, dataFim, userDetails.getUsername());
 
-        // Verificar se o usuário é ADMIN ou o próprio profissional
+        // Verificação de permissão
         boolean isAdmin = userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"));
         boolean isProfissionalAcessandoPropriosDados = false;
 
@@ -83,41 +94,8 @@ public class ComissaoController {
             ComissaoResponseDTO comissao = comissaoService.calcularComissaoPorPeriodo(id, inicio, fim);
             return ResponseEntity.ok(comissao);
         } catch (Exception e) {
-            logger.error("❌ Erro ao calcular comissão", e);
+            logger.error("❌ Erro ao calcular comissão: {}", e.getMessage(), e);
             return ResponseEntity.status(500).body("Erro ao calcular comissão: " + e.getMessage());
-        }
-    }
-
-    // Endpoint para profissional ver suas próprias comissões
-    // Altere esta linha:
-    @GetMapping("/comissoes/minhas")
-    public ResponseEntity<?> consultarMinhasComissoes(
-            @RequestParam String dataInicio,
-            @RequestParam String dataFim,
-            @AuthenticationPrincipal UserDetails userDetails) {
-
-        logger.info("🔍 {} solicitando suas comissões entre {} e {}",
-                userDetails.getUsername(), dataInicio, dataFim);
-
-        try {
-            // Buscar o profissional
-            Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
-            if (profissional == null) {
-                logger.warn("❌ Profissional não encontrado: {}", userDetails.getUsername());
-                return ResponseEntity.status(403).body("Profissional não encontrado.");
-            }
-
-            LocalDate inicio = LocalDate.parse(dataInicio);
-            LocalDate fim = LocalDate.parse(dataFim);
-
-            // CORREÇÃO: Usar ComissaoResponseDTO em vez de
-            // ComissaoService.ComissaoResponseDTO
-            ComissaoResponseDTO comissao = comissaoService.calcularComissaoPorPeriodo(profissional.getId(), inicio,
-                    fim);
-            return ResponseEntity.ok(comissao);
-        } catch (Exception e) {
-            logger.error("❌ Erro ao calcular comissões", e);
-            return ResponseEntity.status(500).body("Erro ao calcular comissões: " + e.getMessage());
         }
     }
 }

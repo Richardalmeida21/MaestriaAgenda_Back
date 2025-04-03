@@ -10,6 +10,7 @@ import com.maestria.agenda.bloqueio.BloqueioAgenda;
 import com.maestria.agenda.bloqueio.BloqueioAgendaRepository;
 import com.maestria.agenda.cliente.Cliente;
 import com.maestria.agenda.cliente.ClienteRepository;
+import com.maestria.agenda.financeiro.PagamentoTipo;
 import com.maestria.agenda.profissional.Profissional;
 import com.maestria.agenda.profissional.ProfissionalRepository;
 import com.maestria.agenda.servico.Servico;
@@ -62,106 +63,109 @@ public class AgendamentoController {
 
     // ✅ Endpoint para criar agendamentos fixos com o novo modelo de repetição
     @PostMapping("/fixo")
-public ResponseEntity<?> cadastrarAgendamentoFixo(
-        @RequestBody DadosCadastroAgendamentoFixo dados,
-        @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<?> cadastrarAgendamentoFixo(
+            @RequestBody DadosCadastroAgendamentoFixo dados,
+            @AuthenticationPrincipal UserDetails userDetails) {
 
-    try {
-        // Validação de permissões (apenas ADMIN pode cadastrar agendamentos fixos, por exemplo)
-        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode criar agendamentos fixos.");
-        }
-
-        // Busca as entidades necessárias
-        Cliente cliente = clienteRepository.findById(dados.clienteId())
-                .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
-        Profissional profissional = profissionalRepository.findById(dados.profissionalId())
-                .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
-        Servico servico = servicoRepository.findById(dados.servicoId())
-                .orElseThrow(() -> new RuntimeException("Serviço não encontrado"));
-        
-        // Cria e popula o agendamento fixo
-        AgendamentoFixo agendamentoFixo = new AgendamentoFixo();
-        agendamentoFixo.setCliente(cliente);
-        agendamentoFixo.setProfissional(profissional);
-        agendamentoFixo.setServico(servico);
-        agendamentoFixo.setTipoRepeticao(dados.tipoRepeticao());
-        agendamentoFixo.setIntervaloRepeticao(dados.intervaloRepeticao());
-        agendamentoFixo.setValorRepeticao(dados.valorRepeticao());
-        agendamentoFixo.setDataInicio(dados.dataInicio());
-        agendamentoFixo.setDataFim(dados.dataFim());
-        agendamentoFixo.setHora(dados.hora());
-        agendamentoFixo.setObservacao(dados.observacao());
-        
-        // Para agendamento mensal, se diaDoMes não foi informado, usamos valorRepeticao
-        if (dados.tipoRepeticao() == AgendamentoFixo.TipoRepeticao.MENSAL && dados.diaDoMes() == null) {
-            agendamentoFixo.setDiaDoMes(dados.valorRepeticao());
-        } else {
-            agendamentoFixo.setDiaDoMes(dados.diaDoMes());
-        }
-        
-        // NOVO: Verifica se a forma de pagamento foi informada e atribui (normalizando para uppercase)
-        if (dados.formaPagamento() == null || dados.formaPagamento().isEmpty()) {
-            return ResponseEntity.badRequest().body("Forma de pagamento é obrigatória.");
-        }
-        agendamentoFixo.setFormaPagamento(dados.formaPagamento().toUpperCase());
-
-        agendamentoFixoRepository.save(agendamentoFixo);
-
-        // Geração automática de ocorrências (ex: para os próximos 30 dias)
-        LocalDate dataFimGeracao = LocalDate.now().plusDays(30);
-        LocalDate dataAtual = agendamentoFixo.getDataInicio().isAfter(LocalDate.now())
-                ? agendamentoFixo.getDataInicio()
-                : LocalDate.now();
-
-        int ocorrenciasCriadas = 0;
-        while (!dataAtual.isAfter(dataFimGeracao)) {
-            // Verifica se a data atual está dentro da validade do agendamento fixo
-            if (!dataAtual.isBefore(agendamentoFixo.getDataInicio()) &&
-                    (agendamentoFixo.getDataFim() == null || !dataAtual.isAfter(agendamentoFixo.getDataFim()))) {
-
-                boolean gerarOcorrencia = false;
-                switch (agendamentoFixo.getTipoRepeticao()) {
-                    case DIARIA:
-                        gerarOcorrencia = (dataAtual.toEpochDay() - agendamentoFixo.getDataInicio().toEpochDay())
-                                % agendamentoFixo.getIntervaloRepeticao() == 0;
-                        break;
-                    case SEMANAL:
-                        int diaDaSemana = dataAtual.getDayOfWeek().getValue() % 7 + 1; // 1=domingo
-                        gerarOcorrencia = (agendamentoFixo.getValorRepeticao() & (1 << (diaDaSemana - 1))) != 0;
-                        break;
-                    case MENSAL:
-                        if (agendamentoFixo.getValorRepeticao() == -1) {
-                            gerarOcorrencia = dataAtual.getDayOfMonth() == dataAtual.lengthOfMonth();
-                        } else {
-                            gerarOcorrencia = agendamentoFixo.getDiaDoMes() == dataAtual.getDayOfMonth();
-                        }
-                        break;
-                    case QUINZENAL:
-                        long diasDesdeInicio = dataAtual.toEpochDay() - agendamentoFixo.getDataInicio().toEpochDay();
-                        gerarOcorrencia = diasDesdeInicio % 15 == 0;
-                        break;
-                    default:
-                        break;
-                }
-    
-                if (gerarOcorrencia) {
-                    // Ao criar a ocorrência, repassa também a forma de pagamento do agendamento fixo
-                    criarAgendamentoAPartirDeFixo(agendamentoFixo, dataAtual);
-                    ocorrenciasCriadas++;
-                }
+        try {
+            // Validação de permissões (apenas ADMIN pode cadastrar agendamentos fixos)
+            if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+                return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode criar agendamentos fixos.");
             }
-            dataAtual = dataAtual.plusDays(1);
+
+            // Busca as entidades necessárias
+            Cliente cliente = clienteRepository.findById(dados.clienteId())
+                    .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+            Profissional profissional = profissionalRepository.findById(dados.profissionalId())
+                    .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+            Servico servico = servicoRepository.findById(dados.servicoId())
+                    .orElseThrow(() -> new RuntimeException("Serviço não encontrado"));
+
+            // Cria e popula o agendamento fixo
+            AgendamentoFixo agendamentoFixo = new AgendamentoFixo();
+            agendamentoFixo.setCliente(cliente);
+            agendamentoFixo.setProfissional(profissional);
+            agendamentoFixo.setServico(servico);
+            agendamentoFixo.setTipoRepeticao(dados.tipoRepeticao());
+            agendamentoFixo.setIntervaloRepeticao(dados.intervaloRepeticao());
+            agendamentoFixo.setValorRepeticao(dados.valorRepeticao());
+            agendamentoFixo.setDataInicio(dados.dataInicio());
+            agendamentoFixo.setDataFim(dados.dataFim());
+            agendamentoFixo.setHora(dados.hora());
+            agendamentoFixo.setObservacao(dados.observacao());
+
+            // Para agendamento mensal, se diaDoMes não foi informado, usamos valorRepeticao
+            if (dados.tipoRepeticao() == AgendamentoFixo.TipoRepeticao.MENSAL && dados.diaDoMes() == null) {
+                agendamentoFixo.setDiaDoMes(dados.valorRepeticao());
+            } else {
+                agendamentoFixo.setDiaDoMes(dados.diaDoMes());
+            }
+
+            // NOVO: Verifica se a forma de pagamento foi informada e atribui (normalizando
+            // para uppercase)
+            if (dados.formaPagamento() == null || dados.formaPagamento().isEmpty()) {
+                return ResponseEntity.badRequest().body("Forma de pagamento é obrigatória.");
+            }
+            agendamentoFixo.setFormaPagamento(dados.formaPagamento().toUpperCase());
+
+            agendamentoFixoRepository.save(agendamentoFixo);
+
+            // Geração automática de ocorrências (ex: para os próximos 30 dias)
+            LocalDate dataFimGeracao = LocalDate.now().plusDays(30);
+            LocalDate dataAtual = agendamentoFixo.getDataInicio().isAfter(LocalDate.now())
+                    ? agendamentoFixo.getDataInicio()
+                    : LocalDate.now();
+
+            int ocorrenciasCriadas = 0;
+            while (!dataAtual.isAfter(dataFimGeracao)) {
+                // Verifica se a data atual está dentro da validade do agendamento fixo
+                if (!dataAtual.isBefore(agendamentoFixo.getDataInicio()) &&
+                        (agendamentoFixo.getDataFim() == null || !dataAtual.isAfter(agendamentoFixo.getDataFim()))) {
+
+                    boolean gerarOcorrencia = false;
+                    switch (agendamentoFixo.getTipoRepeticao()) {
+                        case DIARIA:
+                            gerarOcorrencia = (dataAtual.toEpochDay() - agendamentoFixo.getDataInicio().toEpochDay())
+                                    % agendamentoFixo.getIntervaloRepeticao() == 0;
+                            break;
+                        case SEMANAL:
+                            int diaDaSemana = dataAtual.getDayOfWeek().getValue() % 7 + 1; // 1 = domingo
+                            gerarOcorrencia = (agendamentoFixo.getValorRepeticao() & (1 << (diaDaSemana - 1))) != 0;
+                            break;
+                        case MENSAL:
+                            if (agendamentoFixo.getValorRepeticao() == -1) {
+                                gerarOcorrencia = dataAtual.getDayOfMonth() == dataAtual.lengthOfMonth();
+                            } else {
+                                gerarOcorrencia = agendamentoFixo.getDiaDoMes() == dataAtual.getDayOfMonth();
+                            }
+                            break;
+                        case QUINZENAL:
+                            long diasDesdeInicio = dataAtual.toEpochDay()
+                                    - agendamentoFixo.getDataInicio().toEpochDay();
+                            gerarOcorrencia = diasDesdeInicio % 15 == 0;
+                            break;
+                        default:
+                            break;
+                    }
+
+                    if (gerarOcorrencia) {
+                        // Ao criar a ocorrência, repassa também a forma de pagamento do agendamento
+                        // fixo
+                        criarAgendamentoAPartirDeFixo(agendamentoFixo, dataAtual);
+                        ocorrenciasCriadas++;
+                    }
+                }
+                dataAtual = dataAtual.plusDays(1);
+            }
+
+            logger.info("✅ Foram geradas {} ocorrências para o agendamento fixo.", ocorrenciasCriadas);
+            return ResponseEntity.ok(agendamentoFixo);
+
+        } catch (Exception e) {
+            logger.error("❌ Erro ao criar agendamento fixo", e);
+            return ResponseEntity.status(500).body("Erro ao criar agendamento fixo: " + e.getMessage());
         }
-        
-        logger.info("✅ Foram geradas {} ocorrências para o agendamento fixo.", ocorrenciasCriadas);
-        return ResponseEntity.ok(agendamentoFixo);
-        
-    } catch (Exception e) {
-        logger.error("❌ Erro ao criar agendamento fixo", e);
-        return ResponseEntity.status(500).body("Erro ao criar agendamento fixo: " + e.getMessage());
     }
-}
 
     @GetMapping("/todos/{id}")
     public ResponseEntity<?> listarTodosAgendamentosPorProfissional(
@@ -237,8 +241,8 @@ public ResponseEntity<?> cadastrarAgendamentoFixo(
         agendamento.setHora(agendamentoFixo.getHora());
         agendamento.setObservacao(agendamentoFixo.getObservacao());
         // Repassa a forma de pagamento do agendamento fixo para o agendamento gerado
-        agendamento.setFormaPagamento(agendamentoFixo.getFormaPagamento());
-        
+        agendamento.setFormaPagamento(PagamentoTipo.valueOf(agendamentoFixo.getFormaPagamento()));
+
         agendamentoRepository.save(agendamento);
         logger.info("✅ Agendamento gerado a partir do agendamento fixo {}: {}", agendamentoFixo.getId(), agendamento);
     }
@@ -503,85 +507,66 @@ public ResponseEntity<?> cadastrarAgendamentoFixo(
 
     // ✅ ADMIN pode criar agendamentos para todos, PROFISSIONAL apenas para si
     @PostMapping
-public ResponseEntity<?> cadastrar(@RequestBody DadosCadastroAgendamento dados,
-        @AuthenticationPrincipal UserDetails userDetails) {
-    logger.info("🔍 Solicitação para criar agendamento por: {}", userDetails.getUsername());
+    public ResponseEntity<?> cadastrar(@RequestBody DadosCadastroAgendamento dados,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        logger.info("🔍 Solicitação para criar agendamento por: {}", userDetails.getUsername());
 
-    try {
-        boolean isAdmin = userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"));
+        try {
+            boolean isAdmin = userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"));
 
-        // Buscar o cliente
-        Cliente cliente = clienteRepository.findById(dados.clienteId())
-                .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+            // Buscar cliente e serviço
+            Cliente cliente = clienteRepository.findById(dados.clienteId())
+                    .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+            Servico servico = servicoRepository.findById(dados.servicoId())
+                    .orElseThrow(() -> new RuntimeException("Serviço não encontrado"));
 
-        // Buscar o serviço
-        Servico servico = servicoRepository.findById(dados.servicoId())
-                .orElseThrow(() -> new RuntimeException("Serviço não encontrado"));
-
-        Profissional profissional;
-
-        if (isAdmin) {
-            // Admin pode criar para qualquer profissional
-            profissional = profissionalRepository.findById(dados.profissionalId())
-                    .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
-            logger.info("✅ ADMIN criando agendamento para o profissional: {}", profissional.getNome());
-        } else {
-            // Profissional só pode criar para si mesmo
-            profissional = profissionalRepository.findByLogin(userDetails.getUsername());
-            if (profissional == null) {
-                logger.warn("❌ Profissional não encontrado para o usuário: {}", userDetails.getUsername());
-                return ResponseEntity.status(403).body("Profissional não encontrado.");
+            Profissional profissional;
+            if (isAdmin) {
+                // ADMIN pode criar para qualquer profissional
+                profissional = profissionalRepository.findById(dados.profissionalId())
+                        .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+                logger.info("✅ ADMIN criando agendamento para o profissional: {}", profissional.getNome());
+            } else {
+                // Profissional só pode criar para si mesmo
+                profissional = profissionalRepository.findByLogin(userDetails.getUsername());
+                if (profissional == null) {
+                    logger.warn("❌ Profissional não encontrado para o usuário: {}", userDetails.getUsername());
+                    return ResponseEntity.status(403).body("Profissional não encontrado.");
+                }
+                if (profissional.getId() != dados.profissionalId()) {
+                    logger.warn("❌ Profissional tentando criar agendamento para outro profissional: {}",
+                            dados.profissionalId());
+                    return ResponseEntity.status(403).body("Você só pode criar agendamentos para você mesmo.");
+                }
+                logger.info("✅ PROFISSIONAL {} criando agendamento para si mesmo", profissional.getNome());
             }
-            if (!profissional.getId().equals(dados.profissionalId())) {
-                logger.warn("❌ Profissional tentando criar agendamento para outro profissional: {}",
-                        dados.profissionalId());
-                return ResponseEntity.status(403).body("Você só pode criar agendamentos para você mesmo.");
+
+            // Conversão e validação da forma de pagamento
+            PagamentoTipo pagamentoTipo = dados.formaPagamento();
+            if (pagamentoTipo == null) {
+                return ResponseEntity.badRequest().body("Forma de pagamento inválida. Opções válidas: " +
+                        "CREDITO_1X até CREDITO_10X, DEBITO, PIX, DINHEIRO.");
             }
-            logger.info("✅ PROFISSIONAL {} criando agendamento para si mesmo", profissional.getNome());
+
+            // Criação do agendamento, incluindo o atributo formaPagamento
+            Agendamento agendamento = new Agendamento();
+            agendamento.setCliente(cliente);
+            agendamento.setProfissional(profissional);
+            agendamento.setServico(servico);
+            agendamento.setData(dados.data());
+            agendamento.setHora(dados.hora());
+            agendamento.setObservacao(dados.observacao());
+            agendamento.setFormaPagamento(pagamentoTipo);
+
+            // Salvar o agendamento
+            agendamentoRepository.save(agendamento);
+            logger.info("✅ Agendamento criado com sucesso: {}", agendamento);
+            return ResponseEntity.ok("Agendamento criado com sucesso.");
+        } catch (Exception e) {
+            logger.error("❌ Erro ao criar agendamento", e);
+            return ResponseEntity.status(500).body("Erro ao criar agendamento: " + e.getMessage());
         }
-
-        // Verificação e conversão da forma de pagamento para o Enum PagamentoTipo
-        PagamentoTipo pagamentoTipo = PagamentoTipo.fromString(dados.formaPagamento());
-        if (pagamentoTipo == null) {
-            return ResponseEntity.badRequest().body("Forma de pagamento inválida. Opções válidas: " +
-                    "CREDITO_1X até CREDITO_10X, DEBITO, PIX, DINHEIRO.");
-        }
-
-        // Verificação de bloqueios na agenda para o horário solicitado
-        List<BloqueioAgenda> bloqueios = bloqueioRepository.findByProfissionalAndData(profissional, dados.data());
-        for (BloqueioAgenda bloqueio : bloqueios) {
-            if (bloqueio.isDiaTodo()) {
-                return ResponseEntity.badRequest().body("Este dia está bloqueado na agenda. Motivo: " + bloqueio.getMotivo());
-            }
-
-            LocalTime horaInicio = dados.hora();
-            LocalTime horaFim = dados.hora().plus(servico.getDuracaoAsObject());
-
-            if (horaInicio.isBefore(bloqueio.getHoraFim()) && horaFim.isAfter(bloqueio.getHoraInicio())) {
-                return ResponseEntity.badRequest().body("Este horário está bloqueado na agenda. Motivo: " + bloqueio.getMotivo());
-            }
-        }
-
-        // Criação do agendamento
-        Agendamento agendamento = new Agendamento();
-        agendamento.setCliente(cliente);
-        agendamento.setProfissional(profissional);
-        agendamento.setServico(servico);
-        agendamento.setData(dados.data());
-        agendamento.setHora(dados.hora());
-        agendamento.setObservacao(dados.observacao());
-        agendamento.setFormaPagamento(pagamentoTipo); // Agora corretamente convertido para Enum
-
-        agendamentoRepository.save(agendamento);
-
-        logger.info("✅ Agendamento criado com sucesso: {}", agendamento);
-        return ResponseEntity.ok("Agendamento criado com sucesso.");
-    } catch (Exception e) {
-        logger.error("❌ Erro ao criar agendamento", e);
-        return ResponseEntity.status(500).body("Erro ao criar agendamento: " + e.getMessage());
     }
-}
-
 
     // ✅ ADMIN pode atualizar qualquer agendamento, PROFISSIONAL apenas os seus
     @PutMapping("/{id}")

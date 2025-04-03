@@ -12,6 +12,8 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
 
     List<Agendamento> findByProfissionalAndDataBetween(Profissional profissional, LocalDate dataInicio,
             LocalDate dataFim);
+            
+        List<Agendamento> findByProfissionalIdAndDataBetween(Long profissionalId, LocalDate inicio, LocalDate fim);
 
     @Query("SELECT EXTRACT(HOUR FROM a.hora) AS horario, COUNT(a) " +
        "FROM Agendamento a " +

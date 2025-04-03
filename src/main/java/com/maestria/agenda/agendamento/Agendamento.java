@@ -6,7 +6,7 @@ import java.time.Duration;
 import java.util.Objects;
 import com.maestria.agenda.cliente.Cliente;
 import com.maestria.agenda.profissional.Profissional;
-import com.maestria.agenda.servico.Servico; 
+import com.maestria.agenda.servico.Servico;
 import jakarta.persistence.*;
 import com.maestria.agenda.financeiro.PagamentoTipo;
 
@@ -39,35 +39,39 @@ public class Agendamento {
     private String observacao;
 
     @Enumerated(EnumType.STRING)
-@Column(name = "forma_pagamento", nullable = false)
-private PagamentoTipo formaPagamento;
-
+    @Column(name = "forma_pagamento", nullable = false)
+    private PagamentoTipo formaPagamento;
 
     // Removemos o campo valor, pois será obtido do serviço
 
-    // Construtor com DadosCadastroAgendamento
-   public Agendamento(DadosCadastroAgendamento dados, Cliente cliente, Profissional profissional, Servico servico) {
-    this.cliente = cliente;
-    this.profissional = profissional;
-    this.servico = servico;
-    this.data = dados.data();
-    this.hora = dados.hora();
-    this.observacao = dados.observacao();
-    this.formaPagamento = dados.formaPagamento(); 
-}
-
-
-    // Construtor padrão necessário para o JPA
-    public Agendamento() {}
-
-    // Getters e Setters - atualizados para refletir as mudanças
-
-    public String getFormaPagamento() {
-        return formaPagamento;
-    }
-    public void setFormaPagamento(String formaPagamento) {
+    public Agendamento(PagamentoTipo formaPagamento) {
         this.formaPagamento = formaPagamento;
     }
+
+    public PagamentoTipo getFormaPagamento() {
+        return formaPagamento;
+    }
+
+    public void setFormaPagamento(PagamentoTipo formaPagamento) {
+        this.formaPagamento = formaPagamento;
+    }
+
+    // Construtor com DadosCadastroAgendamento
+    public Agendamento(DadosCadastroAgendamento dados, Cliente cliente, Profissional profissional, Servico servico) {
+        this.cliente = cliente;
+        this.profissional = profissional;
+        this.servico = servico;
+        this.data = dados.data();
+        this.hora = dados.hora();
+        this.observacao = dados.observacao();
+        this.formaPagamento = dados.formaPagamento();
+    }
+
+    // Construtor padrão necessário para o JPA
+    public Agendamento() {
+    }
+
+    // Getters e Setters - atualizados para refletir as mudanças
 
     public Long getId() {
         return id;
@@ -122,7 +126,6 @@ private PagamentoTipo formaPagamento;
         return servico != null ? servico.getDuracaoAsObject() : null;
     }
 
-
     public String getObservacao() {
         return observacao;
     }
@@ -146,7 +149,7 @@ private PagamentoTipo formaPagamento;
         return minutos + " min";
     }
 
-   @Override
+    @Override
     public String toString() {
         return "Agendamento{" +
                 "id=" + id +
@@ -161,23 +164,66 @@ private PagamentoTipo formaPagamento;
     }
 
     @Override
-    public boolean equals(Object o) { 
-        // Inclua formaPagamento se necessário
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Agendamento that = (Agendamento) o;
-        return Objects.equals(id, that.id) &&
-                Objects.equals(cliente, that.cliente) &&
-                Objects.equals(profissional, that.profissional) &&
-                Objects.equals(servico, that.servico) &&
-                Objects.equals(data, that.data) &&
-                Objects.equals(hora, that.hora) &&
-                Objects.equals(observacao, that.observacao) &&
-                Objects.equals(formaPagamento, that.formaPagamento);
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        Agendamento other = (Agendamento) obj;
+        if (id == null) {
+            if (other.id != null)
+                return false;
+        } else if (!id.equals(other.id))
+            return false;
+        if (cliente == null) {
+            if (other.cliente != null)
+                return false;
+        } else if (!cliente.equals(other.cliente))
+            return false;
+        if (profissional == null) {
+            if (other.profissional != null)
+                return false;
+        } else if (!profissional.equals(other.profissional))
+            return false;
+        if (servico == null) {
+            if (other.servico != null)
+                return false;
+        } else if (!servico.equals(other.servico))
+            return false;
+        if (data == null) {
+            if (other.data != null)
+                return false;
+        } else if (!data.equals(other.data))
+            return false;
+        if (hora == null) {
+            if (other.hora != null)
+                return false;
+        } else if (!hora.equals(other.hora))
+            return false;
+        if (observacao == null) {
+            if (other.observacao != null)
+                return false;
+        } else if (!observacao.equals(other.observacao))
+            return false;
+        if (formaPagamento != other.formaPagamento)
+            return false;
+        return true;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, cliente, profissional, servico, data, hora, observacao, formaPagamento);
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((id == null) ? 0 : id.hashCode());
+        result = prime * result + ((cliente == null) ? 0 : cliente.hashCode());
+        result = prime * result + ((profissional == null) ? 0 : profissional.hashCode());
+        result = prime * result + ((servico == null) ? 0 : servico.hashCode());
+        result = prime * result + ((data == null) ? 0 : data.hashCode());
+        result = prime * result + ((hora == null) ? 0 : hora.hashCode());
+        result = prime * result + ((observacao == null) ? 0 : observacao.hashCode());
+        result = prime * result + ((formaPagamento == null) ? 0 : formaPagamento.hashCode());
+        return result;
     }
 }
