@@ -12,5 +12,6 @@ public record DadosCadastroAgendamento(
         @NotNull @FutureOrPresent LocalDate data,
         @NotNull LocalTime hora,
         String observacao,
-        @NotNull String formaPagamento
+        @NotNull PagamentoTipo formaPagamento
+
 ) {}
