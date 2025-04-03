@@ -4,6 +4,8 @@ import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import com.maestria.agenda.financeiro.PagamentoTipo;
+
 
 public record DadosCadastroAgendamento(
         @NotNull Long clienteId,
