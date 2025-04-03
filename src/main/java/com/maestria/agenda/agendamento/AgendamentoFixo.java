@@ -7,6 +7,8 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.Duration;
+import com.maestria.agenda.financeiro.PagamentoTipo;
+
 
 @Entity
 @Table(name = "agendamento_fixo")
