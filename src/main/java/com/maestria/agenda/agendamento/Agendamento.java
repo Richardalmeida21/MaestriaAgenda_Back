@@ -37,8 +37,10 @@ public class Agendamento {
     @Column(columnDefinition = "TEXT")
     private String observacao;
 
-    @Column(name = "forma_pagamento", nullable = false)
-    private String formaPagamento;
+    @Enumerated(EnumType.STRING)
+@Column(name = "forma_pagamento", nullable = false)
+private PagamentoTipo formaPagamento;
+
 
     // Removemos o campo valor, pois será obtido do serviço
 
