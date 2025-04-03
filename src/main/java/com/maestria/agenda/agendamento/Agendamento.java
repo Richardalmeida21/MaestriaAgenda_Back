@@ -45,15 +45,16 @@ private PagamentoTipo formaPagamento;
     // Removemos o campo valor, pois será obtido do serviço
 
     // Construtor com DadosCadastroAgendamento
-    public Agendamento(DadosCadastroAgendamento dados, Cliente cliente, Profissional profissional, Servico servico) {
-        this.cliente = cliente;
-        this.profissional = profissional;
-        this.servico = servico;
-        this.data = dados.data();
-        this.hora = dados.hora();
-        this.observacao = dados.observacao();
-        this.formaPagamento = dados.formaPagamento();
-    }
+   public Agendamento(DadosCadastroAgendamento dados, Cliente cliente, Profissional profissional, Servico servico) {
+    this.cliente = cliente;
+    this.profissional = profissional;
+    this.servico = servico;
+    this.data = dados.data();
+    this.hora = dados.hora();
+    this.observacao = dados.observacao();
+    this.formaPagamento = dados.formaPagamento(); 
+}
+
 
     // Construtor padrão necessário para o JPA
     public Agendamento() {}
