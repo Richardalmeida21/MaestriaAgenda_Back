@@ -16,11 +16,13 @@ public record DadosCadastroAgendamentoFixo(
         int valorRepeticao,
         String observacao,
         Integer diaDoMes,
-        String formaPagamento 
+        String formaPagamento
 ) {
-    // Manter o construtor original para compatibilidade
     public DadosCadastroAgendamentoFixo {
-        // Se for agendamento mensal e não tiver dia do mês especificado, use o valor de repetição
+        if (formaPagamento == null || formaPagamento.trim().isEmpty()) {
+            throw new IllegalArgumentException("A forma de pagamento é obrigatória.");
+        }
+
         if (tipoRepeticao == TipoRepeticao.MENSAL && diaDoMes == null) {
             diaDoMes = valorRepeticao;
         }
