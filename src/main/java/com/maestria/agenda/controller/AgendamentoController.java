@@ -120,7 +120,8 @@ public ResponseEntity<?> listarTodosAgendamentosPorProfissional(
     // Se o usuário não for ADMIN, só permite acessar se for o próprio profissional
     if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
         Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
-        if (profissional == null || !profissional.getId().equals(id)) {
+        // Se o id do profissional for um primitivo long, compare usando '!='
+        if (profissional == null || profissional.getId() != id.longValue()) {
             return ResponseEntity.status(403).body("Acesso negado.");
         }
     }
@@ -135,7 +136,7 @@ public ResponseEntity<?> listarTodosAgendamentosPorProfissional(
         // Buscar agendamentos fixos
         List<AgendamentoFixo> fixos = agendamentoFixoRepository.findByProfissional(profissional);
         
-        // Preparar a resposta combinando ambos os tipos (pode ser em um Map ou DTO)
+        // Monta a resposta unindo ambos os tipos
         Map<String, Object> resposta = new HashMap<>();
         resposta.put("agendamentosNormais", normais);
         resposta.put("agendamentosFixos", fixos);
