@@ -36,37 +36,89 @@ public class ComissaoService {
 
     // Calcula a comissão total por período para um profissional
     public ComissaoResponseDTO calcularComissaoPorPeriodo(Long profissionalId, LocalDate inicio, LocalDate fim) {
-    Profissional profissional = profissionalRepository.findById(profissionalId)
-        .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+    try {
+        Profissional profissional = profissionalRepository.findById(profissionalId)
+            .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
 
-    // Buscar as comissões no período
-    Double comissaoAgendamentosNormais = comissaoRepository.calcularComissaoAgendamentosNormais(profissionalId, inicio, fim);
-    Double comissaoAgendamentosFixos = comissaoRepository.calcularComissaoAgendamentosFixos(profissionalId, inicio, fim);
-    Double comissaoTotal = comissaoAgendamentosNormais + comissaoAgendamentosFixos;
+        // Buscar todos os agendamentos no período
+        List<Agendamento> agendamentos = agendamentoRepository.findByProfissionalIdAndDataBetween(profissionalId, inicio, fim);
+        List<AgendamentoFixo> agendamentosFixos = agendamentoFixoRepository.findByProfissional(profissional);
 
-    // Aqui você precisa obter a forma de pagamento (exemplo genérico)
-    PagamentoTipo pagamentoTipo = obterTipoDePagamento(profissionalId, inicio, fim);
-    
-    // Aplicar a taxa de desconto com base na forma de pagamento
-    double taxaDesconto = pagamentoTipo != null ? pagamentoTipo.getTaxa() / 100 : 0.0;
-    Double comissaoLiquida = comissaoTotal * (1 - taxaDesconto);
+        double comissaoTotal = 0.0;
+        double comissaoLiquida = 0.0;
 
-    return new ComissaoResponseDTO(
-        profissional.getId(),
-        profissional.getNome(),
-        inicio,
-        fim,
-        comissaoTotal,
-        comissaoLiquida,  // 🔹 Incluindo a comissão já com desconto aplicado
-        comissaoAgendamentosNormais,
-        comissaoAgendamentosFixos
-    );
-}
- catch (Exception e) {
-            logger.error("❌ Erro ao calcular comissão", e);
-            throw new RuntimeException("Erro ao calcular comissão: " + e.getMessage());
+        // 🔹 Processar agendamentos normais
+        for (Agendamento agendamento : agendamentos) {
+            if (agendamento.getServico() == null) {
+                logger.warn("⚠️ Agendamento ID {} não possui serviço associado", agendamento.getId());
+                continue;
+            }
+
+            Double valorServico = agendamento.getServico().getValor();
+            if (valorServico == null) {
+                logger.warn("⚠️ Serviço do agendamento ID {} não tem valor definido", agendamento.getId());
+                continue;
+            }
+
+            // 🔹 Identificar a forma de pagamento e sua taxa
+            PagamentoTipo pagamentoTipo = PagamentoTipo.fromString(agendamento.getFormaPagamento());
+            double taxaDesconto = (pagamentoTipo != null) ? pagamentoTipo.getTaxa() / 100 : 0.0;
+
+            // 🔹 Calcular comissão bruta e líquida para este agendamento
+            double comissaoBruta = valorServico * (comissaoPercentual / 100);
+            double comissaoComDesconto = comissaoBruta * (1 - taxaDesconto);
+
+            // 🔹 Acumular valores
+            comissaoTotal += comissaoBruta;
+            comissaoLiquida += comissaoComDesconto;
         }
+
+        // 🔹 Processar agendamentos fixos
+        for (AgendamentoFixo agendamentoFixo : agendamentosFixos) {
+            if (agendamentoFixo.getServico() == null) {
+                logger.warn("⚠️ Agendamento fixo ID {} não possui serviço associado", agendamentoFixo.getId());
+                continue;
+            }
+
+            Double valorServico = agendamentoFixo.getServico().getValor();
+            if (valorServico == null) {
+                logger.warn("⚠️ Serviço do agendamento fixo ID {} não tem valor definido", agendamentoFixo.getId());
+                continue;
+            }
+
+            // 🔹 Identificar a forma de pagamento e sua taxa
+            PagamentoTipo pagamentoTipo = PagamentoTipo.fromString(agendamentoFixo.getFormaPagamento());
+            double taxaDesconto = (pagamentoTipo != null) ? pagamentoTipo.getTaxa() / 100 : 0.0;
+
+            // 🔹 Contar quantas vezes o agendamento fixo foi realizado no período
+            int diasExecutados = calcularDiasExecutadosNoPeriodo(agendamentoFixo, inicio, fim);
+
+            // 🔹 Calcular comissão bruta e líquida
+            double comissaoBruta = valorServico * (comissaoPercentual / 100) * diasExecutados;
+            double comissaoComDesconto = comissaoBruta * (1 - taxaDesconto);
+
+            // 🔹 Acumular valores
+            comissaoTotal += comissaoBruta;
+            comissaoLiquida += comissaoComDesconto;
+        }
+
+        // 🔹 Retornar o DTO com os valores corretos
+        return new ComissaoResponseDTO(
+            profissional.getId(),
+            profissional.getNome(),
+            inicio,
+            fim,
+            comissaoTotal,
+            comissaoLiquida,  
+            comissaoTotal - comissaoLiquida,  
+            comissaoLiquida
+        );
+    } catch (Exception e) {
+        logger.error("❌ Erro ao calcular comissão", e);
+        throw new RuntimeException("Erro ao calcular comissão: " + e.getMessage());
     }
+}
+
 
     // Lista comissões para todos os profissionais (consulta customizada, se necessário)
     public List<Object[]> listarComissoes() {
