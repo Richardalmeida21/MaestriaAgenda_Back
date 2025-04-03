@@ -8,6 +8,7 @@ import com.maestria.agenda.cliente.Cliente;
 import com.maestria.agenda.profissional.Profissional;
 import com.maestria.agenda.servico.Servico; 
 import jakarta.persistence.*;
+import com.maestria.agenda.financeiro.PagamentoTipo;
 
 @Entity
 @Table(name = "agendamento")
