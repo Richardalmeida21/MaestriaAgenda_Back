@@ -36,35 +36,33 @@ public class ComissaoService {
 
     // Calcula a comissão total por período para um profissional
     public ComissaoResponseDTO calcularComissaoPorPeriodo(Long profissionalId, LocalDate inicio, LocalDate fim) {
-        logger.info("🔍 Calculando comissão para o profissional {} entre {} e {}",
-                profissionalId, inicio, fim);
-        try {
-            // Busca o profissional
-            Profissional profissional = profissionalRepository.findById(profissionalId)
-                    .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+    Profissional profissional = profissionalRepository.findById(profissionalId)
+        .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
 
-            // Comissão dos agendamentos normais
-            Double comissaoAgendamentos = agendamentoRepository.calcularComissaoTotalPorPeriodo(
-                    profissionalId, inicio, fim, comissaoPercentual / 100);
-            if (comissaoAgendamentos == null)
-                comissaoAgendamentos = 0.0;
+    // Buscar as comissões no período
+    Double comissaoAgendamentosNormais = comissaoRepository.calcularComissaoAgendamentosNormais(profissionalId, inicio, fim);
+    Double comissaoAgendamentosFixos = comissaoRepository.calcularComissaoAgendamentosFixos(profissionalId, inicio, fim);
+    Double comissaoTotal = comissaoAgendamentosNormais + comissaoAgendamentosFixos;
 
-            // Comissão dos agendamentos fixos
-            Double comissaoAgendamentosFixos = calcularComissaoAgendamentosFixos(profissional, inicio, fim);
+    // Aqui você precisa obter a forma de pagamento (exemplo genérico)
+    PagamentoTipo pagamentoTipo = obterTipoDePagamento(profissionalId, inicio, fim);
+    
+    // Aplicar a taxa de desconto com base na forma de pagamento
+    double taxaDesconto = pagamentoTipo != null ? pagamentoTipo.getTaxa() / 100 : 0.0;
+    Double comissaoLiquida = comissaoTotal * (1 - taxaDesconto);
 
-            // Soma total
-            Double comissaoTotal = comissaoAgendamentos + comissaoAgendamentosFixos;
-            logger.info("✅ Comissão calculada: R$ {}", comissaoTotal);
-
-            return new ComissaoResponseDTO(
-                    profissional.getId(),
-                    profissional.getNome(),
-                    inicio,
-                    fim,
-                    comissaoTotal,
-                    comissaoAgendamentos,
-                    comissaoAgendamentosFixos);
-        } catch (Exception e) {
+    return new ComissaoResponseDTO(
+        profissional.getId(),
+        profissional.getNome(),
+        inicio,
+        fim,
+        comissaoTotal,
+        comissaoLiquida,  // 🔹 Incluindo a comissão já com desconto aplicado
+        comissaoAgendamentosNormais,
+        comissaoAgendamentosFixos
+    );
+}
+ catch (Exception e) {
             logger.error("❌ Erro ao calcular comissão", e);
             throw new RuntimeException("Erro ao calcular comissão: " + e.getMessage());
         }
