@@ -3,6 +3,8 @@ package com.maestria.agenda.agendamento;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import com.maestria.agenda.agendamento.AgendamentoFixo.TipoRepeticao;
+import com.maestria.agenda.financeiro.PagamentoTipo;
+
 
 public record DadosCadastroAgendamentoFixo(
         Long clienteId,
