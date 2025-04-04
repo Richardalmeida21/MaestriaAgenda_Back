@@ -30,6 +30,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/agendamento")
@@ -271,6 +272,15 @@ public class AgendamentoController {
             Servico servico = servicoRepository.findById(dados.servicoId())
                     .orElseThrow(() -> new RuntimeException("Serviço não encontrado"));
 
+            // Guardar valores originais para verificar o que mudou
+            Cliente clienteOriginal = agendamentoFixo.getCliente();
+            Profissional profissionalOriginal = agendamentoFixo.getProfissional();
+            Servico servicoOriginal = agendamentoFixo.getServico();
+            String observacaoOriginal = agendamentoFixo.getObservacao();
+            String formaPagamentoOriginal = agendamentoFixo.getFormaPagamento();
+            LocalTime horaOriginal = agendamentoFixo.getHora();
+
+            // Atualizar o agendamento fixo
             agendamentoFixo.setCliente(cliente);
             agendamentoFixo.setProfissional(profissional);
             agendamentoFixo.setServico(servico);
@@ -282,15 +292,51 @@ public class AgendamentoController {
             agendamentoFixo.setHora(dados.hora());
             agendamentoFixo.setObservacao(dados.observacao());
 
+            // Verificar e atualizar forma de pagamento se foi fornecida
+            if (dados.formaPagamento() != null && !dados.formaPagamento().isEmpty()) {
+                agendamentoFixo.setFormaPagamento(dados.formaPagamento().toUpperCase());
+            }
+
             if (dados.tipoRepeticao() == AgendamentoFixo.TipoRepeticao.MENSAL) {
                 agendamentoFixo.setDiaDoMes(dados.diaDoMes() != null ? dados.diaDoMes() : dados.valorRepeticao());
             } else {
                 agendamentoFixo.setDiaDoMes(1);
             }
 
+            // Salvar as alterações no agendamento fixo
             agendamentoFixoRepository.save(agendamentoFixo);
-            logger.info("✅ Agendamento fixo atualizado com sucesso: {}", agendamentoFixo);
-            return ResponseEntity.ok(agendamentoFixo);
+
+            // Atualizar os agendamentos futuros gerados por este agendamento fixo
+            LocalDate hoje = LocalDate.now();
+            List<Agendamento> agendamentosGerados = agendamentoRepository.findByAgendamentoFixoId(id);
+
+            // Filtrar apenas os agendamentos futuros
+            List<Agendamento> agendamentosFuturos = agendamentosGerados.stream()
+                    .filter(a -> !a.getData().isBefore(hoje))
+                    .collect(Collectors.toList());
+
+            logger.info("🔄 Atualizando {} agendamentos futuros gerados pelo agendamento fixo ID {}",
+                    agendamentosFuturos.size(), id);
+
+            // Atualizar cada agendamento
+            for (Agendamento agendamento : agendamentosFuturos) {
+                agendamento.setCliente(cliente);
+                agendamento.setProfissional(profissional);
+                agendamento.setServico(servico);
+                agendamento.setHora(dados.hora());
+                agendamento.setObservacao(dados.observacao());
+                if (dados.formaPagamento() != null && !dados.formaPagamento().isEmpty()) {
+                    agendamento.setFormaPagamento(PagamentoTipo.valueOf(dados.formaPagamento().toUpperCase()));
+                }
+
+                // Salvar as alterações
+                agendamentoRepository.save(agendamento);
+            }
+
+            logger.info("✅ Agendamento fixo e {} agendamentos futuros atualizados com sucesso",
+                    agendamentosFuturos.size());
+            return ResponseEntity
+                    .ok("Agendamento fixo e todas as suas ocorrências futuras foram atualizados com sucesso.");
         } catch (Exception e) {
             logger.error("❌ Erro ao atualizar agendamento fixo", e);
             return ResponseEntity.status(500).body("Erro ao atualizar agendamento fixo: " + e.getMessage());
