@@ -33,6 +33,8 @@ public class Agendamento {
     private LocalDate data;
     private LocalTime hora;
 
+    private Long agendamentoFixoId;
+
     // Removemos o campo duracao, pois será obtido do serviço
 
     @Column(columnDefinition = "TEXT")
@@ -72,6 +74,16 @@ public class Agendamento {
     }
 
     // Getters e Setters - atualizados para refletir as mudanças
+
+    // Getter
+public Long getAgendamentoFixoId() {
+    return agendamentoFixoId;
+}
+
+// Setter
+public void setAgendamentoFixoId(Long agendamentoFixoId) {
+    this.agendamentoFixoId = agendamentoFixoId;
+}
 
     public Long getId() {
         return id;
