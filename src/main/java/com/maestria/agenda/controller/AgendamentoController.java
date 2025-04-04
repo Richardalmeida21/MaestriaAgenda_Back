@@ -233,20 +233,20 @@ public class AgendamentoController {
 
     // Método auxiliar para criar um agendamento a partir de um agendamento fixo
     private void criarAgendamentoAPartirDeFixo(AgendamentoFixo agendamentoFixo, LocalDate data) {
-    Agendamento agendamento = new Agendamento();
-    agendamento.setCliente(agendamentoFixo.getCliente());
-    agendamento.setProfissional(agendamentoFixo.getProfissional());
-    agendamento.setServico(agendamentoFixo.getServico());
-    agendamento.setData(data);
-    agendamento.setHora(agendamentoFixo.getHora());
-    agendamento.setObservacao(agendamentoFixo.getObservacao());
-    agendamento.setFormaPagamento(PagamentoTipo.valueOf(agendamentoFixo.getFormaPagamento()));
-    // Novo: marca a ocorrência com o id do agendamento fixo
-    agendamento.setAgendamentoFixoId(agendamentoFixo.getId());
-    
-    agendamentoRepository.save(agendamento);
-    logger.info("✅ Agendamento gerado a partir do agendamento fixo {}: {}", agendamentoFixo.getId(), agendamento);
-}
+        Agendamento agendamento = new Agendamento();
+        agendamento.setCliente(agendamentoFixo.getCliente());
+        agendamento.setProfissional(agendamentoFixo.getProfissional());
+        agendamento.setServico(agendamentoFixo.getServico());
+        agendamento.setData(data);
+        agendamento.setHora(agendamentoFixo.getHora());
+        agendamento.setObservacao(agendamentoFixo.getObservacao());
+        agendamento.setFormaPagamento(PagamentoTipo.valueOf(agendamentoFixo.getFormaPagamento()));
+        // Novo: marca a ocorrência com o id do agendamento fixo
+        agendamento.setAgendamentoFixoId(agendamentoFixo.getId());
+
+        agendamentoRepository.save(agendamento);
+        logger.info("✅ Agendamento gerado a partir do agendamento fixo {}: {}", agendamentoFixo.getId(), agendamento);
+    }
 
     @PutMapping("/fixo/{id}")
     public ResponseEntity<?> atualizarAgendamentoFixo(
@@ -297,6 +297,7 @@ public class AgendamentoController {
         }
     }
 
+    // Modificação no método deletarAgendamentoFixo
     @DeleteMapping("/fixo/{id}")
     public ResponseEntity<?> deletarAgendamentoFixo(@PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -311,12 +312,42 @@ public class AgendamentoController {
             AgendamentoFixo agendamentoFixo = agendamentoFixoRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Agendamento fixo não encontrado"));
 
+            // Primeiro, excluir todos os agendamentos gerados a partir deste agendamento
+            // fixo
+            excluirAgendamentosGeradosPorFixo(id);
+
+            // Depois, excluir o agendamento fixo
             agendamentoFixoRepository.delete(agendamentoFixo);
             logger.info("✅ Agendamento fixo deletado com sucesso: {}", agendamentoFixo);
-            return ResponseEntity.ok("Agendamento fixo deletado com sucesso.");
+            return ResponseEntity
+                    .ok("Agendamento fixo e todos os seus agendamentos gerados foram deletados com sucesso.");
         } catch (Exception e) {
             logger.error("❌ Erro ao deletar agendamento fixo", e);
             return ResponseEntity.status(500).body("Erro ao deletar agendamento fixo: " + e.getMessage());
+        }
+    }
+
+    // Adicione este método auxiliar para excluir todos os agendamentos gerados por
+    // um fixo
+    private void excluirAgendamentosGeradosPorFixo(Long agendamentoFixoId) {
+        try {
+            // Buscar todos os agendamentos gerados por este agendamento fixo
+            List<Agendamento> agendamentosGerados = agendamentoRepository.findByAgendamentoFixoId(agendamentoFixoId);
+
+            if (!agendamentosGerados.isEmpty()) {
+                logger.info("🔍 Excluindo {} agendamentos gerados pelo agendamento fixo ID {}",
+                        agendamentosGerados.size(), agendamentoFixoId);
+
+                // Excluir todos os agendamentos encontrados
+                agendamentoRepository.deleteAll(agendamentosGerados);
+
+                logger.info("✅ {} agendamentos gerados foram excluídos com sucesso", agendamentosGerados.size());
+            } else {
+                logger.info("ℹ️ Nenhum agendamento gerado encontrado para o agendamento fixo ID {}", agendamentoFixoId);
+            }
+        } catch (Exception e) {
+            logger.error("❌ Erro ao excluir agendamentos gerados pelo agendamento fixo ID {}", agendamentoFixoId, e);
+            throw e; // Propagar a exceção para ser tratada pelo método chamador
         }
     }
 
