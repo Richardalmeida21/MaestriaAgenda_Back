@@ -233,19 +233,20 @@ public class AgendamentoController {
 
     // Método auxiliar para criar um agendamento a partir de um agendamento fixo
     private void criarAgendamentoAPartirDeFixo(AgendamentoFixo agendamentoFixo, LocalDate data) {
-        Agendamento agendamento = new Agendamento();
-        agendamento.setCliente(agendamentoFixo.getCliente());
-        agendamento.setProfissional(agendamentoFixo.getProfissional());
-        agendamento.setServico(agendamentoFixo.getServico());
-        agendamento.setData(data);
-        agendamento.setHora(agendamentoFixo.getHora());
-        agendamento.setObservacao(agendamentoFixo.getObservacao());
-        // Repassa a forma de pagamento do agendamento fixo para o agendamento gerado
-        agendamento.setFormaPagamento(PagamentoTipo.valueOf(agendamentoFixo.getFormaPagamento()));
-
-        agendamentoRepository.save(agendamento);
-        logger.info("✅ Agendamento gerado a partir do agendamento fixo {}: {}", agendamentoFixo.getId(), agendamento);
-    }
+    Agendamento agendamento = new Agendamento();
+    agendamento.setCliente(agendamentoFixo.getCliente());
+    agendamento.setProfissional(agendamentoFixo.getProfissional());
+    agendamento.setServico(agendamentoFixo.getServico());
+    agendamento.setData(data);
+    agendamento.setHora(agendamentoFixo.getHora());
+    agendamento.setObservacao(agendamentoFixo.getObservacao());
+    agendamento.setFormaPagamento(PagamentoTipo.valueOf(agendamentoFixo.getFormaPagamento()));
+    // Novo: marca a ocorrência com o id do agendamento fixo
+    agendamento.setAgendamentoFixoId(agendamentoFixo.getId());
+    
+    agendamentoRepository.save(agendamento);
+    logger.info("✅ Agendamento gerado a partir do agendamento fixo {}: {}", agendamentoFixo.getId(), agendamento);
+}
 
     @PutMapping("/fixo/{id}")
     public ResponseEntity<?> atualizarAgendamentoFixo(
