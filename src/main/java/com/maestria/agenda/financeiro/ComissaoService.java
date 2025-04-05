@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class ComissaoService {
@@ -124,13 +123,33 @@ public class ComissaoService {
                     
                     // Taxa conforme forma de pagamento
                     double taxa = 0.0;
-                    PagamentoTipo pagamentoTipo = PagamentoTipo.fromString(agendamentoFixo.getFormaPagamento());
-                    if (pagamentoTipo != null) {
-                        taxa = pagamentoTipo.getTaxa();
+                    
+                    // Adicionar logs detalhados para depurar o problema
+                    String formaPagamento = agendamentoFixo.getFormaPagamento();
+                    logger.info("DEBUG - AgendamentoFixo ID {}: forma pagamento = '{}', tipo = {}", 
+                            agendamentoFixo.getId(), formaPagamento, 
+                            formaPagamento != null ? formaPagamento.getClass().getName() : "null");
+                    
+                    PagamentoTipo pagamentoTipo = null;
+                    if (formaPagamento != null && !formaPagamento.trim().isEmpty()) {
+                        // Usar método melhorado para converter a string em PagamentoTipo
+                        pagamentoTipo = converterParaPagamentoTipo(formaPagamento);
+                        
+                        if (pagamentoTipo != null) {
+                            taxa = pagamentoTipo.getTaxa();
+                            logger.info("DEBUG - Forma de pagamento '{}' reconhecida como {}, taxa = {}%", 
+                                    formaPagamento, pagamentoTipo, taxa);
+                        } else {
+                            logger.warn("DEBUG - ⚠️ Forma de pagamento não reconhecida: '{}'", formaPagamento);
+                        }
+                    } else {
+                        logger.warn("DEBUG - ⚠️ Forma de pagamento nula ou vazia para agendamento fixo ID {}", 
+                                agendamentoFixo.getId());
                     }
                     
                     // Desconto devido à taxa
                     double descontoTaxa = valorTotalServico * (taxa / 100.0);
+                    logger.info("DEBUG - Valor serviço = {}, desconto = {}", valorTotalServico, descontoTaxa);
                     
                     valorTotal += valorTotalServico;
                     descontoTaxaTotal += descontoTaxa;
@@ -149,6 +168,73 @@ public class ComissaoService {
                 valorTotal, comissaoPercentual, comissaoBruta, descontoTaxaTotal);
                 
         return new ResultadoComissao(valorTotal, comissaoBruta, descontoTaxaTotal);
+    }
+    
+    /**
+     * Método auxiliar para converter string em PagamentoTipo de forma mais robusta
+     */
+    private PagamentoTipo converterParaPagamentoTipo(String formaPagamento) {
+        if (formaPagamento == null || formaPagamento.trim().isEmpty()) {
+            return null;
+        }
+        
+        String pgto = formaPagamento.trim().toUpperCase();
+        
+        try {
+            // Tenta conversão direta
+            return PagamentoTipo.valueOf(pgto);
+        } catch (IllegalArgumentException e) {
+            // Normaliza valores com variações comuns
+            if (pgto.equals("DÉBITO") || pgto.equals("DEBITO")) {
+                return PagamentoTipo.DEBITO;
+            }
+            if (pgto.equals("PIX") || pgto.contains("PIX")) {
+                return PagamentoTipo.PIX;
+            }
+            if (pgto.equals("DINHEIRO") || pgto.contains("DINHEIRO") || pgto.equals("CASH")) {
+                return PagamentoTipo.DINHEIRO;
+            }
+            
+            // Tratamento para variações de crédito
+            if (pgto.contains("CREDITO") || pgto.contains("CRÉDITO")) {
+                if (pgto.contains("1") || pgto.contains("1X")) {
+                    return PagamentoTipo.CREDITO_1X;
+                }
+                if (pgto.contains("2") || pgto.contains("2X")) {
+                    return PagamentoTipo.CREDITO_2X;
+                }
+                if (pgto.contains("3") || pgto.contains("3X")) {
+                    return PagamentoTipo.CREDITO_3X;
+                }
+                if (pgto.contains("4") || pgto.contains("4X")) {
+                    return PagamentoTipo.CREDITO_4X;
+                }
+                if (pgto.contains("5") || pgto.contains("5X")) {
+                    return PagamentoTipo.CREDITO_5X;
+                }
+                if (pgto.contains("6") || pgto.contains("6X")) {
+                    return PagamentoTipo.CREDITO_6X;
+                }
+                if (pgto.contains("7") || pgto.contains("7X")) {
+                    return PagamentoTipo.CREDITO_7X;
+                }
+                if (pgto.contains("8") || pgto.contains("8X")) {
+                    return PagamentoTipo.CREDITO_8X;
+                }
+                if (pgto.contains("9") || pgto.contains("9X")) {
+                    return PagamentoTipo.CREDITO_9X;
+                }
+                if (pgto.contains("10") || pgto.contains("10X")) {
+                    return PagamentoTipo.CREDITO_10X;
+                }
+                
+                // Se não identificou o número de parcelas, assume 1X
+                return PagamentoTipo.CREDITO_1X;
+            }
+            
+            logger.warn("⚠️ Forma de pagamento não reconhecida após normalização: '{}'", pgto);
+            return null;
+        }
     }
     
     /**
@@ -173,13 +259,13 @@ public class ComissaoService {
             double valorTotalServicos = resultadoNormal.valorTotalServicos + resultadoFixo.valorTotalServicos;
             double comissaoTotal = resultadoNormal.valorComissao + resultadoFixo.valorComissao;
             double descontoTaxaTotal = resultadoNormal.valorDescontoTaxa + resultadoFixo.valorDescontoTaxa;
-            double comissaoLiquida = resultadoNormal.valorComissaoLiquida + resultadoFixo.valorComissaoLiquida;
+            double comissaoLiquida = comissaoTotal - descontoTaxaTotal; // Corrigido para usar comissaoTotal - descontoTaxaTotal
             
             logger.info("RESUMO DA COMISSÃO DE {}", profissional.getNome());
-            logger.info("Comissão de agendamentos normais: {} bruto, {} líquido", 
-                    resultadoNormal.valorComissao, resultadoNormal.valorComissaoLiquida);
-            logger.info("Comissão de agendamentos fixos: {} bruto, {} líquido", 
-                    resultadoFixo.valorComissao, resultadoFixo.valorComissaoLiquida);
+            logger.info("Comissão de agendamentos normais: {} bruto, {} líquido, {} desconto", 
+                    resultadoNormal.valorComissao, resultadoNormal.valorComissaoLiquida, resultadoNormal.valorDescontoTaxa);
+            logger.info("Comissão de agendamentos fixos: {} bruto, {} líquido, {} desconto", 
+                    resultadoFixo.valorComissao, resultadoFixo.valorComissaoLiquida, resultadoFixo.valorDescontoTaxa);
             logger.info("Comissão total: {} bruto, {} líquido, {} desconto", 
                     comissaoTotal, comissaoLiquida, descontoTaxaTotal);
             
