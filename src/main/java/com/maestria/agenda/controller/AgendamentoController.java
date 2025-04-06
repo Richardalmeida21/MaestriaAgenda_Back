@@ -179,7 +179,8 @@ public class AgendamentoController {
             List<Map<String, Object>> agendamentos = new ArrayList<>();
             for (Agendamento a : normais) {
                 Map<String, Object> item = new HashMap<>();
-                item.put("isFixo", false);
+                // Valida se o agendamento possui agendamentoFixoId
+                item.put("isFixo", a.getAgendamentoFixoId() != null);
                 item.put("agendamento", a);
                 agendamentos.add(item);
             }
@@ -231,8 +232,8 @@ public class AgendamentoController {
     private boolean isHorarioBloqueado(Profissional profissional, LocalDate data, LocalTime hora) {
         List<BloqueioAgenda> bloqueios = bloqueioRepository.findByProfissionalAndData(profissional, data);
         for (BloqueioAgenda bloqueio : bloqueios) {
-            if (bloqueio.isDiaTodo() || 
-                (!hora.isBefore(bloqueio.getHoraInicio()) && !hora.isAfter(bloqueio.getHoraFim()))) {
+            if (bloqueio.isDiaTodo() ||
+                    (!hora.isBefore(bloqueio.getHoraInicio()) && !hora.isAfter(bloqueio.getHoraFim()))) {
                 return true;
             }
         }
@@ -398,7 +399,7 @@ public class AgendamentoController {
             List<Agendamento> todos = agendamentoRepository.findAll();
             List<Map<String, Object>> resultado = todos.stream().map(a -> {
                 Map<String, Object> map = new HashMap<>();
-                map.put("isFixo", false);
+                map.put("isFixo", a.getAgendamentoFixoId() != null);
                 map.put("agendamento", a);
                 return map;
             }).collect(Collectors.toList());
@@ -413,7 +414,7 @@ public class AgendamentoController {
             List<Agendamento> agendamentos = agendamentoRepository.findByProfissional(profissional);
             List<Map<String, Object>> resultado = agendamentos.stream().map(a -> {
                 Map<String, Object> map = new HashMap<>();
-                map.put("isFixo", false);
+                map.put("isFixo", a.getAgendamentoFixoId() != null);
                 map.put("agendamento", a);
                 return map;
             }).collect(Collectors.toList());
@@ -433,8 +434,14 @@ public class AgendamentoController {
         }
 
         List<Agendamento> agendamentos = agendamentoRepository.findByProfissional(profissional);
-        logger.info("✅ Retornando {} agendamentos para PROFISSIONAL {}", agendamentos.size(), profissional.getNome());
-        return ResponseEntity.ok(agendamentos);
+        List<Map<String, Object>> resultado = agendamentos.stream().map(a -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("isFixo", a.getAgendamentoFixoId() != null);
+            map.put("agendamento", a);
+            return map;
+        }).collect(Collectors.toList());
+        logger.info("✅ Retornando {} agendamentos para PROFISSIONAL {}", resultado.size(), profissional.getNome());
+        return ResponseEntity.ok(resultado);
     }
 
     @GetMapping("/profissional/{id}")
@@ -468,7 +475,7 @@ public class AgendamentoController {
 
             List<Map<String, Object>> resultado = agendamentos.stream().map(a -> {
                 Map<String, Object> map = new HashMap<>();
-                map.put("isFixo", false);
+                map.put("isFixo", a.getAgendamentoFixoId() != null);
                 map.put("agendamento", a);
                 return map;
             }).collect(Collectors.toList());
@@ -500,11 +507,11 @@ public class AgendamentoController {
             }
             List<Map<String, Object>> normais = agendamentosNormais.stream().map(a -> {
                 Map<String, Object> map = new HashMap<>();
-                map.put("isFixo", false);
+                map.put("isFixo", a.getAgendamentoFixoId() != null);
                 map.put("agendamento", a);
                 return map;
             }).collect(Collectors.toList());
-            
+
             List<AgendamentoFixo> fixedActive = agendamentoFixoRepository.findActiveSchedulesForDate(dataFormatada);
             if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
                 Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
@@ -535,7 +542,7 @@ public class AgendamentoController {
                 map.put("agendamento", f);
                 return map;
             }).collect(Collectors.toList());
-            
+
             Map<String, Object> resposta = new HashMap<>();
             resposta.put("agendamentosNormais", normais);
             resposta.put("agendamentosFixos", fixos);
