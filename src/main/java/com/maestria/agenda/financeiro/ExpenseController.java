@@ -10,7 +10,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/financeiro")
-@CrossOrigin(origins = "*")
 public class ExpenseController {
 
     private static final Logger logger = LoggerFactory.getLogger(ExpenseController.class);
