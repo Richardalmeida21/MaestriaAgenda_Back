@@ -12,14 +12,16 @@ public class ComissaoResponseDTO {
     private Double comissaoLiquida;
     private Double comissaoAgendamentosNormais;
     private Double comissaoAgendamentosFixos;
-    private Double descontoTaxa; // 🔹 Novo campo para o desconto da taxa
+    private Double descontoTaxa;
+    private boolean pendente; // Novo atributo
 
     public ComissaoResponseDTO(Long profissionalId, String nomeProfissional,
-                                LocalDate dataInicio, LocalDate dataFim,
-                                Double comissaoTotal, Double comissaoLiquida,
-                                Double comissaoAgendamentosNormais,
-                                Double comissaoAgendamentosFixos,
-                                Double descontoTaxa) { // 🔹 Adicionado ao construtor
+                               LocalDate dataInicio, LocalDate dataFim,
+                               Double comissaoTotal, Double comissaoLiquida,
+                               Double comissaoAgendamentosNormais,
+                               Double comissaoAgendamentosFixos,
+                               Double descontoTaxa,
+                               boolean pendente) {
         this.profissionalId = profissionalId;
         this.nomeProfissional = nomeProfissional;
         this.dataInicio = dataInicio;
@@ -28,7 +30,8 @@ public class ComissaoResponseDTO {
         this.comissaoLiquida = comissaoLiquida;
         this.comissaoAgendamentosNormais = comissaoAgendamentosNormais;
         this.comissaoAgendamentosFixos = comissaoAgendamentosFixos;
-        this.descontoTaxa = descontoTaxa; // 🔹 Atribuindo o novo valor
+        this.descontoTaxa = descontoTaxa;
+        this.pendente = pendente;
     }
 
     // Getters
@@ -72,7 +75,11 @@ public class ComissaoResponseDTO {
         return comissaoAgendamentosFixos;
     }
 
-    public Double getDescontoTaxa() { // 🔹 Getter para o desconto da taxa
+    public Double getDescontoTaxa() {
         return descontoTaxa;
+    }
+    
+    public boolean isPendente() {
+        return pendente;
     }
 }

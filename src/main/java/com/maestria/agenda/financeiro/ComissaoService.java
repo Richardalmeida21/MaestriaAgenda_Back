@@ -269,16 +269,17 @@ public class ComissaoService {
             logger.info("Comissão total: {} bruto, {} líquido, {} desconto", 
                     comissaoTotal, comissaoLiquida, descontoTaxaTotal);
             
-            return new ComissaoResponseDTO(
-                    profissional.getId(),
-                    profissional.getNome(),
-                    inicio,
-                    fim,
-                    comissaoTotal,
-                    comissaoLiquida,
-                    resultadoNormal.valorComissao,
-                    resultadoFixo.valorComissao,
-                    descontoTaxaTotal);
+                    return new ComissaoResponseDTO(
+                        profissional.getId(),
+                        profissional.getNome(),
+                        inicio,
+                        fim,
+                        comissaoTotal,
+                        comissaoLiquida,
+                        resultadoNormal.valorComissao,
+                        resultadoFixo.valorComissao,
+                        descontoTaxaTotal,
+                        true);
         } catch (Exception e) {
             logger.error("❌ Erro ao calcular comissão: {}", e.getMessage(), e);
             throw new RuntimeException("Erro ao calcular comissão: " + e.getMessage());
