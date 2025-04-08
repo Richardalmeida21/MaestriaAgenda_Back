@@ -63,4 +63,26 @@ public class ExpenseService {
             throw new RuntimeException("Erro ao criar despesa: " + e.getMessage());
         }
     }
+    
+    public ExpenseResponseDTO atualizarStatusPagamento(Long id, boolean paid) {
+        try {
+            Expense expense = expenseRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Despesa não encontrada com ID: " + id));
+            
+            expense.setPaid(paid);
+            Expense savedExpense = expenseRepository.save(expense);
+            
+            return new ExpenseResponseDTO(
+                savedExpense.getId(),
+                savedExpense.getDescription(),
+                savedExpense.getCategory(),
+                savedExpense.getDate(),
+                savedExpense.getAmount(),
+                savedExpense.getPaid()
+            );
+        } catch (Exception e) {
+            logger.error("Erro ao atualizar status de pagamento da despesa: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao atualizar status de pagamento: " + e.getMessage());
+        }
+    }
 }

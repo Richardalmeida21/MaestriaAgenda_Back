@@ -45,4 +45,17 @@ public class ExpenseController {
             return ResponseEntity.status(500).body("Erro ao criar despesa: " + e.getMessage());
         }
     }
+    
+    @PutMapping("/expenses/{id}/payment")
+    public ResponseEntity<?> atualizarStatusPagamento(
+            @PathVariable Long id,
+            @RequestBody ExpensePaymentUpdateRequest request) {
+        try {
+            ExpenseResponseDTO updatedExpense = expenseService.atualizarStatusPagamento(id, request.isPaid());
+            return ResponseEntity.ok(updatedExpense);
+        } catch (Exception e) {
+            logger.error("Erro ao atualizar status de pagamento da despesa: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao atualizar status de pagamento: " + e.getMessage());
+        }
+    }
 }
