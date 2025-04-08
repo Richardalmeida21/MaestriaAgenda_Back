@@ -17,13 +17,17 @@ public class ExpenseService {
         this.expenseRepository = expenseRepository;
     }
 
-    public List<ExpenseResponseDTO> listarDespesas(LocalDate start, LocalDate end, String status) {
+    public List<ExpenseResponseDTO> listarDespesas(LocalDate start, LocalDate end, String paidFilter) {
         List<Expense> expenses = expenseRepository.findByDateBetween(start, end);
-        if (!status.equalsIgnoreCase("all")) {
+        
+        // Filter by paid status if not "all"
+        if (!paidFilter.equalsIgnoreCase("all")) {
+            Boolean isPaid = paidFilter.equalsIgnoreCase("paid");
             expenses = expenses.stream()
-                    .filter(expense -> expense.getStatus().equalsIgnoreCase(status))
+                    .filter(expense -> expense.getPaid() == isPaid)
                     .collect(Collectors.toList());
         }
+        
         return expenses.stream()
                 .map(expense -> new ExpenseResponseDTO(
                         expense.getId(),
@@ -31,7 +35,7 @@ public class ExpenseService {
                         expense.getCategory(),
                         expense.getDate(),
                         expense.getAmount(),
-                        expense.getStatus()
+                        expense.getPaid()
                 ))
                 .collect(Collectors.toList());
     }
@@ -43,7 +47,7 @@ public class ExpenseService {
             expense.setCategory(requestDTO.getCategory());
             expense.setDate(requestDTO.getDate());
             expense.setAmount(requestDTO.getAmount());
-            expense.setStatus(requestDTO.getStatus());
+            expense.setPaid(requestDTO.getPaid());
             
             Expense savedExpense = expenseRepository.save(expense);
             return new ExpenseResponseDTO(
@@ -52,7 +56,7 @@ public class ExpenseService {
                 savedExpense.getCategory(),
                 savedExpense.getDate(),
                 savedExpense.getAmount(),
-                savedExpense.getStatus()
+                savedExpense.getPaid()
             );
         } catch (Exception e) {
             logger.error("Erro ao criar despesa: {}", e.getMessage(), e);

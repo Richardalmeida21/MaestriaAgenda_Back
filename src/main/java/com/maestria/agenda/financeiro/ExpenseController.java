@@ -23,11 +23,11 @@ public class ExpenseController {
     public ResponseEntity<?> listarExpenses(
             @RequestParam String startDate,
             @RequestParam String endDate,
-            @RequestParam(defaultValue = "all") String status) {
+            @RequestParam(defaultValue = "all") String paidFilter) {
         try {
             LocalDate start = LocalDate.parse(startDate);
             LocalDate end = LocalDate.parse(endDate);
-            List<ExpenseResponseDTO> expenses = expenseService.listarDespesas(start, end, status);
+            List<ExpenseResponseDTO> expenses = expenseService.listarDespesas(start, end, paidFilter);
             return ResponseEntity.ok(expenses);
         } catch (Exception e) {
             logger.error("Erro ao listar despesas: {}", e.getMessage(), e);

@@ -9,15 +9,15 @@ public class ExpenseResponseDTO {
     private String category;
     private LocalDate date;
     private Double amount;
-    private String status;
+    private Boolean paid;
 
-    public ExpenseResponseDTO(Long id, String description, String category, LocalDate date, Double amount, String status) {
+    public ExpenseResponseDTO(Long id, String description, String category, LocalDate date, Double amount, Boolean paid) {
         this.id = id;
         this.description = description;
         this.category = category;
         this.date = date;
         this.amount = amount;
-        this.status = status;
+        this.paid = paid;
     }
 
     public Long getId() {
@@ -44,7 +44,7 @@ public class ExpenseResponseDTO {
         return amount;
     }
 
-    public String getStatus() {
-        return status;
+    public Boolean getPaid() {
+        return paid;
     }
 }

@@ -98,4 +98,40 @@ public class ComissaoController {
             return ResponseEntity.status(500).body("Erro ao calcular comissão: " + e.getMessage());
         }
     }
+    
+    /**
+     * Endpoint para marcar uma comissão como paga ou não paga
+     * Apenas administradores podem usar este endpoint
+     */
+    @PutMapping("/comissoes/profissional/{id}/paid")
+    public ResponseEntity<?> marcarComissaoComoPaga(
+            @PathVariable Long id,
+            @RequestParam String dataInicio,
+            @RequestParam String dataFim,
+            @RequestParam boolean paid,
+            @AuthenticationPrincipal UserDetails userDetails) {
+            
+        logger.info("🔄 Marcando comissão do profissional {} entre {} e {} como {} por {}",
+                id, dataInicio, dataFim, paid ? "PAGA" : "NÃO PAGA", userDetails.getUsername());
+                
+        // Verificar se é ADMIN
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            logger.warn("❌ Tentativa não autorizada de atualizar status de pagamento por {}", 
+                    userDetails.getUsername());
+            return ResponseEntity.status(403).body("Acesso negado. Apenas administradores podem atualizar status de pagamento.");
+        }
+        
+        try {
+            LocalDate inicio = LocalDate.parse(dataInicio);
+            LocalDate fim = LocalDate.parse(dataFim);
+            
+            // Usa o método do serviço para atualizar e persistir o status de pagamento
+            ComissaoResponseDTO comissao = comissaoService.atualizarStatusPagamento(id, inicio, fim, paid);
+            
+            return ResponseEntity.ok(comissao);
+        } catch (Exception e) {
+            logger.error("❌ Erro ao atualizar status de pagamento da comissão: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao atualizar status de pagamento: " + e.getMessage());
+        }
+    }
 }

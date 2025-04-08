@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ComissaoService {
@@ -21,6 +22,7 @@ public class ComissaoService {
     private final AgendamentoRepository agendamentoRepository;
     private final AgendamentoFixoRepository agendamentoFixoRepository;
     private final ProfissionalRepository profissionalRepository;
+    private final ComissaoPagamentoRepository comissaoPagamentoRepository;
     private final Logger logger = LoggerFactory.getLogger(ComissaoService.class);
     
     @Value("${comissao.percentual}")
@@ -28,10 +30,12 @@ public class ComissaoService {
 
     public ComissaoService(AgendamentoRepository agendamentoRepository,
             AgendamentoFixoRepository agendamentoFixoRepository,
-            ProfissionalRepository profissionalRepository) {
+            ProfissionalRepository profissionalRepository,
+            ComissaoPagamentoRepository comissaoPagamentoRepository) {
         this.agendamentoRepository = agendamentoRepository;
         this.agendamentoFixoRepository = agendamentoFixoRepository;
         this.profissionalRepository = profissionalRepository;
+        this.comissaoPagamentoRepository = comissaoPagamentoRepository;
     }
     
     /**
@@ -259,7 +263,7 @@ public class ComissaoService {
             double valorTotalServicos = resultadoNormal.valorTotalServicos + resultadoFixo.valorTotalServicos;
             double comissaoTotal = resultadoNormal.valorComissao + resultadoFixo.valorComissao;
             double descontoTaxaTotal = resultadoNormal.valorDescontoTaxa + resultadoFixo.valorDescontoTaxa;
-            double comissaoLiquida = comissaoTotal - descontoTaxaTotal; // Corrigido para usar comissaoTotal - descontoTaxaTotal
+            double comissaoLiquida = comissaoTotal - descontoTaxaTotal;
             
             logger.info("RESUMO DA COMISSÃO DE {}", profissional.getNome());
             logger.info("Comissão de agendamentos normais: {} bruto, {} líquido, {} desconto", 
@@ -269,20 +273,66 @@ public class ComissaoService {
             logger.info("Comissão total: {} bruto, {} líquido, {} desconto", 
                     comissaoTotal, comissaoLiquida, descontoTaxaTotal);
             
-                    return new ComissaoResponseDTO(
-                        profissional.getId(),
-                        profissional.getNome(),
-                        inicio,
-                        fim,
-                        comissaoTotal,
-                        comissaoLiquida,
-                        resultadoNormal.valorComissao,
-                        resultadoFixo.valorComissao,
-                        descontoTaxaTotal,
-                        true);
+            // Verificar se já existe registro de pagamento para este período e profissional
+            boolean isPaid = false;
+            Optional<ComissaoPagamento> pagamentoExistente = comissaoPagamentoRepository
+                .findByProfissionalIdAndPeriodo(profissionalId, inicio, fim);
+                
+            if (pagamentoExistente.isPresent()) {
+                isPaid = pagamentoExistente.get().getPaid();
+            }
+            
+            return new ComissaoResponseDTO(
+                profissional.getId(),
+                profissional.getNome(),
+                inicio,
+                fim,
+                comissaoTotal,
+                comissaoLiquida,
+                resultadoNormal.valorComissao,
+                resultadoFixo.valorComissao,
+                descontoTaxaTotal,
+                isPaid);
         } catch (Exception e) {
             logger.error("❌ Erro ao calcular comissão: {}", e.getMessage(), e);
             throw new RuntimeException("Erro ao calcular comissão: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Atualiza o status de pagamento de uma comissão
+     */
+    public ComissaoResponseDTO atualizarStatusPagamento(Long profissionalId, LocalDate inicio, LocalDate fim, boolean paid) {
+        try {
+            // Calcular a comissão para pegar os valores corretos
+            ComissaoResponseDTO comissao = calcularComissaoPorPeriodo(profissionalId, inicio, fim);
+            
+            // Buscar registro existente ou criar um novo
+            ComissaoPagamento pagamento = comissaoPagamentoRepository
+                .findByProfissionalIdAndPeriodo(profissionalId, inicio, fim)
+                .orElse(new ComissaoPagamento(profissionalId, inicio, fim, comissao.getComissaoLiquida(), false));
+            
+            // Atualizar status de pagamento
+            pagamento.setPaid(paid);
+            comissaoPagamentoRepository.save(pagamento);
+            
+            // Retornar comissão atualizada
+            comissao = new ComissaoResponseDTO(
+                comissao.getProfissionalId(),
+                comissao.getNomeProfissional(),
+                comissao.getDataInicio(),
+                comissao.getDataFim(),
+                comissao.getComissaoTotal(),
+                comissao.getComissaoLiquida(),
+                comissao.getComissaoAgendamentosNormais(),
+                comissao.getComissaoAgendamentosFixos(),
+                comissao.getDescontoTaxa(),
+                paid);
+                
+            return comissao;
+        } catch (Exception e) {
+            logger.error("❌ Erro ao atualizar status de pagamento: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao atualizar status de pagamento: " + e.getMessage());
         }
     }
     

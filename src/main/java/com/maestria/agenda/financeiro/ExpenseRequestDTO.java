@@ -7,16 +7,16 @@ public class ExpenseRequestDTO {
     private String category;
     private LocalDate date;
     private Double amount;
-    private String status;
+    private Boolean paid;
 
     public ExpenseRequestDTO() {}
 
-    public ExpenseRequestDTO(String description, String category, LocalDate date, Double amount, String status) {
+    public ExpenseRequestDTO(String description, String category, LocalDate date, Double amount, Boolean paid) {
         this.description = description;
         this.category = category;
         this.date = date;
         this.amount = amount;
-        this.status = status;
+        this.paid = paid;
     }
 
     public String getDescription() {
@@ -51,11 +51,11 @@ public class ExpenseRequestDTO {
         this.amount = amount;
     }
 
-    public String getStatus() {
-        return status;
+    public Boolean getPaid() {
+        return paid;
     }
 
-    public void setStatus(String status) {
-        this.status = status;
+    public void setPaid(Boolean paid) {
+        this.paid = paid;
     }
 }

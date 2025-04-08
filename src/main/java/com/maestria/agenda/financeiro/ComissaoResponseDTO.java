@@ -1,5 +1,6 @@
 package com.maestria.agenda.financeiro;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
@@ -13,7 +14,10 @@ public class ComissaoResponseDTO {
     private Double comissaoAgendamentosNormais;
     private Double comissaoAgendamentosFixos;
     private Double descontoTaxa;
-    private boolean pendente; // Novo atributo
+    private boolean paid;
+    
+    @JsonIgnore
+    private boolean pendente;
 
     public ComissaoResponseDTO(Long profissionalId, String nomeProfissional,
                                LocalDate dataInicio, LocalDate dataFim,
@@ -21,7 +25,7 @@ public class ComissaoResponseDTO {
                                Double comissaoAgendamentosNormais,
                                Double comissaoAgendamentosFixos,
                                Double descontoTaxa,
-                               boolean pendente) {
+                               boolean paid) {
         this.profissionalId = profissionalId;
         this.nomeProfissional = nomeProfissional;
         this.dataInicio = dataInicio;
@@ -31,7 +35,8 @@ public class ComissaoResponseDTO {
         this.comissaoAgendamentosNormais = comissaoAgendamentosNormais;
         this.comissaoAgendamentosFixos = comissaoAgendamentosFixos;
         this.descontoTaxa = descontoTaxa;
-        this.pendente = pendente;
+        this.paid = paid;
+        this.pendente = false;
     }
 
     // Getters
@@ -79,7 +84,21 @@ public class ComissaoResponseDTO {
         return descontoTaxa;
     }
     
+    public boolean isPaid() {
+        return paid;
+    }
+    
+    public void setPaid(boolean paid) {
+        this.paid = paid;
+    }
+    
+    @JsonIgnore
     public boolean isPendente() {
         return pendente;
+    }
+    
+    @JsonIgnore
+    public void setPendente(boolean pendente) {
+        this.pendente = pendente;
     }
 }

@@ -19,17 +19,17 @@ public class Expense {
     
     private Double amount;
     
-    private String status;
+    private Boolean paid = false;
     
     // Construtor padrão para JPA
     public Expense() {}
 
-    public Expense(String description, String category, LocalDate date, Double amount, String status) {
+    public Expense(String description, String category, LocalDate date, Double amount, Boolean paid) {
         this.description = description;
         this.category = category;
         this.date = date;
         this.amount = amount;
-        this.status = status;
+        this.paid = paid;
     }
 
     // Getters e Setters
@@ -69,11 +69,11 @@ public class Expense {
         this.amount = amount;
     }
 
-    public String getStatus() {
-        return status;
+    public Boolean getPaid() {
+        return paid;
     }
 
-    public void setStatus(String status) {
-        this.status = status;
+    public void setPaid(Boolean paid) {
+        this.paid = paid;
     }
 }
