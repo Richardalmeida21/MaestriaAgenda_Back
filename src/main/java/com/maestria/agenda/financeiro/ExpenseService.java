@@ -39,6 +39,13 @@ public class ExpenseService {
                 ))
                 .collect(Collectors.toList());
     }
+
+    public void deletarDespesa(Long id) {
+        if (!expenseRepository.existsById(id)) {
+            throw new IllegalArgumentException("Despesa não encontrada com o ID: " + id);
+        }
+        expenseRepository.deleteById(id);
+    }
     
     public ExpenseResponseDTO criarDespesa(ExpenseRequestDTO requestDTO) {
         try {
