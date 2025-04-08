@@ -45,6 +45,17 @@ public class ExpenseController {
             return ResponseEntity.status(500).body("Erro ao criar despesa: " + e.getMessage());
         }
     }
+
+    @DeleteMapping("/expenses/{id}")
+public ResponseEntity<?> deletarDespesa(@PathVariable Long id) {
+    try {
+        expenseService.deletarDespesa(id);
+        return ResponseEntity.ok("Despesa deletada com sucesso.");
+    } catch (Exception e) {
+        logger.error("Erro ao deletar despesa: {}", e.getMessage(), e);
+        return ResponseEntity.status(500).body("Erro ao deletar despesa: " + e.getMessage());
+    }
+}
     
     @PutMapping("/expenses/{id}/payment")
     public ResponseEntity<?> atualizarStatusPagamento(
