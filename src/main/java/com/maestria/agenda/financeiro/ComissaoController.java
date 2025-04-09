@@ -34,27 +34,41 @@ public class ComissaoController {
      * Retorna comissões de todos os profissionais para o mês atual
      */
     @GetMapping("/comissoes")
-    public ResponseEntity<?> listarComissoes(@AuthenticationPrincipal UserDetails userDetails) {
-        logger.info("🔍 Solicitando listagem de comissões por {}", userDetails.getUsername());
+public ResponseEntity<?> listarComissoes(
+        @RequestParam(required = false) String dataInicio,
+        @RequestParam(required = false) String dataFim,
+        @AuthenticationPrincipal UserDetails userDetails) {
+        
+    logger.info("🔍 Solicitando listagem de comissões por {} no período de {} a {}", 
+        userDetails.getUsername(), dataInicio, dataFim);
 
-        // Verificar permissão ADMIN
-        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-            logger.warn("❌ Tentativa de acesso não autorizado às comissões por {}", userDetails.getUsername());
-            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode acessar todas as comissões.");
-        }
-
-        try {
-            // Define o mês atual como período padrão
-            LocalDate inicio = LocalDate.now().withDayOfMonth(1);
-            LocalDate fim = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
-            
-            List<ComissaoResponseDTO> comissoes = comissaoService.listarTodasComissoesNoPeriodo(inicio, fim);
-            return ResponseEntity.ok(comissoes);
-        } catch (Exception e) {
-            logger.error("❌ Erro ao listar comissões: {}", e.getMessage(), e);
-            return ResponseEntity.status(500).body("Erro ao listar comissões: " + e.getMessage());
-        }
+    // Verificar permissão ADMIN
+    if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+        logger.warn("❌ Tentativa de acesso não autorizado às comissões por {}", userDetails.getUsername());
+        return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode acessar todas as comissões.");
     }
+
+    try {
+        LocalDate inicio;
+        LocalDate fim;
+        
+        // Use provided dates or default to current month
+        if (dataInicio != null && dataFim != null) {
+            inicio = LocalDate.parse(dataInicio);
+            fim = LocalDate.parse(dataFim);
+        } else {
+            // Define o mês atual como período padrão
+            inicio = LocalDate.now().withDayOfMonth(1);
+            fim = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
+        }
+        
+        List<ComissaoResponseDTO> comissoes = comissaoService.listarTodasComissoesNoPeriodo(inicio, fim);
+        return ResponseEntity.ok(comissoes);
+    } catch (Exception e) {
+        logger.error("❌ Erro ao listar comissões: {}", e.getMessage(), e);
+        return ResponseEntity.status(500).body("Erro ao listar comissões: " + e.getMessage());
+    }
+}
 
     /**
      * Endpoint para calcular comissão de um profissional específico por período
