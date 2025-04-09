@@ -305,12 +305,34 @@ public class ComissaoService {
     public ComissaoResponseDTO atualizarStatusPagamento(Long profissionalId, LocalDate inicio, LocalDate fim, boolean paid) {
     try {
         // Buscar registro existente ou criar um novo
-        ComissaoPagamento pagamento = comissaoPagamentoRepository
-            .findByProfissionalIdAndPeriodo(profissionalId, inicio, fim)
-            .orElseGet(() -> {
-                logger.info("Criando novo registro de pagamento para profissional {} no período {} a {}", profissionalId, inicio, fim);
-                return new ComissaoPagamento(profissionalId, inicio, fim, 0.0, paid); // Valor inicial de comissaoLiquida = 0.0
-            });
+        Optional<ComissaoPagamento> pagamentoOptional = comissaoPagamentoRepository
+            .findByProfissionalIdAndPeriodo(profissionalId, inicio, fim);
+        
+        ComissaoPagamento pagamento;
+        
+        if (pagamentoOptional.isPresent()) {
+            pagamento = pagamentoOptional.get();
+            
+            // Verificação para evitar duplo pagamento
+            if (paid && pagamento.getPaid()) {
+                logger.warn("⚠️ Tentativa de pagar comissão já paga para profissional {} no período {} a {}", 
+                    profissionalId, inicio, fim);
+                throw new RuntimeException("Esta comissão já está marcada como paga.");
+            }
+            
+            // Verificação para evitar reverter uma comissão não paga
+            if (!paid && !pagamento.getPaid()) {
+                logger.warn("⚠️ Tentativa de reverter comissão não paga para profissional {} no período {} a {}", 
+                    profissionalId, inicio, fim);
+                throw new RuntimeException("Esta comissão já está marcada como não paga.");
+            }
+            
+        } else {
+            // Criar novo registro se não existir
+            logger.info("Criando novo registro de pagamento para profissional {} no período {} a {}", 
+                profissionalId, inicio, fim);
+            pagamento = new ComissaoPagamento(profissionalId, inicio, fim, 0.0, paid);
+        }
 
         // Atualizar status de pagamento
         pagamento.setPaid(paid);
@@ -321,8 +343,12 @@ public class ComissaoService {
         }
         comissaoPagamentoRepository.save(pagamento);
 
-        // Calcular a comissão para pegar os valores corretos
+        // Calcular a comissão para pegar os valores corretos e atualizar o valor no registro
         ComissaoResponseDTO comissao = calcularComissaoPorPeriodo(profissionalId, inicio, fim);
+        
+        // Atualizar o valor da comissão no registro
+        pagamento.setValorComissao(comissao.getComissaoLiquida());
+        comissaoPagamentoRepository.save(pagamento);
 
         // Retornar comissão atualizada
         return new ComissaoResponseDTO(
@@ -337,6 +363,10 @@ public class ComissaoService {
             comissao.getDescontoTaxa(),
             pagamento.getPaid()
         );
+    } catch (RuntimeException e) {
+        // Propaga exceções específicas de regras de negócio
+        logger.warn("❌ Validação falhou: {}", e.getMessage());
+        throw e;
     } catch (Exception e) {
         logger.error("❌ Erro ao atualizar status de pagamento: {}", e.getMessage(), e);
         throw new RuntimeException("Erro ao atualizar status de pagamento: " + e.getMessage());
