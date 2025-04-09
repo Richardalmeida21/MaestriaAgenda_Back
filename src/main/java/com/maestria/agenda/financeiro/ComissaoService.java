@@ -242,6 +242,33 @@ public class ComissaoService {
     }
     
     /**
+     * Verifica se existe algum período de pagamento que se sobreponha ao período consultado
+     */
+    private boolean verificarSePeriodoPossuiPagamento(Long profissionalId, LocalDate inicio, LocalDate fim) {
+        List<ComissaoPagamento> pagamentosComSobreposicao = comissaoPagamentoRepository
+            .findPaidPeriodsByProfissionalIdWithOverlap(profissionalId, inicio, fim);
+            
+        if (!pagamentosComSobreposicao.isEmpty()) {
+            for (ComissaoPagamento pagamento : pagamentosComSobreposicao) {
+                // Verificar se o período está totalmente coberto
+                if (pagamento.getPeriodoInicio().compareTo(inicio) <= 0 && 
+                    pagamento.getPeriodoFim().compareTo(fim) >= 0) {
+                    // O período consultado está completamente coberto por um pagamento existente
+                    logger.info("Período {}-{} já está totalmente pago (período existente: {}-{})", 
+                        inicio, fim, pagamento.getPeriodoInicio(), pagamento.getPeriodoFim());
+                    return true;
+                }
+            }
+            
+            // Se não está totalmente coberto, mas há sobreposições, vamos logar para debug
+            logger.info("Período {}-{} possui {} pagamentos com sobreposição, mas não está totalmente coberto", 
+                inicio, fim, pagamentosComSobreposicao.size());
+        }
+        
+        return false;
+    }
+    
+    /**
      * Calcula a comissão para um profissional específico em um período determinado.
      * Combina os resultados de agendamentos normais e fixos.
      */
@@ -275,11 +302,17 @@ public class ComissaoService {
             
             // Verificar se já existe registro de pagamento para este período e profissional
             boolean isPaid = false;
+            
+            // Verificar se existe um pagamento exatamente para este período
             Optional<ComissaoPagamento> pagamentoExistente = comissaoPagamentoRepository
                 .findByProfissionalIdAndPeriodo(profissionalId, inicio, fim);
                 
             if (pagamentoExistente.isPresent()) {
                 isPaid = pagamentoExistente.get().getPaid();
+            } else {
+                // Se não existe pagamento exato para o período, verificar se já existe algum 
+                // pagamento que engloba completamente este período
+                isPaid = verificarSePeriodoPossuiPagamento(profissionalId, inicio, fim);
             }
             
             return new ComissaoResponseDTO(
@@ -304,6 +337,13 @@ public class ComissaoService {
      */
     public ComissaoResponseDTO atualizarStatusPagamento(Long profissionalId, LocalDate inicio, LocalDate fim, boolean paid) {
     try {
+        // Verificar se o período já está coberto por pagamentos existentes quando tentando marcar como pago
+        if (paid && verificarSePeriodoPossuiPagamento(profissionalId, inicio, fim)) {
+            logger.warn("⚠️ Tentativa de pagar comissão que já está marcada como paga para profissional {} no período {} a {}", 
+                profissionalId, inicio, fim);
+            throw new RuntimeException("Este período já possui pagamento registrado. Para evitar duplicidade, a operação foi cancelada.");
+        }
+        
         // Buscar registro existente ou criar um novo
         Optional<ComissaoPagamento> pagamentoOptional = comissaoPagamentoRepository
             .findByProfissionalIdAndPeriodo(profissionalId, inicio, fim);

@@ -118,45 +118,37 @@ public ResponseEntity<?> listarComissoes(
      * Apenas administradores podem usar este endpoint
      */
     @PutMapping("/comissoes/profissional/{id}/paid")
-public ResponseEntity<?> marcarComissaoComoPaga(
-        @PathVariable Long id,
-        @RequestParam String dataInicio,
-        @RequestParam String dataFim,
-        @RequestParam boolean paid,
-        @AuthenticationPrincipal UserDetails userDetails) {
-        
-    logger.info("🔄 Marcando comissão do profissional {} entre {} e {} como {} por {}",
-            id, dataInicio, dataFim, paid ? "PAGA" : "NÃO PAGA", userDetails.getUsername());
+    public ResponseEntity<?> marcarComissaoComoPaga(
+            @PathVariable Long id,
+            @RequestParam String dataInicio,
+            @RequestParam String dataFim,
+            @RequestParam boolean paid,
+            @AuthenticationPrincipal UserDetails userDetails) {
             
-    // Verificar se é ADMIN
-    if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-        logger.warn("❌ Tentativa não autorizada de atualizar status de pagamento por {}", 
-                userDetails.getUsername());
-        return ResponseEntity.status(403).body("Acesso negado. Apenas administradores podem atualizar status de pagamento.");
-    }
-    
-    try {
-        LocalDate inicio = LocalDate.parse(dataInicio);
-        LocalDate fim = LocalDate.parse(dataFim);
-        
-        // Verificar se a comissão já está paga antes de processar (somente quando paid=true)
-        if (paid) {
-            ComissaoResponseDTO comissaoAtual = comissaoService.buscarComissao(id, inicio, fim);
-            if (comissaoAtual != null && comissaoAtual.getPaid()) {
-                logger.warn("⚠️ Tentativa de pagar comissão já paga: profissional={}, período={} a {}", 
-                    id, dataInicio, dataFim);
-                return ResponseEntity.badRequest().body(
-                    "Esta comissão já está marcada como paga. Para evitar duplicidade, a operação foi cancelada.");
-            }
+        logger.info("🔄 Marcando comissão do profissional {} entre {} e {} como {} por {}",
+                id, dataInicio, dataFim, paid ? "PAGA" : "NÃO PAGA", userDetails.getUsername());
+                
+        // Verificar se é ADMIN
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            logger.warn("❌ Tentativa não autorizada de atualizar status de pagamento por {}", 
+                    userDetails.getUsername());
+            return ResponseEntity.status(403).body("Acesso negado. Apenas administradores podem atualizar status de pagamento.");
         }
         
-        // Usa o método do serviço para atualizar e persistir o status de pagamento
-        ComissaoResponseDTO comissao = comissaoService.atualizarStatusPagamento(id, inicio, fim, paid);
-        
-        return ResponseEntity.ok(comissao);
-    } catch (Exception e) {
-        logger.error("❌ Erro ao atualizar status de pagamento da comissão: {}", e.getMessage(), e);
-        return ResponseEntity.status(500).body("Erro ao atualizar status de pagamento: " + e.getMessage());
+        try {
+            LocalDate inicio = LocalDate.parse(dataInicio);
+            LocalDate fim = LocalDate.parse(dataFim);
+            
+            // O serviço já fará todas as verificações de períodos sobrepostos e status
+            ComissaoResponseDTO comissao = comissaoService.atualizarStatusPagamento(id, inicio, fim, paid);
+            
+            return ResponseEntity.ok(comissao);
+        } catch (RuntimeException e) {
+            logger.warn("⚠️ Erro de validação ao atualizar status de pagamento: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            logger.error("❌ Erro ao atualizar status de pagamento da comissão: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao atualizar status de pagamento: " + e.getMessage());
+        }
     }
-}
 }
