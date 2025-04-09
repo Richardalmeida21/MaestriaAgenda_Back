@@ -14,9 +14,11 @@ public class ExpenseController {
 
     private static final Logger logger = LoggerFactory.getLogger(ExpenseController.class);
     private final ExpenseService expenseService;
+    private final RecurringExpenseService recurringExpenseService;
 
-    public ExpenseController(ExpenseService expenseService) {
+    public ExpenseController(ExpenseService expenseService, RecurringExpenseService recurringExpenseService) {
         this.expenseService = expenseService;
+        this.recurringExpenseService = recurringExpenseService;
     }
 
     @GetMapping("/expenses")
@@ -47,15 +49,15 @@ public class ExpenseController {
     }
 
     @DeleteMapping("/expenses/{id}")
-public ResponseEntity<?> deletarDespesa(@PathVariable Long id) {
-    try {
-        expenseService.deletarDespesa(id);
-        return ResponseEntity.ok("Despesa deletada com sucesso.");
-    } catch (Exception e) {
-        logger.error("Erro ao deletar despesa: {}", e.getMessage(), e);
-        return ResponseEntity.status(500).body("Erro ao deletar despesa: " + e.getMessage());
+    public ResponseEntity<?> deletarDespesa(@PathVariable Long id) {
+        try {
+            expenseService.deletarDespesa(id);
+            return ResponseEntity.ok("Despesa deletada com sucesso.");
+        } catch (Exception e) {
+            logger.error("Erro ao deletar despesa: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao deletar despesa: " + e.getMessage());
+        }
     }
-}
     
     @PutMapping("/expenses/{id}/payment")
     public ResponseEntity<?> atualizarStatusPagamento(
@@ -67,6 +69,92 @@ public ResponseEntity<?> deletarDespesa(@PathVariable Long id) {
         } catch (Exception e) {
             logger.error("Erro ao atualizar status de pagamento da despesa: {}", e.getMessage(), e);
             return ResponseEntity.status(500).body("Erro ao atualizar status de pagamento: " + e.getMessage());
+        }
+    }
+
+    // ===== ENDPOINTS PARA DESPESAS FIXAS =====
+
+    @GetMapping("/recurring-expenses")
+    public ResponseEntity<?> listarDespesasFixas() {
+        try {
+            List<RecurringExpenseResponseDTO> despesasFixas = recurringExpenseService.listarDespesasFixasAtivas();
+            return ResponseEntity.ok(despesasFixas);
+        } catch (Exception e) {
+            logger.error("Erro ao listar despesas fixas: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao listar despesas fixas: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/recurring-expenses/{id}")
+    public ResponseEntity<?> buscarDespesaFixa(@PathVariable Long id) {
+        try {
+            RecurringExpenseResponseDTO despesaFixa = recurringExpenseService.buscarDespesaFixa(id);
+            return ResponseEntity.ok(despesaFixa);
+        } catch (Exception e) {
+            logger.error("Erro ao buscar despesa fixa: {}", e.getMessage(), e);
+            return ResponseEntity.status(404).body("Erro ao buscar despesa fixa: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/recurring-expenses")
+    public ResponseEntity<?> criarDespesaFixa(@RequestBody RecurringExpenseRequestDTO requestDTO) {
+        try {
+            RecurringExpenseResponseDTO despesaCriada = recurringExpenseService.criarDespesaFixa(requestDTO);
+            return ResponseEntity.ok(despesaCriada);
+        } catch (Exception e) {
+            logger.error("Erro ao criar despesa fixa: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao criar despesa fixa: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/recurring-expenses/{id}")
+    public ResponseEntity<?> atualizarDespesaFixa(
+            @PathVariable Long id,
+            @RequestBody RecurringExpenseRequestDTO requestDTO) {
+        try {
+            RecurringExpenseResponseDTO despesaAtualizada = recurringExpenseService.atualizarDespesaFixa(id, requestDTO);
+            return ResponseEntity.ok(despesaAtualizada);
+        } catch (Exception e) {
+            logger.error("Erro ao atualizar despesa fixa: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao atualizar despesa fixa: " + e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/recurring-expenses/{id}")
+    public ResponseEntity<?> excluirDespesaFixa(@PathVariable Long id) {
+        try {
+            recurringExpenseService.excluirDespesaFixa(id);
+            return ResponseEntity.ok("Despesa fixa excluída com sucesso.");
+        } catch (Exception e) {
+            logger.error("Erro ao excluir despesa fixa: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao excluir despesa fixa: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/recurring-expenses/{id}/deactivate")
+    public ResponseEntity<?> desativarDespesaFixa(@PathVariable Long id) {
+        try {
+            recurringExpenseService.desativarDespesaFixa(id);
+            return ResponseEntity.ok("Despesa fixa desativada com sucesso.");
+        } catch (Exception e) {
+            logger.error("Erro ao desativar despesa fixa: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao desativar despesa fixa: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/recurring-expenses/generate")
+    public ResponseEntity<?> gerarDespesasParaPeriodo(
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        try {
+            LocalDate inicio = LocalDate.parse(startDate);
+            LocalDate fim = LocalDate.parse(endDate);
+            
+            List<ExpenseResponseDTO> despesasGeradas = recurringExpenseService.gerarDespesasParaPeriodo(inicio, fim);
+            return ResponseEntity.ok(despesasGeradas);
+        } catch (Exception e) {
+            logger.error("Erro ao gerar despesas para o período: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao gerar despesas para o período: " + e.getMessage());
         }
     }
 }
