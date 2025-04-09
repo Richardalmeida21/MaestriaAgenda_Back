@@ -303,38 +303,45 @@ public class ComissaoService {
      * Atualiza o status de pagamento de uma comissão
      */
     public ComissaoResponseDTO atualizarStatusPagamento(Long profissionalId, LocalDate inicio, LocalDate fim, boolean paid) {
-        try {
-            // Calcular a comissão para pegar os valores corretos
-            ComissaoResponseDTO comissao = calcularComissaoPorPeriodo(profissionalId, inicio, fim);
-            
-            // Buscar registro existente ou criar um novo
-            ComissaoPagamento pagamento = comissaoPagamentoRepository
-                .findByProfissionalIdAndPeriodo(profissionalId, inicio, fim)
-                .orElse(new ComissaoPagamento(profissionalId, inicio, fim, comissao.getComissaoLiquida(), false));
-            
-            // Atualizar status de pagamento
-            pagamento.setPaid(paid);
-            comissaoPagamentoRepository.save(pagamento);
-            
-            // Retornar comissão atualizada
-            comissao = new ComissaoResponseDTO(
-                comissao.getProfissionalId(),
-                comissao.getNomeProfissional(),
-                comissao.getDataInicio(),
-                comissao.getDataFim(),
-                comissao.getComissaoTotal(),
-                comissao.getComissaoLiquida(),
-                comissao.getComissaoAgendamentosNormais(),
-                comissao.getComissaoAgendamentosFixos(),
-                comissao.getDescontoTaxa(),
-                paid);
-                
-            return comissao;
-        } catch (Exception e) {
-            logger.error("❌ Erro ao atualizar status de pagamento: {}", e.getMessage(), e);
-            throw new RuntimeException("Erro ao atualizar status de pagamento: " + e.getMessage());
+    try {
+        // Buscar registro existente ou criar um novo
+        ComissaoPagamento pagamento = comissaoPagamentoRepository
+            .findByProfissionalIdAndPeriodo(profissionalId, inicio, fim)
+            .orElseGet(() -> {
+                logger.info("Criando novo registro de pagamento para profissional {} no período {} a {}", profissionalId, inicio, fim);
+                return new ComissaoPagamento(profissionalId, inicio, fim, 0.0, paid); // Valor inicial de comissaoLiquida = 0.0
+            });
+
+        // Atualizar status de pagamento
+        pagamento.setPaid(paid);
+        if (paid) {
+            pagamento.setDataPagamento(LocalDateTime.now()); // Define a data de pagamento
+        } else {
+            pagamento.setDataPagamento(null); // Remove a data de pagamento se marcado como não pago
         }
+        comissaoPagamentoRepository.save(pagamento);
+
+        // Calcular a comissão para pegar os valores corretos
+        ComissaoResponseDTO comissao = calcularComissaoPorPeriodo(profissionalId, inicio, fim);
+
+        // Retornar comissão atualizada
+        return new ComissaoResponseDTO(
+            comissao.getProfissionalId(),
+            comissao.getNomeProfissional(),
+            comissao.getDataInicio(),
+            comissao.getDataFim(),
+            comissao.getComissaoTotal(),
+            comissao.getComissaoLiquida(),
+            comissao.getComissaoAgendamentosNormais(),
+            comissao.getComissaoAgendamentosFixos(),
+            comissao.getDescontoTaxa(),
+            pagamento.getPaid()
+        );
+    } catch (Exception e) {
+        logger.error("❌ Erro ao atualizar status de pagamento: {}", e.getMessage(), e);
+        throw new RuntimeException("Erro ao atualizar status de pagamento: " + e.getMessage());
     }
+}
     
     /**
      * Calcula quantas vezes um agendamento fixo foi executado dentro de um período
