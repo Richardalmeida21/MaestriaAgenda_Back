@@ -22,20 +22,25 @@ public class ExpenseController {
     }
 
     @GetMapping("/expenses")
-    public ResponseEntity<?> listarExpenses(
-            @RequestParam String startDate,
-            @RequestParam String endDate,
-            @RequestParam(defaultValue = "all") String paidFilter) {
-        try {
-            LocalDate start = LocalDate.parse(startDate);
-            LocalDate end = LocalDate.parse(endDate);
-            List<ExpenseResponseDTO> expenses = expenseService.listarDespesas(start, end, paidFilter);
-            return ResponseEntity.ok(expenses);
-        } catch (Exception e) {
-            logger.error("Erro ao listar despesas: {}", e.getMessage(), e);
-            return ResponseEntity.status(500).body("Erro ao listar despesas: " + e.getMessage());
-        }
+public ResponseEntity<?> listarExpenses(
+        @RequestParam String startDate,
+        @RequestParam String endDate,
+        @RequestParam(defaultValue = "all") String paidFilter) {
+    try {
+        LocalDate inicio = LocalDate.parse(startDate);
+        LocalDate fim = LocalDate.parse(endDate);
+        // Busca despesas pontuais
+        List<ExpenseResponseDTO> despesasPontuais = expenseService.listarDespesas(inicio, fim, paidFilter);
+        // Busca as despesas fixas geradas para o período
+        List<ExpenseResponseDTO> despesasFixas = recurringExpenseService.gerarDespesasParaPeriodo(inicio, fim);
+        // Mescla as duas listas
+        despesasPontuais.addAll(despesasFixas);
+        return ResponseEntity.ok(despesasPontuais);
+    } catch (Exception e) {
+        logger.error("Erro ao listar despesas: {}", e.getMessage(), e);
+        return ResponseEntity.status(500).body("Erro ao listar despesas: " + e.getMessage());
     }
+}
     
     @PostMapping("/expenses")
     public ResponseEntity<?> criarDespesa(@RequestBody ExpenseRequestDTO requestDTO) {
