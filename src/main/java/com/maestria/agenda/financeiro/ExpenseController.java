@@ -29,12 +29,8 @@ public ResponseEntity<?> listarExpenses(
     try {
         LocalDate inicio = LocalDate.parse(startDate);
         LocalDate fim = LocalDate.parse(endDate);
-        // Busca despesas pontuais
+        // Retorna apenas despesas pontuais, sem mesclagem
         List<ExpenseResponseDTO> despesasPontuais = expenseService.listarDespesas(inicio, fim, paidFilter);
-        // Busca as despesas fixas geradas para o período
-        List<ExpenseResponseDTO> despesasFixas = recurringExpenseService.gerarDespesasParaPeriodo(inicio, fim);
-        // Mescla as duas listas
-        despesasPontuais.addAll(despesasFixas);
         return ResponseEntity.ok(despesasPontuais);
     } catch (Exception e) {
         logger.error("Erro ao listar despesas: {}", e.getMessage(), e);
