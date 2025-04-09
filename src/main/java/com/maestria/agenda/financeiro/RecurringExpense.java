@@ -99,9 +99,9 @@ public class RecurringExpense {
         this.recurrenceType = recurrenceType;
     }
 
-    public Integer getRecurrenceValue() {
-        return recurrenceValue;
-    }
+   public Integer getRecurrenceValue() {
+    return (recurrenceValue != null) ? recurrenceValue : 1;
+}
 
     public void setRecurrenceValue(Integer recurrenceValue) {
         this.recurrenceValue = recurrenceValue;
