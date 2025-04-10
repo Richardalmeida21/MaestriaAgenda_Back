@@ -55,56 +55,40 @@ public class RecurringExpenseService {
      * Cria uma nova despesa fixa
      */
     public RecurringExpenseCreationResponse criarDespesaFixa(RecurringExpenseRequestDTO requestDTO) {
-        try {
-            RecurringExpense recurringExpense = new RecurringExpense();
-            updateFromDTO(recurringExpense, requestDTO);
-            
-            RecurringExpense saved = recurringExpenseRepository.save(recurringExpense);
-            logger.info("Despesa fixa criada com ID: {}", saved.getId());
-            
-            // Gerar despesas automaticamente para o próximo ano
-            LocalDate startDate = saved.getStartDate();
-            LocalDate endDate = startDate.plusYears(1);
-            
-            List<Expense> despesasGeradas = new ArrayList<>();
-            List<LocalDate> datasDespesa = calcularDatasNoIntervalo(saved, startDate, endDate);
-            
-            for (LocalDate data : datasDespesa) {
-                Expense despesa = new Expense(
-                    saved.getDescription(),
-                    saved.getCategory(),
-                    data,
-                    saved.getAmount(),
-                    false // Inicialmente não paga
-                );
-                despesasGeradas.add(despesa);
-            }
-            
-            // Salvar as despesas geradas
-            List<Expense> savedExpenses = expenseRepository.saveAll(despesasGeradas);
-            logger.info("{} despesas geradas automaticamente para a despesa fixa ID: {}", 
-                despesasGeradas.size(), saved.getId());
-            
-            // Converter as despesas salvas para DTOs
-            List<ExpenseResponseDTO> expenseDTOs = savedExpenses.stream()
-                .map(expense -> new ExpenseResponseDTO(
-                    expense.getId(),
-                    expense.getDescription(),
-                    expense.getCategory(),
-                    expense.getDate(),
-                    expense.getAmount(),
-                    expense.getPaid(),
-                    expense.getIsFixo(),
-                    expense.getDayOfMonth(),
-                    expense.getEndDate()
-                ))
-                .collect(Collectors.toList());
-            
-            return new RecurringExpenseCreationResponse(mapToDTO(saved), expenseDTOs);
-        } catch (Exception e) {
-            logger.error("Erro ao criar despesa fixa: {}", e.getMessage(), e);
-            throw new RuntimeException("Erro ao criar despesa fixa: " + e.getMessage());
-        }
+        // Criar a despesa fixa
+        RecurringExpense recurringExpense = new RecurringExpense();
+        recurringExpense.setDescription(requestDTO.getDescription());
+        recurringExpense.setCategory(requestDTO.getCategory());
+        recurringExpense.setAmount(requestDTO.getAmount());
+        recurringExpense.setRecurrenceType(requestDTO.getRecurrenceType());
+        recurringExpense.setRecurrenceValue(requestDTO.getRecurrenceValue());
+        recurringExpense.setStartDate(requestDTO.getStartDate());
+        recurringExpense.setEndDate(requestDTO.getEndDate());
+        recurringExpense.setActive(true);
+
+        // Salvar a despesa fixa
+        recurringExpense = recurringExpenseRepository.save(recurringExpense);
+
+        // Gerar as despesas futuras
+        List<Expense> generatedExpenses = generateFutureExpenses(recurringExpense);
+
+        // Converter para DTOs
+        List<ExpenseResponseDTO> expenseDTOs = generatedExpenses.stream()
+            .map(expense -> new ExpenseResponseDTO(
+                expense.getId(),
+                expense.getDescription(),
+                expense.getCategory(),
+                expense.getAmount(),
+                expense.getDate(),
+                expense.getPaid(),
+                expense.getRecurringExpenseId()
+            ))
+            .collect(Collectors.toList());
+
+        return new RecurringExpenseCreationResponse(
+            mapToDTO(recurringExpense),
+            expenseDTOs
+        );
     }
     
     /**
@@ -311,45 +295,18 @@ public class RecurringExpenseService {
     /**
      * Converte entidade para DTO
      */
-    private RecurringExpenseResponseDTO mapToDTO(RecurringExpense entity) {
-        // Verificar se existe uma despesa instanciada para o mês atual baseada nesta despesa fixa
-        boolean isPaid = false;
-        
-        // Para determinar se está paga, precisamos verificar se há alguma instância da despesa
-        // fixa para o mês corrente e se ela está paga
-        if (entity.getId() != null) {
-            LocalDate today = LocalDate.now();
-            LocalDate startOfMonth = today.withDayOfMonth(1);
-            LocalDate endOfMonth = today.withDayOfMonth(today.lengthOfMonth());
-            
-            // Calcular datas para o mês atual baseado no padrão de recorrência
-            List<LocalDate> datasNoMes = calcularDatasNoIntervalo(entity, startOfMonth, endOfMonth);
-            
-            // Se existirem datas para este mês, verificar se as despesas correspondentes estão pagas
-            if (!datasNoMes.isEmpty()) {
-                // Verificamos a primeira data (assumindo que todas terão o mesmo status)
-                List<Expense> despesasDoMes = expenseRepository.findByRecurringExpenseIdAndDateBetween(
-                    entity.getId(), startOfMonth, endOfMonth);
-                
-                // Se existir pelo menos uma despesa instanciada para este mês, vamos usar o status dela
-                if (!despesasDoMes.isEmpty()) {
-                    isPaid = despesasDoMes.get(0).getPaid();
-                }
-            }
-        }
-        
+    private RecurringExpenseResponseDTO mapToDTO(RecurringExpense recurringExpense) {
         return new RecurringExpenseResponseDTO(
-            entity.getId(),
-            entity.getDescription(),
-            entity.getCategory(),
-            entity.getAmount(),
-            entity.getStartDate(),
-            entity.getEndDate(),
-            entity.getRecurrenceType(),
-            entity.getRecurrenceValue(),
-            entity.getActive(),
-            "RECURRING", // Adicionando o tipo RECURRING para despesas fixas
-            isPaid       // Status de pagamento baseado nas despesas instanciadas
+            recurringExpense.getId(),
+            recurringExpense.getDescription(),
+            recurringExpense.getCategory(),
+            recurringExpense.getAmount(),
+            recurringExpense.getRecurrenceType(),
+            recurringExpense.getRecurrenceValue(),
+            recurringExpense.getStartDate(),
+            recurringExpense.getEndDate(),
+            recurringExpense.getActive(),
+            true // isFixo is always true for recurring expenses
         );
     }
     

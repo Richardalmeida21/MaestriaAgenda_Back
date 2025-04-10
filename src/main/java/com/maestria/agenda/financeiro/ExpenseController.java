@@ -77,7 +77,7 @@ public class ExpenseController {
     @PostMapping("/recurring-expenses")
     public ResponseEntity<?> criarDespesaFixa(@RequestBody RecurringExpenseRequestDTO requestDTO) {
         try {
-            RecurringExpenseResponseDTO response = recurringExpenseService.criarDespesaFixa(requestDTO);
+            RecurringExpenseCreationResponse response = recurringExpenseService.criarDespesaFixa(requestDTO);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Erro ao criar despesa fixa: {}", e.getMessage(), e);
