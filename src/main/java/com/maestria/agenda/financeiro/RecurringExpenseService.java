@@ -144,33 +144,52 @@ public class RecurringExpenseService {
                 List<LocalDate> datasDespesa = calcularDatasNoIntervalo(despesaFixa, inicio, fim);
                 
                 for (LocalDate data : datasDespesa) {
-                    // Criar uma despesa normal para cada data de ocorrência
-                    Expense despesa = new Expense(
-                        despesaFixa.getDescription(),
-                        despesaFixa.getCategory(),
-                        data,
-                        despesaFixa.getAmount(),
-                        false // Inicialmente não paga
-                    );
+                    // Verificar se a despesa já existe
+                    boolean despesaExiste = expenseRepository.existsByDateAndRecurringExpenseId(data, despesaFixa.getId());
                     
-                    despesasGeradas.add(despesa);
+                    if (!despesaExiste) {
+                        // Criar uma despesa normal para cada data de ocorrência
+                        Expense despesa = new Expense(
+                            despesaFixa.getDescription(),
+                            despesaFixa.getCategory(),
+                            data,
+                            despesaFixa.getAmount(),
+                            false, // Inicialmente não paga
+                            despesaFixa.getId() // Referência à despesa recorrente
+                        );
+                        
+                        despesasGeradas.add(despesa);
+                    }
                 }
             }
             
-            // Salvar as despesas geradas
+            // Salvar apenas as despesas novas
             List<Expense> salvas = expenseRepository.saveAll(despesasGeradas);
             logger.info("{} despesas geradas e salvas", salvas.size());
             
+            // Buscar todas as despesas do período (incluindo as recém-geradas)
+            List<Expense> todasDespesas = expenseRepository.findByDateBetween(inicio, fim);
+            
             // Converter para DTO e retornar
-            return salvas.stream()
-                .map(d -> new ExpenseResponseDTO(
-                    d.getId(),
-                    d.getDescription(),
-                    d.getCategory(),
-                    d.getDate(),
-                    d.getAmount(),
-                    d.getPaid()
-                ))
+            return todasDespesas.stream()
+                .map(d -> {
+                    RecurringExpense recurringExpense = null;
+                    if (d.getRecurringExpenseId() != null) {
+                        recurringExpense = recurringExpenseRepository.findById(d.getRecurringExpenseId())
+                            .orElse(null);
+                    }
+                    
+                    return new ExpenseResponseDTO(
+                        d.getId(),
+                        d.getDescription(),
+                        d.getCategory(),
+                        d.getDate(),
+                        d.getAmount(),
+                        d.getPaid(),
+                        d.getRecurringExpenseId(),
+                        recurringExpense != null ? recurringExpense.getRecurrenceInfo() : null
+                    );
+                })
                 .collect(Collectors.toList());
         } catch (Exception e) {
             logger.error("Erro ao gerar despesas para o período: {}", e.getMessage(), e);

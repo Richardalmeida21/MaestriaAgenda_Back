@@ -21,6 +21,9 @@ public class Expense {
     
     private Boolean paid = false;
     
+    @Column(name = "recurring_expense_id")
+    private Long recurringExpenseId;
+    
     // Construtor padrão para JPA
     public Expense() {}
 
@@ -32,9 +35,22 @@ public class Expense {
         this.paid = paid;
     }
 
+    public Expense(String description, String category, LocalDate date, Double amount, Boolean paid, Long recurringExpenseId) {
+        this.description = description;
+        this.category = category;
+        this.date = date;
+        this.amount = amount;
+        this.paid = paid;
+        this.recurringExpenseId = recurringExpenseId;
+    }
+
     // Getters e Setters
     public Long getId() {
         return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getDescription() {
@@ -75,5 +91,13 @@ public class Expense {
 
     public void setPaid(Boolean paid) {
         this.paid = paid;
+    }
+
+    public Long getRecurringExpenseId() {
+        return recurringExpenseId;
+    }
+
+    public void setRecurringExpenseId(Long recurringExpenseId) {
+        this.recurringExpenseId = recurringExpenseId;
     }
 }
