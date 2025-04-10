@@ -99,9 +99,21 @@ public class ExpenseController {
     }
 
     @PostMapping("/recurring-expenses")
-    public ResponseEntity<?> criarDespesaFixa(@RequestBody RecurringExpenseRequestDTO requestDTO) {
+    public ResponseEntity<?> criarDespesaFixa(
+            @RequestBody RecurringExpenseRequestDTO requestDTO,
+            @RequestParam(required = false) String endDate) {
         try {
+            // Criar a despesa fixa
             RecurringExpenseResponseDTO despesaCriada = recurringExpenseService.criarDespesaFixa(requestDTO);
+            
+            // Se foi fornecido um endDate, gerar as instâncias até essa data
+            if (endDate != null) {
+                LocalDate fim = LocalDate.parse(endDate);
+                List<ExpenseResponseDTO> despesasGeradas = recurringExpenseService.gerarDespesasParaPeriodo(
+                    requestDTO.getStartDate(), fim);
+                return ResponseEntity.ok(new RecurringExpenseCreationResponse(despesaCriada, despesasGeradas));
+            }
+            
             return ResponseEntity.ok(despesaCriada);
         } catch (Exception e) {
             logger.error("Erro ao criar despesa fixa: {}", e.getMessage(), e);
@@ -141,22 +153,6 @@ public class ExpenseController {
         } catch (Exception e) {
             logger.error("Erro ao desativar despesa fixa: {}", e.getMessage(), e);
             return ResponseEntity.status(500).body("Erro ao desativar despesa fixa: " + e.getMessage());
-        }
-    }
-
-    @PostMapping("/recurring-expenses/generate")
-    public ResponseEntity<?> gerarDespesasParaPeriodo(
-            @RequestParam String startDate,
-            @RequestParam String endDate) {
-        try {
-            LocalDate inicio = LocalDate.parse(startDate);
-            LocalDate fim = LocalDate.parse(endDate);
-            
-            List<ExpenseResponseDTO> despesasGeradas = recurringExpenseService.gerarDespesasParaPeriodo(inicio, fim);
-            return ResponseEntity.ok(despesasGeradas);
-        } catch (Exception e) {
-            logger.error("Erro ao gerar despesas para o período: {}", e.getMessage(), e);
-            return ResponseEntity.status(500).body("Erro ao gerar despesas para o período: " + e.getMessage());
         }
     }
 
