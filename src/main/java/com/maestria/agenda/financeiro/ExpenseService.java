@@ -1,11 +1,13 @@
 package com.maestria.agenda.financeiro;
 
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import java.time.LocalDate;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class ExpenseService {
@@ -24,7 +26,7 @@ public class ExpenseService {
         if (!paidFilter.equalsIgnoreCase("all")) {
             Boolean isPaid = paidFilter.equalsIgnoreCase("paid");
             expenses = expenses.stream()
-                    .filter(expense -> expense.getPaid() == isPaid)
+                    .filter(expense -> Objects.equals(expense.getPaid(), isPaid))
                     .collect(Collectors.toList());
         }
         
@@ -35,7 +37,10 @@ public class ExpenseService {
                         expense.getCategory(),
                         expense.getDate(),
                         expense.getAmount(),
-                        expense.getPaid()
+                        expense.getPaid(),
+                        expense.getRecurringExpenseId(),
+                        null,
+                        expense.getRecurringExpenseId() != null ? "RECURRING" : "REGULAR"
                 ))
                 .collect(Collectors.toList());
     }
@@ -63,7 +68,10 @@ public class ExpenseService {
                 savedExpense.getCategory(),
                 savedExpense.getDate(),
                 savedExpense.getAmount(),
-                savedExpense.getPaid()
+                savedExpense.getPaid(),
+                null,
+                null,
+                "REGULAR"
             );
         } catch (Exception e) {
             logger.error("Erro ao criar despesa: {}", e.getMessage(), e);
@@ -85,11 +93,35 @@ public class ExpenseService {
                 savedExpense.getCategory(),
                 savedExpense.getDate(),
                 savedExpense.getAmount(),
-                savedExpense.getPaid()
+                savedExpense.getPaid(),
+                savedExpense.getRecurringExpenseId(),
+                null,
+                savedExpense.getRecurringExpenseId() != null ? "RECURRING" : "REGULAR"
             );
         } catch (Exception e) {
             logger.error("Erro ao atualizar status de pagamento da despesa: {}", e.getMessage(), e);
             throw new RuntimeException("Erro ao atualizar status de pagamento: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Verifica se uma instância de despesa fixa existe e está associada à despesa fixa informada
+     */
+    public boolean verificarSeInstanciaExiste(Long instanceId, Long recurringExpenseId) {
+        try {
+            // Buscar a despesa pelo ID
+            Expense expense = expenseRepository.findById(instanceId)
+                .orElse(null);
+            
+            // Verificar se existe e se pertence à despesa fixa indicada
+            if (expense != null) {
+                return expense.getRecurringExpenseId() != null && 
+                       expense.getRecurringExpenseId().equals(recurringExpenseId);
+            }
+            return false;
+        } catch (Exception e) {
+            logger.error("Erro ao verificar instância: {}", e.getMessage(), e);
+            return false;
         }
     }
 }
