@@ -62,6 +62,29 @@ public class RecurringExpenseService {
             RecurringExpense saved = recurringExpenseRepository.save(recurringExpense);
             logger.info("Despesa fixa criada com ID: {}", saved.getId());
             
+            // Gerar despesas automaticamente para o próximo ano
+            LocalDate startDate = saved.getStartDate();
+            LocalDate endDate = startDate.plusYears(1);
+            
+            List<Expense> despesasGeradas = new ArrayList<>();
+            List<LocalDate> datasDespesa = calcularDatasNoIntervalo(saved, startDate, endDate);
+            
+            for (LocalDate data : datasDespesa) {
+                Expense despesa = new Expense(
+                    saved.getDescription(),
+                    saved.getCategory(),
+                    data,
+                    saved.getAmount(),
+                    false // Inicialmente não paga
+                );
+                despesasGeradas.add(despesa);
+            }
+            
+            // Salvar as despesas geradas
+            expenseRepository.saveAll(despesasGeradas);
+            logger.info("{} despesas geradas automaticamente para a despesa fixa ID: {}", 
+                despesasGeradas.size(), saved.getId());
+            
             return mapToDTO(saved);
         } catch (Exception e) {
             logger.error("Erro ao criar despesa fixa: {}", e.getMessage(), e);
@@ -269,5 +292,36 @@ public class RecurringExpenseService {
         entity.setRecurrenceType(dto.getRecurrenceType());
         entity.setRecurrenceValue(dto.getRecurrenceValue());
         entity.setActive(true);
+    }
+    
+    public RecurringExpenseResponseDTO atualizarStatusPagamento(Long id, boolean paid) {
+        try {
+            RecurringExpense recurringExpense = recurringExpenseRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Despesa fixa não encontrada com ID: " + id));
+            
+            // Atualizar o status de pagamento da despesa fixa
+            recurringExpense.setPaid(paid);
+            RecurringExpense saved = recurringExpenseRepository.save(recurringExpense);
+            
+            // Atualizar o status de pagamento de todas as despesas geradas
+            List<Expense> despesasGeradas = expenseRepository.findByDescriptionAndCategoryAndAmount(
+                recurringExpense.getDescription(),
+                recurringExpense.getCategory(),
+                recurringExpense.getAmount()
+            );
+            
+            for (Expense despesa : despesasGeradas) {
+                despesa.setPaid(paid);
+            }
+            
+            expenseRepository.saveAll(despesasGeradas);
+            logger.info("Status de pagamento atualizado para {} despesas geradas da despesa fixa ID: {}", 
+                despesasGeradas.size(), id);
+            
+            return mapToDTO(saved);
+        } catch (Exception e) {
+            logger.error("Erro ao atualizar status de pagamento da despesa fixa: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao atualizar status de pagamento: " + e.getMessage());
+        }
     }
 }
