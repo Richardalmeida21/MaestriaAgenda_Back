@@ -7,4 +7,5 @@ import java.util.List;
 public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     List<Expense> findByDateBetween(LocalDate startDate, LocalDate endDate);
     boolean existsByDateAndRecurringExpenseId(LocalDate date, Long recurringExpenseId);
+    List<Expense> findByRecurringExpenseIdAndDateBetween(Long recurringExpenseId, LocalDate startDate, LocalDate endDate);
 }

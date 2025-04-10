@@ -182,4 +182,17 @@ public class ExpenseController {
             return ResponseEntity.status(500).body("Erro ao listar todas as despesas: " + e.getMessage());
         }
     }
+
+    @PutMapping("/recurring-expenses/{id}/payment")
+    public ResponseEntity<?> atualizarStatusPagamentoDespesaFixa(
+            @PathVariable Long id,
+            @RequestBody ExpensePaymentUpdateRequest request) {
+        try {
+            RecurringExpenseResponseDTO updatedExpense = recurringExpenseService.atualizarStatusPagamento(id, request.isPaid());
+            return ResponseEntity.ok(updatedExpense);
+        } catch (Exception e) {
+            logger.error("Erro ao atualizar status de pagamento da despesa fixa: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao atualizar status de pagamento: " + e.getMessage());
+        }
+    }
 }

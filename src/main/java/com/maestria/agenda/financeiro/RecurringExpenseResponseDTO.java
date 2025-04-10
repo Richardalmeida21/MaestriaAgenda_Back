@@ -14,11 +14,12 @@ public class RecurringExpenseResponseDTO {
     private Integer recurrenceValue;
     private Boolean active;
     private String type;
+    private Boolean paid;
     
     public RecurringExpenseResponseDTO(Long id, String description, String category, 
                                       Double amount, LocalDate startDate, LocalDate endDate,
                                       RecurrenceType recurrenceType, Integer recurrenceValue,
-                                      Boolean active, String type) {
+                                      Boolean active, String type, Boolean paid) {
         this.id = id;
         this.description = description;
         this.category = category;
@@ -29,14 +30,23 @@ public class RecurringExpenseResponseDTO {
         this.recurrenceValue = recurrenceValue;
         this.active = active;
         this.type = type;
+        this.paid = paid;
     }
     
-    // Construtor sem o campo type para compatibilidade
+    // Construtor sem o campo paid e type para compatibilidade
     public RecurringExpenseResponseDTO(Long id, String description, String category, 
                                       Double amount, LocalDate startDate, LocalDate endDate,
                                       RecurrenceType recurrenceType, Integer recurrenceValue,
                                       Boolean active) {
-        this(id, description, category, amount, startDate, endDate, recurrenceType, recurrenceValue, active, "RECURRING");
+        this(id, description, category, amount, startDate, endDate, recurrenceType, recurrenceValue, active, "RECURRING", false);
+    }
+    
+    // Construtor com type mas sem paid para compatibilidade
+    public RecurringExpenseResponseDTO(Long id, String description, String category, 
+                                      Double amount, LocalDate startDate, LocalDate endDate,
+                                      RecurrenceType recurrenceType, Integer recurrenceValue,
+                                      Boolean active, String type) {
+        this(id, description, category, amount, startDate, endDate, recurrenceType, recurrenceValue, active, type, false);
     }
     
     // Getters
@@ -86,6 +96,14 @@ public class RecurringExpenseResponseDTO {
     
     public String getType() {
         return type;
+    }
+    
+    public Boolean getPaid() {
+        return paid;
+    }
+    
+    public void setPaid(Boolean paid) {
+        this.paid = paid;
     }
     
     // Informação formatada sobre recorrência

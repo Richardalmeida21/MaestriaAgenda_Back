@@ -274,6 +274,32 @@ public class RecurringExpenseService {
      * Converte entidade para DTO
      */
     private RecurringExpenseResponseDTO mapToDTO(RecurringExpense entity) {
+        // Verificar se existe uma despesa instanciada para o mês atual baseada nesta despesa fixa
+        boolean isPaid = false;
+        
+        // Para determinar se está paga, precisamos verificar se há alguma instância da despesa
+        // fixa para o mês corrente e se ela está paga
+        if (entity.getId() != null) {
+            LocalDate today = LocalDate.now();
+            LocalDate startOfMonth = today.withDayOfMonth(1);
+            LocalDate endOfMonth = today.withDayOfMonth(today.lengthOfMonth());
+            
+            // Calcular datas para o mês atual baseado no padrão de recorrência
+            List<LocalDate> datasNoMes = calcularDatasNoIntervalo(entity, startOfMonth, endOfMonth);
+            
+            // Se existirem datas para este mês, verificar se as despesas correspondentes estão pagas
+            if (!datasNoMes.isEmpty()) {
+                // Verificamos a primeira data (assumindo que todas terão o mesmo status)
+                List<Expense> despesasDoMes = expenseRepository.findByRecurringExpenseIdAndDateBetween(
+                    entity.getId(), startOfMonth, endOfMonth);
+                
+                // Se existir pelo menos uma despesa instanciada para este mês, vamos usar o status dela
+                if (!despesasDoMes.isEmpty()) {
+                    isPaid = despesasDoMes.get(0).getPaid();
+                }
+            }
+        }
+        
         return new RecurringExpenseResponseDTO(
             entity.getId(),
             entity.getDescription(),
@@ -284,7 +310,8 @@ public class RecurringExpenseService {
             entity.getRecurrenceType(),
             entity.getRecurrenceValue(),
             entity.getActive(),
-            "RECURRING" // Adicionando o tipo RECURRING para despesas fixas
+            "RECURRING", // Adicionando o tipo RECURRING para despesas fixas
+            isPaid       // Status de pagamento baseado nas despesas instanciadas
         );
     }
     
@@ -311,5 +338,73 @@ public class RecurringExpenseService {
         }
         
         entity.setActive(true);
+    }
+    
+    /**
+     * Atualiza o status de pagamento de uma despesa fixa e todas as suas instâncias no mês corrente
+     */
+    @Transactional
+    public RecurringExpenseResponseDTO atualizarStatusPagamento(Long id, boolean paid) {
+        try {
+            // Buscar a despesa fixa
+            RecurringExpense recurringExpense = recurringExpenseRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Despesa fixa não encontrada com ID: " + id));
+            
+            // Definir período do mês atual
+            LocalDate today = LocalDate.now();
+            LocalDate startOfMonth = today.withDayOfMonth(1);
+            LocalDate endOfMonth = today.withDayOfMonth(today.lengthOfMonth());
+            
+            // Buscar todas as despesas instantâneas geradas a partir desta despesa fixa para o mês atual
+            List<Expense> despesasDoMes = expenseRepository.findByRecurringExpenseIdAndDateBetween(
+                id, startOfMonth, endOfMonth);
+                
+            logger.info("Atualizando status de pagamento para {} da despesa fixa ID={}: {} despesas afetadas", 
+                paid ? "PAGO" : "PENDENTE", id, despesasDoMes.size());
+                
+            // Se não existirem despesas instantâneas para o mês atual,
+            // vamos gerar as instâncias necessárias
+            if (despesasDoMes.isEmpty()) {
+                // Calcular datas para o mês atual baseado no padrão de recorrência
+                List<LocalDate> datasNoMes = calcularDatasNoIntervalo(recurringExpense, startOfMonth, endOfMonth);
+                
+                if (!datasNoMes.isEmpty()) {
+                    logger.info("Gerando {} instâncias de despesa para o mês atual", datasNoMes.size());
+                    
+                    for (LocalDate data : datasNoMes) {
+                        Expense despesa = new Expense(
+                            recurringExpense.getDescription(),
+                            recurringExpense.getCategory(),
+                            data,
+                            recurringExpense.getAmount(),
+                            paid,  // já com o status correto
+                            recurringExpense.getId()
+                        );
+                        
+                        expenseRepository.save(despesa);
+                        despesasDoMes.add(despesa);
+                    }
+                } else {
+                    logger.warn("Nenhuma data válida encontrada para o mês atual");
+                    throw new RuntimeException("Não foi possível atualizar a despesa fixa pois não há instâncias para o mês atual");
+                }
+            } else {
+                // Atualizar o status de pagamento de todas as instâncias
+                for (Expense despesa : despesasDoMes) {
+                    despesa.setPaid(paid);
+                    expenseRepository.save(despesa);
+                }
+            }
+            
+            // Retornar a despesa fixa atualizada com o novo status
+            RecurringExpenseResponseDTO dto = mapToDTO(recurringExpense);
+            // Forçamos o status para refletir a alteração que acabamos de fazer
+            dto.setPaid(paid);
+            
+            return dto;
+        } catch (Exception e) {
+            logger.error("Erro ao atualizar status de pagamento da despesa fixa: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao atualizar status de pagamento: " + e.getMessage());
+        }
     }
 }
