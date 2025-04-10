@@ -1,11 +1,13 @@
 package com.maestria.agenda.financeiro;
 
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import java.time.LocalDate;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class ExpenseService {
@@ -24,7 +26,7 @@ public class ExpenseService {
         if (!paidFilter.equalsIgnoreCase("all")) {
             Boolean isPaid = paidFilter.equalsIgnoreCase("paid");
             expenses = expenses.stream()
-                    .filter(expense -> expense.getPaid() == isPaid)
+                    .filter(expense -> Objects.equals(expense.getPaid(), isPaid))
                     .collect(Collectors.toList());
         }
         
