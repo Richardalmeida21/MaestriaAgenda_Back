@@ -15,6 +15,7 @@ public class ExpenseResponseDTO {
 
     public ExpenseResponseDTO() {}
 
+    // Construtor completo com todos os campos
     public ExpenseResponseDTO(Long id, String description, String category, LocalDate date, Double amount, Boolean paid, Long recurringExpenseId, String recurrenceInfo) {
         this.id = id;
         this.description = description;
@@ -26,6 +27,19 @@ public class ExpenseResponseDTO {
         this.recurrenceInfo = recurrenceInfo;
     }
 
+    // Adicionando construtor simplificado que não exige recurringExpenseId e recurrenceInfo
+    public ExpenseResponseDTO(Long id, String description, String category, LocalDate date, Double amount, Boolean paid) {
+        this.id = id;
+        this.description = description;
+        this.category = category;
+        this.date = date;
+        this.amount = amount;
+        this.paid = paid;
+        this.recurringExpenseId = null;
+        this.recurrenceInfo = null;
+    }
+
+    // Getters e Setters existentes
     public Long getId() {
         return id;
     }
