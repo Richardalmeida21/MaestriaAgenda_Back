@@ -196,6 +196,7 @@ public class ExpenseController {
         }
     }
 
+
     @PutMapping("/recurring-expenses/{recurringId}/instances/{instanceId}/payment")
     public ResponseEntity<?> atualizarStatusPagamentoInstanciaDespesaFixa(
             @PathVariable Long recurringId,
