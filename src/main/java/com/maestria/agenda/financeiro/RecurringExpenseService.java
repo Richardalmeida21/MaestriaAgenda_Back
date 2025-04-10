@@ -78,10 +78,9 @@ public class RecurringExpenseService {
                 expense.getId(),
                 expense.getDescription(),
                 expense.getCategory(),
-                expense.getAmount(),
                 expense.getDate(),
-                expense.getPaid(),
-                expense.getRecurringExpenseId()
+                expense.getAmount(),
+                expense.getPaid()
             ))
             .collect(Collectors.toList());
 
@@ -516,5 +515,40 @@ public class RecurringExpenseService {
             logger.error("Erro ao corrigir despesa fixa problemática: {}", e.getMessage(), e);
             return false;
         }
+    }
+
+    private List<Expense> generateFutureExpenses(RecurringExpense recurringExpense) {
+        List<Expense> expenses = new ArrayList<>();
+        LocalDate currentDate = recurringExpense.getStartDate();
+        LocalDate endDate = recurringExpense.getEndDate();
+
+        while (!currentDate.isAfter(endDate)) {
+            Expense expense = new Expense();
+            expense.setDescription(recurringExpense.getDescription());
+            expense.setCategory(recurringExpense.getCategory());
+            expense.setAmount(recurringExpense.getAmount());
+            expense.setDate(currentDate);
+            expense.setPaid(false);
+            expense.setRecurringExpenseId(recurringExpense.getId());
+            expenses.add(expense);
+
+            // Move to next occurrence based on recurrence type
+            switch (recurringExpense.getRecurrenceType()) {
+                case DAILY:
+                    currentDate = currentDate.plusDays(1);
+                    break;
+                case WEEKLY:
+                    currentDate = currentDate.plusWeeks(1);
+                    break;
+                case MONTHLY:
+                    currentDate = currentDate.plusMonths(1);
+                    break;
+                case YEARLY:
+                    currentDate = currentDate.plusYears(1);
+                    break;
+            }
+        }
+
+        return expenseRepository.saveAll(expenses);
     }
 }
