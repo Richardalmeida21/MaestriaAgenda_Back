@@ -74,17 +74,20 @@ public class RecurringExpenseService {
 
         // Converter para DTOs
         List<ExpenseResponseDTO> expenseDTOs = generatedExpenses.stream()
-            .map(expense -> new ExpenseResponseDTO(
-                expense.getId(),
-                expense.getDescription(),
-                expense.getCategory(),
-                expense.getDate(),
-                expense.getAmount(),
-                expense.getPaid(),
-                true, // isFixo
-                expense.getRecurringExpenseId(),
-                expense.getEndDate()
-            ))
+            .map(expense -> {
+                Integer dayOfMonth = expense.getDate() != null ? expense.getDate().getDayOfMonth() : null;
+                return new ExpenseResponseDTO(
+                    expense.getId(),
+                    expense.getDescription(),
+                    expense.getCategory(),
+                    expense.getDate(),
+                    expense.getAmount(),
+                    expense.getPaid(),
+                    true, // isFixo
+                    dayOfMonth,
+                    expense.getEndDate()
+                );
+            })
             .collect(Collectors.toList());
 
         return new RecurringExpenseCreationResponse(
