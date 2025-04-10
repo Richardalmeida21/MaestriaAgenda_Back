@@ -176,14 +176,15 @@ public class RecurringExpenseService {
                     
                     if (!despesaExiste) {
                         // Criar uma despesa normal para cada data de ocorrência
-                        Expense despesa = new Expense(
-                            despesaFixa.getDescription(),
-                            despesaFixa.getCategory(),
-                            data,
-                            despesaFixa.getAmount(),
-                            false, // Inicialmente não paga
-                            despesaFixa.getId() // Referência à despesa recorrente
-                        );
+                        Expense despesa = new Expense();
+                        despesa.setDescription(despesaFixa.getDescription());
+                        despesa.setCategory(despesaFixa.getCategory());
+                        despesa.setDate(data);
+                        despesa.setAmount(despesaFixa.getAmount());
+                        despesa.setPaid(false);
+                        despesa.setRecurringExpenseId(despesaFixa.getId());
+                        despesa.setIsFixo(true);
+                        despesa.setEndDate(despesaFixa.getEndDate());
                         
                         despesasGeradas.add(despesa);
                     }
@@ -200,12 +201,7 @@ public class RecurringExpenseService {
             // Converter para DTO e retornar
             return todasDespesas.stream()
                 .map(d -> {
-                    RecurringExpense recurringExpense = null;
-                    if (d.getRecurringExpenseId() != null) {
-                        recurringExpense = recurringExpenseRepository.findById(d.getRecurringExpenseId())
-                            .orElse(null);
-                    }
-                    
+                    Integer dayOfMonth = d.getDate() != null ? d.getDate().getDayOfMonth() : null;
                     return new ExpenseResponseDTO(
                         d.getId(),
                         d.getDescription(),
@@ -213,9 +209,9 @@ public class RecurringExpenseService {
                         d.getDate(),
                         d.getAmount(),
                         d.getPaid(),
-                        d.getRecurringExpenseId(),
-                        recurringExpense != null ? recurringExpense.getRecurrenceInfo() : null,
-                        d.getRecurringExpenseId() != null ? "RECURRING" : "REGULAR"
+                        true, // isFixo
+                        dayOfMonth,
+                        d.getEndDate()
                     );
                 })
                 .collect(Collectors.toList());
