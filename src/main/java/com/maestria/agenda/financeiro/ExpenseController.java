@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -22,21 +23,21 @@ public class ExpenseController {
     }
 
     @GetMapping("/expenses")
-public ResponseEntity<?> listarExpenses(
-        @RequestParam String startDate,
-        @RequestParam String endDate,
-        @RequestParam(defaultValue = "all") String paidFilter) {
-    try {
-        LocalDate inicio = LocalDate.parse(startDate);
-        LocalDate fim = LocalDate.parse(endDate);
-        // Retorna apenas despesas pontuais, sem mesclagem
-        List<ExpenseResponseDTO> despesasPontuais = expenseService.listarDespesas(inicio, fim, paidFilter);
-        return ResponseEntity.ok(despesasPontuais);
-    } catch (Exception e) {
-        logger.error("Erro ao listar despesas: {}", e.getMessage(), e);
-        return ResponseEntity.status(500).body("Erro ao listar despesas: " + e.getMessage());
+    public ResponseEntity<?> listarExpenses(
+            @RequestParam String startDate,
+            @RequestParam String endDate,
+            @RequestParam(defaultValue = "all") String paidFilter) {
+        try {
+            LocalDate inicio = LocalDate.parse(startDate);
+            LocalDate fim = LocalDate.parse(endDate);
+            // Retorna apenas despesas pontuais, sem mesclagem
+            List<ExpenseResponseDTO> despesasPontuais = expenseService.listarDespesas(inicio, fim, paidFilter);
+            return ResponseEntity.ok(despesasPontuais);
+        } catch (Exception e) {
+            logger.error("Erro ao listar despesas: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao listar despesas: " + e.getMessage());
+        }
     }
-}
     
     @PostMapping("/expenses")
     public ResponseEntity<?> criarDespesa(@RequestBody ExpenseRequestDTO requestDTO) {
@@ -156,6 +157,29 @@ public ResponseEntity<?> listarExpenses(
         } catch (Exception e) {
             logger.error("Erro ao gerar despesas para o período: {}", e.getMessage(), e);
             return ResponseEntity.status(500).body("Erro ao gerar despesas para o período: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/all-expenses")
+    public ResponseEntity<?> listarTodasDespesas(
+            @RequestParam String startDate,
+            @RequestParam String endDate,
+            @RequestParam(defaultValue = "all") String paidFilter) {
+        try {
+            LocalDate inicio = LocalDate.parse(startDate);
+            LocalDate fim = LocalDate.parse(endDate);
+            // Obter despesas pontuais
+            List<ExpenseResponseDTO> despesasPontuais = expenseService.listarDespesas(inicio, fim, paidFilter);
+            // Obter despesas fixas
+            List<RecurringExpenseResponseDTO> despesasFixas = recurringExpenseService.listarDespesasFixasAtivas();
+            // Combinar listas
+            List<Object> todasDespesas = new ArrayList<>();
+            todasDespesas.addAll(despesasPontuais);
+            todasDespesas.addAll(despesasFixas);
+            return ResponseEntity.ok(todasDespesas);
+        } catch (Exception e) {
+            logger.error("Erro ao listar todas as despesas: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao listar todas as despesas: " + e.getMessage());
         }
     }
 }
