@@ -266,4 +266,19 @@ public class ExpenseController {
             return ResponseEntity.status(500).body("Erro ao excluir instância de despesa fixa: " + e.getMessage());
         }
     }
+
+    @GetMapping("/recurring-expenses/generate")
+    public ResponseEntity<?> gerarDespesasParaPeriodo(
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        try {
+            LocalDate inicio = LocalDate.parse(startDate);
+            LocalDate fim = LocalDate.parse(endDate);
+            List<ExpenseResponseDTO> despesasGeradas = recurringExpenseService.gerarDespesasParaPeriodo(inicio, fim);
+            return ResponseEntity.ok(despesasGeradas);
+        } catch (Exception e) {
+            logger.error("Erro ao gerar despesas para o período: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao gerar despesas para o período: " + e.getMessage());
+        }
+    }
 }
