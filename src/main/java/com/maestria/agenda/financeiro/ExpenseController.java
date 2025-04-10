@@ -250,4 +250,24 @@ public class ExpenseController {
             return ResponseEntity.status(500).body("Erro ao corrigir despesa fixa: " + e.getMessage());
         }
     }
+
+    @DeleteMapping("/recurring-expenses/{recurringId}/instances/{instanceId}")
+    public ResponseEntity<?> excluirInstanciaDespesaFixa(
+            @PathVariable Long recurringId,
+            @PathVariable Long instanceId) {
+        try {
+            // Primeiro verificar se a instância existe
+            boolean instanciaExiste = expenseService.verificarSeInstanciaExiste(instanceId, recurringId);
+            if (!instanciaExiste) {
+                return ResponseEntity.status(404).body("Instância de despesa fixa não encontrada.");
+            }
+            
+            // Excluir a instância
+            expenseService.deletarDespesa(instanceId);
+            return ResponseEntity.ok("Instância de despesa fixa excluída com sucesso.");
+        } catch (Exception e) {
+            logger.error("Erro ao excluir instância de despesa fixa: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao excluir instância de despesa fixa: " + e.getMessage());
+        }
+    }
 }

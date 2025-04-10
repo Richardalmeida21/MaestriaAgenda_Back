@@ -107,21 +107,7 @@ public class ExpenseService {
     /**
      * Verifica se uma instância de despesa fixa existe e está associada à despesa fixa informada
      */
-    public boolean verificarSeInstanciaExiste(Long instanceId, Long recurringExpenseId) {
-        try {
-            // Buscar a despesa pelo ID
-            Expense expense = expenseRepository.findById(instanceId)
-                .orElse(null);
-            
-            // Verificar se existe e se pertence à despesa fixa indicada
-            if (expense != null) {
-                return expense.getRecurringExpenseId() != null && 
-                       expense.getRecurringExpenseId().equals(recurringExpenseId);
-            }
-            return false;
-        } catch (Exception e) {
-            logger.error("Erro ao verificar instância: {}", e.getMessage(), e);
-            return false;
-        }
+    public boolean verificarSeInstanciaExiste(Long instanceId, Long recurringId) {
+        return expenseRepository.existsByIdAndRecurringExpenseId(instanceId, recurringId);
     }
 }
