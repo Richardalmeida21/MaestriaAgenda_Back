@@ -187,7 +187,8 @@ public class RecurringExpenseService {
                         d.getAmount(),
                         d.getPaid(),
                         d.getRecurringExpenseId(),
-                        recurringExpense != null ? recurringExpense.getRecurrenceInfo() : null
+                        recurringExpense != null ? recurringExpense.getRecurrenceInfo() : null,
+                        d.getRecurringExpenseId() != null ? "RECURRING" : "REGULAR"
                     );
                 })
                 .collect(Collectors.toList());
@@ -215,6 +216,7 @@ public class RecurringExpenseService {
         LocalDate dataAtual = startDate;
         while (!dataAtual.isAfter(endDate)) {
             boolean gerarDespesa = false;
+            Integer recurrenceValue = despesa.getRecurrenceValue() != null ? despesa.getRecurrenceValue() : 1;
             
             switch (despesa.getRecurrenceType()) {
                 case DAILY:
@@ -227,22 +229,31 @@ public class RecurringExpenseService {
                     int diaDaSemana = dataAtual.getDayOfWeek().getValue();
                     // Ajustar para 0 (domingo) a 6 (sábado)
                     int diaBit = (diaDaSemana == 7) ? 0 : diaDaSemana;
-                    gerarDespesa = (despesa.getRecurrenceValue() & (1 << diaBit)) != 0;
+                    gerarDespesa = (recurrenceValue & (1 << diaBit)) != 0;
                     break;
                     
                 case MONTHLY:
-                    if (despesa.getRecurrenceValue() == -1) {
+                    if (recurrenceValue == -1) {
                         // Último dia do mês
                         gerarDespesa = dataAtual.getDayOfMonth() == dataAtual.lengthOfMonth();
                     } else {
-                        // Dia específico do mês
-                        gerarDespesa = despesa.getRecurrenceValue() == dataAtual.getDayOfMonth();
+                        // Dia específico do mês - usar o mesmo dia da data de início quando recorrenceValue é nulo
+                        if (despesa.getRecurrenceValue() == null) {
+                            gerarDespesa = dataAtual.getDayOfMonth() == startDate.getDayOfMonth();
+                        } else {
+                            gerarDespesa = recurrenceValue == dataAtual.getDayOfMonth();
+                        }
                     }
                     break;
                     
                 case YEARLY:
                     // Para simplicidade, consideramos o dia do ano
-                    gerarDespesa = despesa.getRecurrenceValue() == dataAtual.getDayOfYear();
+                    if (despesa.getRecurrenceValue() == null) {
+                        // Se não tiver valor específico, usar o mesmo dia do ano da data de início
+                        gerarDespesa = dataAtual.getDayOfYear() == startDate.getDayOfYear();
+                    } else {
+                        gerarDespesa = recurrenceValue == dataAtual.getDayOfYear();
+                    }
                     break;
                 
                 default:
@@ -272,7 +283,8 @@ public class RecurringExpenseService {
             entity.getEndDate(),
             entity.getRecurrenceType(),
             entity.getRecurrenceValue(),
-            entity.getActive()
+            entity.getActive(),
+            "RECURRING" // Adicionando o tipo RECURRING para despesas fixas
         );
     }
     
@@ -286,7 +298,18 @@ public class RecurringExpenseService {
         entity.setStartDate(dto.getStartDate());
         entity.setEndDate(dto.getEndDate());
         entity.setRecurrenceType(dto.getRecurrenceType());
-        entity.setRecurrenceValue(dto.getRecurrenceValue());
+        
+        // Para recorrência mensal, se o valor for nulo, use o dia da data de início
+        if (dto.getRecurrenceType() == RecurrenceType.MONTHLY && dto.getRecurrenceValue() == null) {
+            // Use o dia da data de início como valor de recorrência
+            entity.setRecurrenceValue(dto.getStartDate().getDayOfMonth());
+            logger.info("Usando o dia da data de início ({}) como valor de recorrência mensal", 
+                        dto.getStartDate().getDayOfMonth());
+        } else {
+            // Caso contrário, use o valor exato informado no DTO
+            entity.setRecurrenceValue(dto.getRecurrenceValue());
+        }
+        
         entity.setActive(true);
     }
 }

@@ -35,7 +35,10 @@ public class ExpenseService {
                         expense.getCategory(),
                         expense.getDate(),
                         expense.getAmount(),
-                        expense.getPaid()
+                        expense.getPaid(),
+                        expense.getRecurringExpenseId(),
+                        null,
+                        expense.getRecurringExpenseId() != null ? "RECURRING" : "REGULAR"
                 ))
                 .collect(Collectors.toList());
     }
@@ -63,7 +66,10 @@ public class ExpenseService {
                 savedExpense.getCategory(),
                 savedExpense.getDate(),
                 savedExpense.getAmount(),
-                savedExpense.getPaid()
+                savedExpense.getPaid(),
+                null,
+                null,
+                "REGULAR"
             );
         } catch (Exception e) {
             logger.error("Erro ao criar despesa: {}", e.getMessage(), e);
@@ -85,7 +91,10 @@ public class ExpenseService {
                 savedExpense.getCategory(),
                 savedExpense.getDate(),
                 savedExpense.getAmount(),
-                savedExpense.getPaid()
+                savedExpense.getPaid(),
+                savedExpense.getRecurringExpenseId(),
+                null,
+                savedExpense.getRecurringExpenseId() != null ? "RECURRING" : "REGULAR"
             );
         } catch (Exception e) {
             logger.error("Erro ao atualizar status de pagamento da despesa: {}", e.getMessage(), e);

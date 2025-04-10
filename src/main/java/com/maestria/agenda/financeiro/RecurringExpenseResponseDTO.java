@@ -13,11 +13,12 @@ public class RecurringExpenseResponseDTO {
     private RecurrenceType recurrenceType;
     private Integer recurrenceValue;
     private Boolean active;
+    private String type;
     
     public RecurringExpenseResponseDTO(Long id, String description, String category, 
                                       Double amount, LocalDate startDate, LocalDate endDate,
                                       RecurrenceType recurrenceType, Integer recurrenceValue,
-                                      Boolean active) {
+                                      Boolean active, String type) {
         this.id = id;
         this.description = description;
         this.category = category;
@@ -27,6 +28,15 @@ public class RecurringExpenseResponseDTO {
         this.recurrenceType = recurrenceType;
         this.recurrenceValue = recurrenceValue;
         this.active = active;
+        this.type = type;
+    }
+    
+    // Construtor sem o campo type para compatibilidade
+    public RecurringExpenseResponseDTO(Long id, String description, String category, 
+                                      Double amount, LocalDate startDate, LocalDate endDate,
+                                      RecurrenceType recurrenceType, Integer recurrenceValue,
+                                      Boolean active) {
+        this(id, description, category, amount, startDate, endDate, recurrenceType, recurrenceValue, active, "RECURRING");
     }
     
     // Getters
@@ -72,6 +82,10 @@ public class RecurringExpenseResponseDTO {
     
     public Boolean getActive() {
         return active;
+    }
+    
+    public String getType() {
+        return type;
     }
     
     // Informação formatada sobre recorrência

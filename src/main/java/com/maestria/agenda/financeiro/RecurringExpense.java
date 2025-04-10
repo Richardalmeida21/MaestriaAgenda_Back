@@ -132,7 +132,7 @@ public class RecurringExpense {
     }
 
     public Integer getRecurrenceValue() {
-        return (recurrenceValue != null) ? recurrenceValue : 1;
+        return recurrenceValue;
     }
 
     public void setRecurrenceValue(Integer recurrenceValue) {

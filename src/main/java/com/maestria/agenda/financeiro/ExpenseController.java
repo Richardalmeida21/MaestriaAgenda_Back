@@ -168,9 +168,9 @@ public class ExpenseController {
         try {
             LocalDate inicio = LocalDate.parse(startDate);
             LocalDate fim = LocalDate.parse(endDate);
-            // Obter despesas pontuais
+            // Obter despesas pontuais (essas já terão o campo type definido como "REGULAR")
             List<ExpenseResponseDTO> despesasPontuais = expenseService.listarDespesas(inicio, fim, paidFilter);
-            // Obter despesas fixas
+            // Obter despesas fixas (essas já terão o campo type definido como "RECURRING")
             List<RecurringExpenseResponseDTO> despesasFixas = recurringExpenseService.listarDespesasFixasAtivas();
             // Combinar listas
             List<Object> todasDespesas = new ArrayList<>();
