@@ -149,9 +149,9 @@ public class ExpenseService {
                         expense.getDate(),
                         expense.getAmount(),
                         expense.getPaid(),
-                        expense.getRecurringExpenseId(),
-                        null,
-                        expense.getRecurringExpenseId() != null ? "RECURRING" : "REGULAR"
+                        expense.getIsFixo(),
+                        expense.getDayOfMonth(),
+                        expense.getEndDate()
                 ))
                 .collect(Collectors.toList());
     }

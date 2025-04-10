@@ -42,7 +42,7 @@ public class ExpenseController {
     @PostMapping("/expenses")
     public ResponseEntity<?> criarDespesa(@RequestBody ExpenseRequestDTO requestDTO) {
         try {
-            ExpenseResponseDTO createdExpense = expenseService.criarDespesa(requestDTO);
+            ExpenseResponseDTO createdExpense = expenseService.createExpense(requestDTO);
             return ResponseEntity.ok(createdExpense);
         } catch (Exception e) {
             logger.error("Erro ao criar despesa: {}", e.getMessage(), e);
@@ -53,7 +53,7 @@ public class ExpenseController {
     @DeleteMapping("/expenses/{id}")
     public ResponseEntity<?> deletarDespesa(@PathVariable Long id) {
         try {
-            expenseService.deletarDespesa(id);
+            expenseService.deleteExpense(id);
             return ResponseEntity.ok("Despesa deletada com sucesso.");
         } catch (Exception e) {
             logger.error("Erro ao deletar despesa: {}", e.getMessage(), e);
@@ -66,7 +66,7 @@ public class ExpenseController {
             @PathVariable Long id,
             @RequestBody ExpensePaymentUpdateRequest request) {
         try {
-            ExpenseResponseDTO updatedExpense = expenseService.atualizarStatusPagamento(id, request.isPaid());
+            ExpenseResponseDTO updatedExpense = expenseService.updatePaymentStatus(id, request.isPaid());
             return ResponseEntity.ok(updatedExpense);
         } catch (Exception e) {
             logger.error("Erro ao atualizar status de pagamento da despesa: {}", e.getMessage(), e);
@@ -77,7 +77,7 @@ public class ExpenseController {
     @PostMapping("/recurring-expenses")
     public ResponseEntity<?> criarDespesaFixa(@RequestBody RecurringExpenseRequestDTO requestDTO) {
         try {
-            RecurringExpenseCreationResponse response = recurringExpenseService.criarDespesaFixa(requestDTO);
+            RecurringExpenseResponseDTO response = recurringExpenseService.criarDespesaFixa(requestDTO);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Erro ao criar despesa fixa: {}", e.getMessage(), e);

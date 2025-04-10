@@ -54,7 +54,7 @@ public class RecurringExpenseService {
     /**
      * Cria uma nova despesa fixa
      */
-    public RecurringExpenseResponseDTO criarDespesaFixa(RecurringExpenseRequestDTO requestDTO) {
+    public RecurringExpenseCreationResponse criarDespesaFixa(RecurringExpenseRequestDTO requestDTO) {
         try {
             RecurringExpense recurringExpense = new RecurringExpense();
             updateFromDTO(recurringExpense, requestDTO);
@@ -81,11 +81,26 @@ public class RecurringExpenseService {
             }
             
             // Salvar as despesas geradas
-            expenseRepository.saveAll(despesasGeradas);
+            List<Expense> savedExpenses = expenseRepository.saveAll(despesasGeradas);
             logger.info("{} despesas geradas automaticamente para a despesa fixa ID: {}", 
                 despesasGeradas.size(), saved.getId());
             
-            return mapToDTO(saved);
+            // Converter as despesas salvas para DTOs
+            List<ExpenseResponseDTO> expenseDTOs = savedExpenses.stream()
+                .map(expense -> new ExpenseResponseDTO(
+                    expense.getId(),
+                    expense.getDescription(),
+                    expense.getCategory(),
+                    expense.getDate(),
+                    expense.getAmount(),
+                    expense.getPaid(),
+                    expense.getIsFixo(),
+                    expense.getDayOfMonth(),
+                    expense.getEndDate()
+                ))
+                .collect(Collectors.toList());
+            
+            return new RecurringExpenseCreationResponse(mapToDTO(saved), expenseDTOs);
         } catch (Exception e) {
             logger.error("Erro ao criar despesa fixa: {}", e.getMessage(), e);
             throw new RuntimeException("Erro ao criar despesa fixa: " + e.getMessage());
