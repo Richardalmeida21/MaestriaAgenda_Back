@@ -1,31 +1,50 @@
 package com.maestria.agenda.financeiro;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.time.LocalDate;
 
 @Entity
 @Table(name = "expenses")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class Expense {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
+    @Column(nullable = false)
     private String description;
-    
+
+    @Column(nullable = false)
     private String category;
-    
+
+    @Column(nullable = false)
     private LocalDate date;
-    
+
+    @Column(nullable = false)
     private Double amount;
-    
+
+    @Column(nullable = false)
     private Boolean paid = false;
-    
+
+    @Column(nullable = false)
+    private Boolean isFixo = false;
+
+    @Column
+    private Integer dayOfMonth; // Used for fixed expenses to store the day of the month
+
+    @Column
+    private LocalDate endDate; // Used for fixed expenses to store when they should end
+
     @Column(name = "recurring_expense_id")
     private Long recurringExpenseId;
-    
-    // Construtor padrão para JPA
-    public Expense() {}
 
     public Expense(String description, String category, LocalDate date, Double amount, Boolean paid) {
         this.description = description;

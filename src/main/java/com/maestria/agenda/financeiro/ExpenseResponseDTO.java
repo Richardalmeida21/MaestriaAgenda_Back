@@ -1,8 +1,17 @@
 package com.maestria.agenda.financeiro;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class ExpenseResponseDTO {
     private Long id;
     private String description;
@@ -10,23 +19,23 @@ public class ExpenseResponseDTO {
     private LocalDate date;
     private Double amount;
     private Boolean paid;
-    private Long recurringExpenseId;
-    private String recurrenceInfo;
-    private String type;
+    private Boolean isFixo;
+    private Integer dayOfMonth;
+    private LocalDate endDate;
 
     public ExpenseResponseDTO() {}
 
     // Construtor completo com todos os campos
-    public ExpenseResponseDTO(Long id, String description, String category, LocalDate date, Double amount, Boolean paid, Long recurringExpenseId, String recurrenceInfo, String type) {
+    public ExpenseResponseDTO(Long id, String description, String category, LocalDate date, Double amount, Boolean paid, Boolean isFixo, Integer dayOfMonth, LocalDate endDate) {
         this.id = id;
         this.description = description;
         this.category = category;
         this.date = date;
         this.amount = amount;
         this.paid = paid;
-        this.recurringExpenseId = recurringExpenseId;
-        this.recurrenceInfo = recurrenceInfo;
-        this.type = type;
+        this.isFixo = isFixo;
+        this.dayOfMonth = dayOfMonth;
+        this.endDate = endDate;
     }
 
     // Adicionando construtor simplificado que não exige recurringExpenseId e recurrenceInfo
@@ -37,9 +46,9 @@ public class ExpenseResponseDTO {
         this.date = date;
         this.amount = amount;
         this.paid = paid;
-        this.recurringExpenseId = null;
-        this.recurrenceInfo = null;
-        this.type = "REGULAR";
+        this.isFixo = false;
+        this.dayOfMonth = null;
+        this.endDate = null;
     }
 
     // Getters e Setters existentes
@@ -95,27 +104,27 @@ public class ExpenseResponseDTO {
         this.paid = paid;
     }
 
-    public Long getRecurringExpenseId() {
-        return recurringExpenseId;
+    public Boolean getIsFixo() {
+        return isFixo;
     }
 
-    public void setRecurringExpenseId(Long recurringExpenseId) {
-        this.recurringExpenseId = recurringExpenseId;
+    public void setIsFixo(Boolean isFixo) {
+        this.isFixo = isFixo;
     }
 
-    public String getRecurrenceInfo() {
-        return recurrenceInfo;
+    public Integer getDayOfMonth() {
+        return dayOfMonth;
     }
 
-    public void setRecurrenceInfo(String recurrenceInfo) {
-        this.recurrenceInfo = recurrenceInfo;
+    public void setDayOfMonth(Integer dayOfMonth) {
+        this.dayOfMonth = dayOfMonth;
     }
-    
-    public String getType() {
-        return type;
+
+    public LocalDate getEndDate() {
+        return endDate;
     }
-    
-    public void setType(String type) {
-        this.type = type;
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
     }
 }
