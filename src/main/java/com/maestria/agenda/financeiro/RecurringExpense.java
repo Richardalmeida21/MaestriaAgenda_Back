@@ -27,10 +27,13 @@ public class RecurringExpense {
     private Integer recurrenceValue; // Dia do mês (1-31) ou máscara de dias da semana
 
     private Boolean active;
+    
+    private Boolean paid = false;
 
     // Construtor padrão para JPA
     public RecurringExpense() {
         this.active = true;
+        this.paid = false;
     }
 
     public RecurringExpense(String description, String category, Double amount,
@@ -44,6 +47,7 @@ public class RecurringExpense {
         this.recurrenceType = recurrenceType;
         this.recurrenceValue = recurrenceValue;
         this.active = true;
+        this.paid = false;
     }
 
     public String getRecurrenceInfo() {
@@ -145,5 +149,13 @@ public class RecurringExpense {
 
     public void setActive(Boolean active) {
         this.active = active;
+    }
+
+    public Boolean getPaid() {
+        return paid;
+    }
+    
+    public void setPaid(Boolean paid) {
+        this.paid = paid;
     }
 }

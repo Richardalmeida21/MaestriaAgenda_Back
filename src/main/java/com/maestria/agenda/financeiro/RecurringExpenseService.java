@@ -407,4 +407,119 @@ public class RecurringExpenseService {
             throw new RuntimeException("Erro ao atualizar status de pagamento: " + e.getMessage());
         }
     }
+    
+    /**
+     * Resetar status de pagamento de uma despesa fixa problemática e suas instâncias
+     */
+    @Transactional
+    public RecurringExpenseResponseDTO resetarStatusPagamento(Long id) {
+        try {
+            // Buscar a despesa fixa
+            RecurringExpense recurringExpense = recurringExpenseRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Despesa fixa não encontrada: " + id));
+            
+            // Atualizar o status para não pago
+            recurringExpense.setPaid(false);
+            
+            // Salvar a despesa fixa atualizada
+            RecurringExpense savedExpense = recurringExpenseRepository.save(recurringExpense);
+            
+            // Também buscar e atualizar todas as instâncias desta despesa fixa no mês atual
+            LocalDate hoje = LocalDate.now();
+            LocalDate inicioDaMes = hoje.withDayOfMonth(1);
+            LocalDate fimDoMes = hoje.withDayOfMonth(hoje.lengthOfMonth());
+            
+            List<Expense> instancias = expenseRepository.findByRecurringExpenseIdAndDateBetween(
+                id, inicioDaMes, fimDoMes);
+            
+            for (Expense instancia : instancias) {
+                instancia.setPaid(false);
+                expenseRepository.save(instancia);
+            }
+            
+            logger.info("Resetado status de pagamento da despesa fixa ID {}: {} instâncias atualizadas", 
+                id, instancias.size());
+            
+            return mapToDTO(savedExpense);
+        } catch (Exception e) {
+            logger.error("Erro ao resetar status de pagamento da despesa fixa: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    /**
+     * Corrigir uma despesa fixa problemática e suas instâncias
+     */
+    @Transactional
+    public boolean corrigirDespesaFixaProblematica(Long id) {
+        try {
+            RecurringExpense recurringExpense = recurringExpenseRepository.findById(id)
+                .orElse(null);
+            
+            if (recurringExpense == null) {
+                logger.warn("Despesa fixa não encontrada ao tentar corrigir: {}", id);
+                return false;
+            }
+            
+            // Realizar operações de correção:
+            
+            // 1. Verificar campos obrigatórios e preencher se necessário
+            if (recurringExpense.getDescription() == null || recurringExpense.getDescription().isEmpty()) {
+                recurringExpense.setDescription("Despesa Fixa #" + id);
+            }
+            
+            if (recurringExpense.getCategory() == null || recurringExpense.getCategory().isEmpty()) {
+                recurringExpense.setCategory("others");
+            }
+            
+            if (recurringExpense.getRecurrenceType() == null) {
+                recurringExpense.setRecurrenceType(RecurrenceType.MONTHLY);
+            }
+            
+            if (recurringExpense.getStartDate() == null) {
+                recurringExpense.setStartDate(LocalDate.now());
+            }
+            
+            // 2. Resetar status de pagamento
+            recurringExpense.setPaid(false);
+            
+            // 3. Garantir que está ativa
+            recurringExpense.setActive(true);
+            
+            // Salvar correções
+            recurringExpenseRepository.save(recurringExpense);
+            
+            // 4. Verificar e corrigir instâncias problemáticas
+            List<Expense> instancias = expenseRepository.findByRecurringExpenseId(id);
+            for (Expense instancia : instancias) {
+                // Corrigir relação
+                if (!id.equals(instancia.getRecurringExpenseId())) {
+                    instancia.setRecurringExpenseId(id);
+                }
+                
+                // Resetar status de pagamento
+                instancia.setPaid(false);
+                
+                // Corrigir descrição se necessário
+                if (instancia.getDescription() == null || instancia.getDescription().isEmpty()) {
+                    instancia.setDescription(recurringExpense.getDescription());
+                }
+                
+                // Corrigir valor
+                if (instancia.getAmount() == null || instancia.getAmount() <= 0) {
+                    instancia.setAmount(recurringExpense.getAmount());
+                }
+                
+                expenseRepository.save(instancia);
+            }
+            
+            logger.info("Despesa fixa ID {} corrigida com sucesso. {} instâncias atualizadas.", 
+                id, instancias.size());
+            
+            return true;
+        } catch (Exception e) {
+            logger.error("Erro ao corrigir despesa fixa problemática: {}", e.getMessage(), e);
+            return false;
+        }
+    }
 }
