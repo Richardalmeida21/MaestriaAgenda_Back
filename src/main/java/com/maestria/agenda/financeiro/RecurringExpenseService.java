@@ -80,7 +80,10 @@ public class RecurringExpenseService {
                 expense.getCategory(),
                 expense.getDate(),
                 expense.getAmount(),
-                expense.getPaid()
+                expense.getPaid(),
+                true, // isFixo
+                expense.getRecurringExpenseId(),
+                expense.getEndDate()
             ))
             .collect(Collectors.toList());
 
@@ -530,6 +533,8 @@ public class RecurringExpenseService {
             expense.setDate(currentDate);
             expense.setPaid(false);
             expense.setRecurringExpenseId(recurringExpense.getId());
+            expense.setIsFixo(true);
+            expense.setEndDate(recurringExpense.getEndDate());
             expenses.add(expense);
 
             // Move to next occurrence based on recurrence type
