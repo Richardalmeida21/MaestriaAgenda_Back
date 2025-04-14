@@ -1,16 +1,16 @@
 package com.maestria.agenda.financeiro;
 
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.time.YearMonth;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class RecurringExpenseService {
@@ -282,6 +282,59 @@ public class RecurringExpenseService {
         } catch (Exception e) {
             logger.error("Erro ao gerar despesas para período: {}", e.getMessage(), e);
             throw new RuntimeException("Erro ao gerar despesas para período: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Gera instâncias de despesas recorrentes para um período específico,
+     * indicando quais já existem no banco de dados e quais seriam novas.
+     *
+     * @param inicio Data inicial do período
+     * @param fim Data final do período
+     * @return Lista de instâncias de despesas recorrentes
+     */
+    public List<RecurringExpenseInstanceDTO> gerarInstanciasDespesasFixas(LocalDate inicio, LocalDate fim) {
+        try {
+            List<RecurringExpense> despesasFixasAtivas = recurringExpenseRepository
+                .findActiveRecurringExpensesInPeriod(inicio, fim);
+            
+            List<RecurringExpenseInstanceDTO> instances = new ArrayList<>();
+            
+            logger.info("Gerando instâncias potenciais de despesas para período {}-{} para {} despesas fixas", 
+                      inicio, fim, despesasFixasAtivas.size());
+            
+            // Para cada despesa fixa ativa no período, calcular suas datas de ocorrência
+            for (RecurringExpense despesaFixa : despesasFixasAtivas) {
+                // Calcular datas em que esta despesa ocorre no período
+                List<LocalDate> datas = calcularDatasNoIntervalo(despesaFixa, inicio, fim);
+                
+                for (LocalDate data : datas) {
+                    // Verificar se já existe no banco de dados
+                    boolean despesaExiste = expenseRepository.existsByDateAndRecurringExpenseId(data, despesaFixa.getId());
+                    
+                    // Criar DTO para a instância
+                    RecurringExpenseInstanceDTO instance = new RecurringExpenseInstanceDTO(
+                        null, // ID seria preenchido se já existir e for buscado
+                        despesaFixa.getId(),
+                        despesaFixa.getDescription(),
+                        despesaFixa.getCategory(),
+                        despesaFixa.getAmount(),
+                        data,
+                        false, // Presumindo não paga
+                        despesaExiste // Se já existe no banco
+                    );
+                    
+                    instances.add(instance);
+                }
+            }
+            
+            // Ordenar por data
+            instances.sort(Comparator.comparing(RecurringExpenseInstanceDTO::getDueDate));
+            
+            return instances;
+        } catch (Exception e) {
+            logger.error("Erro ao gerar instâncias de despesas fixas: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao gerar instâncias de despesas fixas: " + e.getMessage());
         }
     }
     

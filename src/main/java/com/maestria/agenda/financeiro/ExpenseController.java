@@ -120,4 +120,23 @@ public class ExpenseController {
             return ResponseEntity.status(500).body("Erro ao listar todas as despesas: " + e.getMessage());
         }
     }
+    
+    @GetMapping("/recurring-expenses/generate")
+    public ResponseEntity<?> gerarInstanciasRecurringExpenses(
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        try {
+            LocalDate inicio = LocalDate.parse(startDate);
+            LocalDate fim = LocalDate.parse(endDate);
+            
+            List<RecurringExpenseInstanceDTO> instancias = 
+                recurringExpenseService.gerarInstanciasDespesasFixas(inicio, fim);
+            
+            return ResponseEntity.ok(instancias);
+        } catch (Exception e) {
+            logger.error("Erro ao gerar instâncias de despesas fixas: {}", e.getMessage(), e);
+            return ResponseEntity.status(500)
+                .body("Erro ao gerar instâncias de despesas fixas: " + e.getMessage());
+        }
+    }
 }
