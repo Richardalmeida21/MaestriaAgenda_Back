@@ -39,10 +39,13 @@ public class SecurityConfig {
                     .requestMatchers("/agendamento/comissoes/total/**").hasAuthority("ADMIN")
                     .requestMatchers("/agendamento/fixo/**").hasAuthority("ADMIN")
                     .requestMatchers("/financeiro/comissoes").hasAuthority("ADMIN")
-                    .requestMatchers("/financeiro/comissoes/profissional/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
-                    .requestMatchers("/financeiro/comissoes/minhas").hasAuthority("PROFISSIONAL")
-                    .requestMatchers("/financeiro/expenses/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
-                    .anyRequest().authenticated())
+.requestMatchers("/financeiro/comissoes/profissional/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+.requestMatchers("/financeiro/comissoes/minhas").hasAuthority("PROFISSIONAL")
+.requestMatchers("/financeiro/expenses/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+.requestMatchers("/financeiro/recurring-expenses/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+.requestMatchers("/financeiro/sync-recurring-expenses").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+.requestMatchers("/financeiro/all-expenses").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+.anyRequest().authenticated()
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
