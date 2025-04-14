@@ -75,6 +75,17 @@ public class ExpenseController {
         }
     }
 
+    @GetMapping("/recurring-expenses")
+    public ResponseEntity<?> listarDespesasFixas() {
+        try {
+            List<RecurringExpenseResponseDTO> despesasFixas = recurringExpenseService.listarDespesasFixas();
+            return ResponseEntity.ok(despesasFixas);
+        } catch (Exception e) {
+            logger.error("Erro ao listar despesas fixas: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao listar despesas fixas: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/recurring-expenses")
     public ResponseEntity<?> criarDespesaFixa(@RequestBody RecurringExpenseRequestDTO requestDTO) {
         try {
@@ -83,6 +94,22 @@ public class ExpenseController {
         } catch (Exception e) {
             logger.error("Erro ao criar despesa fixa: {}", e.getMessage(), e);
             return ResponseEntity.status(500).body("Erro ao criar despesa fixa: " + e.getMessage());
+        }
+    }
+    
+    @GetMapping("/all-expenses")
+    public ResponseEntity<?> listarTodasDespesas(
+            @RequestParam String startDate,
+            @RequestParam String endDate,
+            @RequestParam(defaultValue = "all") String paidFilter) {
+        try {
+            LocalDate inicio = LocalDate.parse(startDate);
+            LocalDate fim = LocalDate.parse(endDate);
+            List<ExpenseResponseDTO> todasDespesas = expenseService.listarTodasDespesas(inicio, fim, paidFilter);
+            return ResponseEntity.ok(todasDespesas);
+        } catch (Exception e) {
+            logger.error("Erro ao listar todas as despesas: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao listar todas as despesas: " + e.getMessage());
         }
     }
 }

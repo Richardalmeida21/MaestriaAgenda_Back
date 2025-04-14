@@ -1,7 +1,7 @@
 package com.maestria.agenda.financeiro;
 
 import java.time.LocalDate;
-import java.time.YearMonth;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -154,6 +154,24 @@ public class ExpenseService {
                         expense.getEndDate()
                 ))
                 .collect(Collectors.toList());
+    }
+    
+    public List<ExpenseResponseDTO> listarTodasDespesas(LocalDate inicio, LocalDate fim, String paidFilter) {
+        List<Expense> expenses = expenseRepository.findByDateBetween(inicio, fim);
+        
+        if (!paidFilter.equalsIgnoreCase("all")) {
+            Boolean isPaid = paidFilter.equalsIgnoreCase("paid");
+            expenses = expenses.stream()
+                    .filter(expense -> Objects.equals(expense.getPaid(), isPaid))
+                    .collect(Collectors.toList());
+        }
+        
+        List<ExpenseResponseDTO> result = expenses.stream()
+                .map(this::convertToDTO)
+                .sorted(Comparator.comparing(ExpenseResponseDTO::getDate))
+                .collect(Collectors.toList());
+                
+        return result;
     }
 
     /**
