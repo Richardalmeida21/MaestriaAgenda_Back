@@ -12,6 +12,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 @RestController
 @RequestMapping("/financeiro")
+@CrossOrigin(origins = "*")
 public class ExpenseController {
 
     private static final Logger logger = LoggerFactory.getLogger(ExpenseController.class);
