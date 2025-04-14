@@ -20,36 +20,37 @@ import java.util.List;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter)
-            throws Exception {
-        http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf.disable())
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/ping").permitAll()
-                    .requestMatchers("/auth/login", "/auth/register", "/public/**", "/generate-password")
-                        .permitAll()
-                    .requestMatchers("/auth/me", "/agendamento/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
-                    .requestMatchers("/cliente/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
-                    .requestMatchers("/profissional/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
-                    .requestMatchers("/servico/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
-                    .requestMatchers("/bloqueio/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
-                    .requestMatchers("/metricas").hasAuthority("ADMIN")
-                    .requestMatchers("/agendamento/comissoes/total/**").hasAuthority("ADMIN")
-                    .requestMatchers("/agendamento/fixo/**").hasAuthority("ADMIN")
-                    .requestMatchers("/financeiro/comissoes").hasAuthority("ADMIN")
-.requestMatchers("/financeiro/comissoes/profissional/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
-.requestMatchers("/financeiro/comissoes/minhas").hasAuthority("PROFISSIONAL")
-.requestMatchers("/financeiro/expenses/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
-.requestMatchers("/financeiro/recurring-expenses/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
-.requestMatchers("/financeiro/sync-recurring-expenses").hasAnyAuthority("ADMIN", "PROFISSIONAL")
-.requestMatchers("/financeiro/all-expenses").hasAnyAuthority("ADMIN", "PROFISSIONAL")
-.anyRequest().authenticated()
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter)
+        throws Exception {
+    http
+        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+        .csrf(csrf -> csrf.disable())
+        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/ping").permitAll()
+                .requestMatchers("/auth/login", "/auth/register", "/public/**", "/generate-password")
+                    .permitAll()
+                .requestMatchers("/auth/me", "/agendamento/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+                .requestMatchers("/cliente/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+                .requestMatchers("/profissional/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+                .requestMatchers("/servico/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+                .requestMatchers("/bloqueio/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+                .requestMatchers("/metricas").hasAuthority("ADMIN")
+                .requestMatchers("/agendamento/comissoes/total/**").hasAuthority("ADMIN")
+                .requestMatchers("/agendamento/fixo/**").hasAuthority("ADMIN")
+                .requestMatchers("/financeiro/comissoes").hasAuthority("ADMIN")
+                .requestMatchers("/financeiro/comissoes/profissional/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+                .requestMatchers("/financeiro/comissoes/minhas").hasAuthority("PROFISSIONAL")
+                .requestMatchers("/financeiro/expenses/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+                .requestMatchers("/financeiro/recurring-expenses/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+                .requestMatchers("/financeiro/sync-recurring-expenses").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+                .requestMatchers("/financeiro/all-expenses").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+                .anyRequest().authenticated()
+        )
+        .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
-        return http.build();
-    }
+    return http.build();
+}
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration)
