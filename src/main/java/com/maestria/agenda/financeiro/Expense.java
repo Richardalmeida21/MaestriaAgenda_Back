@@ -1,12 +1,17 @@
 package com.maestria.agenda.financeiro;
 
-import jakarta.persistence.*;
+import java.time.LocalDate;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.LocalDate;
 
 @Entity
 @Table(name = "expenses")
@@ -34,14 +39,14 @@ public class Expense {
     @Column(nullable = false)
     private Boolean paid = false;
 
-    @Column(nullable = false)
+    @Column(name = "is_fixo", nullable = false)
     private Boolean isFixo = false;
 
-    @Column
-    private Integer dayOfMonth; // Used for fixed expenses to store the day of the month
+    @Column(name = "day_of_month")
+    private Integer dayOfMonth;
 
-    @Column
-    private LocalDate endDate; // Used for fixed expenses to store when they should end
+    @Column(name = "end_date")
+    private LocalDate endDate;
 
     @Column(name = "recurring_expense_id")
     private Long recurringExpenseId;
@@ -110,6 +115,30 @@ public class Expense {
 
     public void setPaid(Boolean paid) {
         this.paid = paid;
+    }
+
+    public Boolean getIsFixo() {
+        return isFixo;
+    }
+
+    public void setIsFixo(Boolean isFixo) {
+        this.isFixo = isFixo;
+    }
+
+    public Integer getDayOfMonth() {
+        return dayOfMonth;
+    }
+
+    public void setDayOfMonth(Integer dayOfMonth) {
+        this.dayOfMonth = dayOfMonth;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
     }
 
     public Long getRecurringExpenseId() {

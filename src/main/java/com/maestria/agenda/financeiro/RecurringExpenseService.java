@@ -5,7 +5,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -27,56 +29,91 @@ public class RecurringExpenseService {
      * Lista todas as despesas fixas
      */
     public List<RecurringExpenseResponseDTO> listarDespesasFixas() {
-        return recurringExpenseRepository.findAll().stream()
-            .map(this::mapToDTO)
-            .collect(Collectors.toList());
+        List<RecurringExpense> despesasFixas = recurringExpenseRepository.findAll();
+        return despesasFixas.stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
     }
     
     /**
      * Lista despesas fixas ativas
      */
     public List<RecurringExpenseResponseDTO> listarDespesasFixasAtivas() {
-        return recurringExpenseRepository.findByActiveTrue().stream()
-            .map(this::mapToDTO)
-            .collect(Collectors.toList());
+        List<RecurringExpense> despesasFixas = recurringExpenseRepository.findByActiveTrue();
+        return despesasFixas.stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
     }
     
     /**
      * Busca uma despesa fixa por ID
      */
     public RecurringExpenseResponseDTO buscarDespesaFixa(Long id) {
-        RecurringExpense recurringExpense = recurringExpenseRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Despesa fixa não encontrada com ID: " + id));
-        
-        return mapToDTO(recurringExpense);
+        RecurringExpense despesaFixa = recurringExpenseRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Despesa fixa não encontrada com ID: " + id));
+        return mapToDTO(despesaFixa);
+    }
+    
+    /**
+     * Atualiza o status de pagamento de uma despesa fixa
+     */
+    @Transactional
+    public void atualizarStatusPagamento(Long id, boolean paid) {
+        try {
+            RecurringExpense recurringExpense = recurringExpenseRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Despesa fixa não encontrada com ID: " + id));
+            
+            recurringExpense.setPaid(paid);
+            recurringExpenseRepository.save(recurringExpense);
+            logger.info("Status de pagamento atualizado para despesa fixa ID={}: {}", id, paid);
+        } catch (Exception e) {
+            logger.error("Erro ao atualizar status de pagamento da despesa fixa: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao atualizar status de pagamento: " + e.getMessage());
+        }
     }
     
     /**
      * Cria uma nova despesa fixa
      */
+    @Transactional
     public RecurringExpenseCreationResponse criarDespesaFixa(RecurringExpenseRequestDTO requestDTO) {
-        // Criar a despesa fixa
-        RecurringExpense recurringExpense = new RecurringExpense();
-        recurringExpense.setDescription(requestDTO.getDescription());
-        recurringExpense.setCategory(requestDTO.getCategory());
-        recurringExpense.setAmount(requestDTO.getAmount());
-        recurringExpense.setRecurrenceType(requestDTO.getRecurrenceType());
-        recurringExpense.setRecurrenceValue(requestDTO.getRecurrenceValue());
-        recurringExpense.setStartDate(requestDTO.getStartDate());
-        recurringExpense.setEndDate(requestDTO.getEndDate());
-        recurringExpense.setActive(true);
+        try {
+            // Validar dados
+            if (requestDTO.getAmount() == null || requestDTO.getAmount() <= 0) {
+                throw new IllegalArgumentException("O valor da despesa deve ser maior que zero");
+            }
+            
+            if (requestDTO.getRecurrenceType() == null) {
+                throw new IllegalArgumentException("O tipo de recorrência é obrigatório");
+            }
+            
+            // Criar a despesa fixa
+            RecurringExpense recurringExpense = new RecurringExpense();
+            recurringExpense.setDescription(requestDTO.getDescription());
+            recurringExpense.setCategory(requestDTO.getCategory());
+            recurringExpense.setAmount(requestDTO.getAmount());
+            recurringExpense.setRecurrenceType(requestDTO.getRecurrenceType());
+            recurringExpense.setRecurrenceValue(requestDTO.getRecurrenceValue());
+            recurringExpense.setStartDate(requestDTO.getStartDate());
+            recurringExpense.setEndDate(requestDTO.getEndDate());
+            recurringExpense.setActive(true);
 
-        // Salvar a despesa fixa
-        recurringExpense = recurringExpenseRepository.save(recurringExpense);
+            // Salvar a despesa fixa
+            recurringExpense = recurringExpenseRepository.save(recurringExpense);
+            logger.info("Despesa fixa criada com ID: {}", recurringExpense.getId());
+            
+            // Gerar despesas futuras por 3 meses
+            LocalDate hoje = LocalDate.now();
+            LocalDate limiteGeracao = hoje.plusMonths(3);
+            LocalDate dataFim = requestDTO.getEndDate() != null && requestDTO.getEndDate().isBefore(limiteGeracao) 
+                    ? requestDTO.getEndDate() 
+                    : limiteGeracao;
+            
+            List<Expense> generatedExpenses = generateFutureExpensesInPeriod(recurringExpense, hoje, dataFim);
 
-        // Gerar as despesas futuras
-        List<Expense> generatedExpenses = generateFutureExpenses(recurringExpense);
-
-        // Converter para DTOs
-        List<ExpenseResponseDTO> expenseDTOs = generatedExpenses.stream()
-            .map(expense -> {
-                Integer dayOfMonth = expense.getDate() != null ? expense.getDate().getDayOfMonth() : null;
-                return new ExpenseResponseDTO(
+            // Converter para DTOs
+            List<ExpenseResponseDTO> expenseDTOs = generatedExpenses.stream()
+                .map(expense -> new ExpenseResponseDTO(
                     expense.getId(),
                     expense.getDescription(),
                     expense.getCategory(),
@@ -84,30 +121,81 @@ public class RecurringExpenseService {
                     expense.getAmount(),
                     expense.getPaid(),
                     true, // isFixo
-                    dayOfMonth,
+                    expense.getDayOfMonth(),
                     expense.getEndDate()
-                );
-            })
-            .collect(Collectors.toList());
+                ))
+                .collect(Collectors.toList());
 
-        return new RecurringExpenseCreationResponse(
-            mapToDTO(recurringExpense),
-            expenseDTOs
-        );
+            return new RecurringExpenseCreationResponse(
+                mapToDTO(recurringExpense),
+                expenseDTOs
+            );
+        } catch (Exception e) {
+            logger.error("Erro ao criar despesa fixa: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao criar despesa fixa: " + e.getMessage());
+        }
     }
     
     /**
      * Atualiza uma despesa fixa existente
      */
+    @Transactional
     public RecurringExpenseResponseDTO atualizarDespesaFixa(Long id, RecurringExpenseRequestDTO requestDTO) {
         try {
             RecurringExpense recurringExpense = recurringExpenseRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Despesa fixa não encontrada com ID: " + id));
             
+            // Guardar valores antigos para verificar o que mudou
+            String descricaoAntiga = recurringExpense.getDescription();
+            String categoriaAntiga = recurringExpense.getCategory();
+            Double valorAntigo = recurringExpense.getAmount();
+            RecurrenceType tipoRecorrenciaAntigo = recurringExpense.getRecurrenceType();
+            Integer valorRecorrenciaAntigo = recurringExpense.getRecurrenceValue();
+            
+            // Atualizar a entidade principal
             updateFromDTO(recurringExpense, requestDTO);
             
             RecurringExpense saved = recurringExpenseRepository.save(recurringExpense);
             logger.info("Despesa fixa atualizada com ID: {}", saved.getId());
+            
+            // Atualizar despesas futuras
+            LocalDate hoje = LocalDate.now();
+            
+            // Buscar todas as instâncias futuras
+            List<Expense> despesasFuturas = expenseRepository.findByRecurringExpenseIdAndDateBetween(
+                id, hoje, hoje.plusMonths(12));
+            
+            // Se houver alterações nos valores principais, atualizar todas as instâncias futuras
+            boolean atualizarTudo = !descricaoAntiga.equals(saved.getDescription()) ||
+                                   !categoriaAntiga.equals(saved.getCategory()) ||
+                                   !valorAntigo.equals(saved.getAmount());
+            
+            // Se o padrão de recorrência mudou, vamos remover tudo e recriar
+            boolean padraoMudou = !tipoRecorrenciaAntigo.equals(saved.getRecurrenceType()) ||
+                                 (valorRecorrenciaAntigo == null && saved.getRecurrenceValue() != null) ||
+                                 (valorRecorrenciaAntigo != null && !valorRecorrenciaAntigo.equals(saved.getRecurrenceValue()));
+            
+            if (padraoMudou) {
+                // Remover todas as instâncias futuras e recriar
+                expenseRepository.deleteAll(despesasFuturas);
+                
+                // Limite de geração (3 meses à frente)
+                LocalDate limiteGeracao = hoje.plusMonths(3);
+                LocalDate dataFim = saved.getEndDate() != null && saved.getEndDate().isBefore(limiteGeracao) 
+                        ? saved.getEndDate() 
+                        : limiteGeracao;
+                
+                // Gerar novas instâncias
+                generateFutureExpensesInPeriod(saved, hoje, dataFim);
+            } else if (atualizarTudo) {
+                // Apenas atualizar os valores das instâncias existentes
+                for (Expense despesa : despesasFuturas) {
+                    despesa.setDescription(saved.getDescription());
+                    despesa.setCategory(saved.getCategory());
+                    despesa.setAmount(saved.getAmount());
+                    expenseRepository.save(despesa);
+                }
+            }
             
             return mapToDTO(saved);
         } catch (Exception e) {
@@ -119,6 +207,7 @@ public class RecurringExpenseService {
     /**
      * Desativa (soft delete) uma despesa fixa
      */
+    @Transactional
     public void desativarDespesaFixa(Long id) {
         try {
             RecurringExpense recurringExpense = recurringExpenseRepository.findById(id)
@@ -126,7 +215,6 @@ public class RecurringExpenseService {
             
             recurringExpense.setActive(false);
             recurringExpenseRepository.save(recurringExpense);
-            
             logger.info("Despesa fixa desativada com ID: {}", id);
         } catch (Exception e) {
             logger.error("Erro ao desativar despesa fixa: {}", e.getMessage(), e);
@@ -137,12 +225,20 @@ public class RecurringExpenseService {
     /**
      * Exclui permanentemente uma despesa fixa
      */
+    @Transactional
     public void excluirDespesaFixa(Long id) {
         try {
             if (!recurringExpenseRepository.existsById(id)) {
                 throw new RuntimeException("Despesa fixa não encontrada com ID: " + id);
             }
             
+            // Primeiro excluir todas as despesas geradas a partir desta despesa fixa
+            List<Expense> despesasRelacionadas = expenseRepository.findByRecurringExpenseId(id);
+            logger.info("Excluindo despesa fixa ID={} e suas {} instâncias", id, despesasRelacionadas.size());
+            
+            expenseRepository.deleteAll(despesasRelacionadas);
+            
+            // Depois excluir a despesa fixa em si
             recurringExpenseRepository.deleteById(id);
             logger.info("Despesa fixa excluída com ID: {}", id);
         } catch (Exception e) {
@@ -157,144 +253,270 @@ public class RecurringExpenseService {
     @Transactional
     public List<ExpenseResponseDTO> gerarDespesasParaPeriodo(LocalDate inicio, LocalDate fim) {
         try {
-            // Buscar todas as despesas fixas ativas que se aplicam ao período
-            List<RecurringExpense> despesasFixas = 
-                recurringExpenseRepository.findActiveRecurringExpensesInPeriod(inicio, fim);
+            List<RecurringExpense> despesasFixasAtivas = recurringExpenseRepository
+                .findActiveRecurringExpensesInPeriod(inicio, fim);
             
-            logger.info("Gerando despesas para o período de {} a {} com base em {} despesas fixas", 
-                inicio, fim, despesasFixas.size());
+            logger.info("Gerando despesas para período {}-{} para {} despesas fixas", 
+                      inicio, fim, despesasFixasAtivas.size());
             
             List<Expense> despesasGeradas = new ArrayList<>();
             
-            // Para cada despesa fixa, gerar as ocorrências no período
-            for (RecurringExpense despesaFixa : despesasFixas) {
-                List<LocalDate> datasDespesa = calcularDatasNoIntervalo(despesaFixa, inicio, fim);
-                
-                for (LocalDate data : datasDespesa) {
-                    // Verificar se a despesa já existe
-                    boolean despesaExiste = expenseRepository.existsByDateAndRecurringExpenseId(data, despesaFixa.getId());
-                    
-                    if (!despesaExiste) {
-                        // Criar uma despesa normal para cada data de ocorrência
-                        Expense despesa = new Expense();
-                        despesa.setDescription(despesaFixa.getDescription());
-                        despesa.setCategory(despesaFixa.getCategory());
-                        despesa.setDate(data);
-                        despesa.setAmount(despesaFixa.getAmount());
-                        despesa.setPaid(false);
-                        despesa.setRecurringExpenseId(despesaFixa.getId());
-                        despesa.setIsFixo(true);
-                        despesa.setEndDate(despesaFixa.getEndDate());
-                        
-                        despesasGeradas.add(despesa);
-                    }
-                }
+            for (RecurringExpense despesaFixa : despesasFixasAtivas) {
+                List<Expense> geradas = generateFutureExpensesInPeriod(despesaFixa, inicio, fim);
+                despesasGeradas.addAll(geradas);
             }
             
-            // Salvar apenas as despesas novas
-            List<Expense> salvas = expenseRepository.saveAll(despesasGeradas);
-            logger.info("{} despesas geradas e salvas", salvas.size());
-            
-            // Buscar todas as despesas do período (incluindo as recém-geradas)
-            List<Expense> todasDespesas = expenseRepository.findByDateBetween(inicio, fim);
-            
-            // Converter para DTO e retornar
-            return todasDespesas.stream()
-                .map(d -> {
-                    Integer dayOfMonth = d.getDate() != null ? d.getDate().getDayOfMonth() : null;
-                    return new ExpenseResponseDTO(
-                        d.getId(),
-                        d.getDescription(),
-                        d.getCategory(),
-                        d.getDate(),
-                        d.getAmount(),
-                        d.getPaid(),
-                        true, // isFixo
-                        dayOfMonth,
-                        d.getEndDate()
-                    );
-                })
+            return despesasGeradas.stream()
+                .map(d -> new ExpenseResponseDTO(
+                    d.getId(), 
+                    d.getDescription(), 
+                    d.getCategory(), 
+                    d.getDate(), 
+                    d.getAmount(), 
+                    d.getPaid(),
+                    true,
+                    d.getDayOfMonth(),
+                    d.getEndDate()
+                ))
                 .collect(Collectors.toList());
         } catch (Exception e) {
-            logger.error("Erro ao gerar despesas para o período: {}", e.getMessage(), e);
-            throw new RuntimeException("Erro ao gerar despesas para o período: " + e.getMessage());
+            logger.error("Erro ao gerar despesas para período: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao gerar despesas para período: " + e.getMessage());
         }
     }
     
     /**
-     * Calcula as datas em que uma despesa fixa ocorre em um intervalo
+     * Gera despesas futuras para uma despesa fixa dentro de um período específico
      */
-    private List<LocalDate> calcularDatasNoIntervalo(RecurringExpense despesa, LocalDate inicio, LocalDate fim) {
-        List<LocalDate> datas = new ArrayList<>();
+    @Transactional
+    private List<Expense> generateFutureExpensesInPeriod(RecurringExpense recurringExpense, 
+                                                       LocalDate dataInicio, 
+                                                       LocalDate dataFim) {
+        List<Expense> expenses = new ArrayList<>();
         
-        // Ajustar datas de início e fim
-        LocalDate startDate = despesa.getStartDate().isBefore(inicio) ? inicio : despesa.getStartDate();
-        LocalDate endDate = despesa.getEndDate() != null && despesa.getEndDate().isBefore(fim) ? 
-                            despesa.getEndDate() : fim;
-                            
-        if (startDate.isAfter(endDate)) {
-            return datas; // Intervalo inválido
+        // Calcular datas em que esta despesa ocorre no período
+        List<LocalDate> datas = calcularDatasNoIntervalo(recurringExpense, dataInicio, dataFim);
+        
+        logger.info("Gerando {} despesas futuras para a despesa fixa ID={} de {} até {}", 
+                    datas.size(), recurringExpense.getId(), dataInicio, dataFim);
+        
+        // Para cada data calculada, criar uma despesa específica (se ainda não existir)
+        for (LocalDate data : datas) {
+            boolean despesaExiste = expenseRepository.existsByDateAndRecurringExpenseId(data, recurringExpense.getId());
+            
+            if (!despesaExiste) {
+                Expense expense = new Expense();
+                expense.setDescription(recurringExpense.getDescription());
+                expense.setCategory(recurringExpense.getCategory());
+                expense.setAmount(recurringExpense.getAmount());
+                expense.setDate(data);
+                expense.setPaid(false);
+                expense.setIsFixo(true);
+                expense.setDayOfMonth(recurringExpense.getRecurrenceValue());
+                expense.setEndDate(recurringExpense.getEndDate());
+                expense.setRecurringExpenseId(recurringExpense.getId());
+                
+                Expense savedExpense = expenseRepository.save(expense);
+                expenses.add(savedExpense);
+                
+                logger.debug("Despesa gerada para {} com valor {}", data, expense.getAmount());
+            }
         }
         
-        LocalDate dataAtual = startDate;
-        while (!dataAtual.isAfter(endDate)) {
-            boolean gerarDespesa = false;
-            Integer recurrenceValue = despesa.getRecurrenceValue() != null ? despesa.getRecurrenceValue() : 1;
-            
-            switch (despesa.getRecurrenceType()) {
-                case DAILY:
-                    gerarDespesa = true;
-                    break;
-                    
-                case WEEKLY:
-                    // Para recorrência semanal, verificamos se o dia da semana está na máscara
-                    // Dia da semana é 1 (segunda) a 7 (domingo) em Java
-                    int diaDaSemana = dataAtual.getDayOfWeek().getValue();
-                    // Ajustar para 0 (domingo) a 6 (sábado)
-                    int diaBit = (diaDaSemana == 7) ? 0 : diaDaSemana;
-                    gerarDespesa = (recurrenceValue & (1 << diaBit)) != 0;
-                    break;
-                    
-                case MONTHLY:
-                    if (recurrenceValue == -1) {
-                        // Último dia do mês
-                        gerarDespesa = dataAtual.getDayOfMonth() == dataAtual.lengthOfMonth();
-                    } else {
-                        // Dia específico do mês - usar o mesmo dia da data de início quando recorrenceValue é nulo
-                        if (despesa.getRecurrenceValue() == null) {
-                            gerarDespesa = dataAtual.getDayOfMonth() == startDate.getDayOfMonth();
-                        } else {
-                            gerarDespesa = recurrenceValue == dataAtual.getDayOfMonth();
-                        }
-                    }
-                    break;
-                    
-                case YEARLY:
-                    // Para simplicidade, consideramos o dia do ano
-                    if (despesa.getRecurrenceValue() == null) {
-                        // Se não tiver valor específico, usar o mesmo dia do ano da data de início
-                        gerarDespesa = dataAtual.getDayOfYear() == startDate.getDayOfYear();
-                    } else {
-                        gerarDespesa = recurrenceValue == dataAtual.getDayOfYear();
-                    }
-                    break;
-                
-                default:
-                    break;
-            }
-            
-            if (gerarDespesa) {
-                datas.add(dataAtual);
-            }
-            
-            dataAtual = dataAtual.plusDays(1);
+        return expenses;
+    }
+    
+    /**
+     * Calcula todas as datas em que uma despesa fixa ocorre dentro de um intervalo
+     */
+    private List<LocalDate> calcularDatasNoIntervalo(RecurringExpense recurringExpense, 
+                                                   LocalDate inicio, LocalDate fim) {
+        List<LocalDate> datas = new ArrayList<>();
+        
+        // Definir a data de início real (a maior entre a data inicial da despesa e a data inicial do período)
+        LocalDate dataInicial = recurringExpense.getStartDate().isBefore(inicio) 
+            ? inicio 
+            : recurringExpense.getStartDate();
+        
+        // Definir a data de fim real (a menor entre a data final da despesa e a data final do período)
+        LocalDate dataFinal = recurringExpense.getEndDate() != null && recurringExpense.getEndDate().isBefore(fim)
+            ? recurringExpense.getEndDate()
+            : fim;
+        
+        // Se a data inicial é depois da data final, não há datas a calcular
+        if (dataInicial.isAfter(dataFinal)) {
+            return datas;
+        }
+        
+        // Calcular as datas baseadas no tipo de recorrência
+        switch (recurringExpense.getRecurrenceType()) {
+            case DAILY:
+                datas = calcularDatasRecorrenciaDiaria(recurringExpense, dataInicial, dataFinal);
+                break;
+            case WEEKLY:
+                datas = calcularDatasRecorrenciaSemanal(recurringExpense, dataInicial, dataFinal);
+                break;
+            case MONTHLY:
+                datas = calcularDatasRecorrenciaMensal(recurringExpense, dataInicial, dataFinal);
+                break;
+            case YEARLY:
+                datas = calcularDatasRecorrenciaAnual(recurringExpense, dataInicial, dataFinal);
+                break;
         }
         
         return datas;
     }
     
     /**
-     * Converte entidade para DTO
+     * Calcula datas para recorrência diária
+     */
+    private List<LocalDate> calcularDatasRecorrenciaDiaria(
+            RecurringExpense recurringExpense, LocalDate inicio, LocalDate fim) {
+        List<LocalDate> datas = new ArrayList<>();
+        
+        int intervaloDias = recurringExpense.getRecurrenceValue() != null ? 
+                recurringExpense.getRecurrenceValue() : 1;
+        
+        for (LocalDate data = inicio; 
+             !data.isAfter(fim); 
+             data = data.plusDays(intervaloDias)) {
+            datas.add(data);
+        }
+        
+        return datas;
+    }
+    
+    /**
+     * Calcula datas para recorrência semanal
+     * O recurrenceValue é uma máscara de bits onde cada bit representa um dia da semana
+     * Bit 0 (valor 1) = Domingo, Bit 1 (valor 2) = Segunda, etc.
+     */
+    private List<LocalDate> calcularDatasRecorrenciaSemanal(
+            RecurringExpense recurringExpense, LocalDate inicio, LocalDate fim) {
+        List<LocalDate> datas = new ArrayList<>();
+        
+        int mascara = recurringExpense.getRecurrenceValue() != null ? 
+                recurringExpense.getRecurrenceValue() : 0;
+        
+        // Se a máscara é 0, não há dias selecionados
+        if (mascara == 0) {
+            return datas;
+        }
+        
+        for (LocalDate data = inicio; !data.isAfter(fim); data = data.plusDays(1)) {
+            // Converter do domingo=1 para domingo=0 para verificar o bit correto
+            int diaDaSemana = data.getDayOfWeek().getValue() % 7; // Domingo=0, Segunda=1, ...
+            
+            // Verificar se o bit correspondente está definido na máscara
+            if ((mascara & (1 << diaDaSemana)) != 0) {
+                datas.add(data);
+            }
+        }
+        
+        return datas;
+    }
+    
+    /**
+     * Calcula datas para recorrência mensal
+     * recurrenceValue é o dia do mês (1-31) ou -1 para o último dia
+     */
+    private List<LocalDate> calcularDatasRecorrenciaMensal(
+            RecurringExpense recurringExpense, LocalDate inicio, LocalDate fim) {
+        List<LocalDate> datas = new ArrayList<>();
+        
+        int diaDoMes = recurringExpense.getRecurrenceValue() != null ? 
+                recurringExpense.getRecurrenceValue() : 1;
+        
+        // Começar no mês da data de início
+        int mesInicial = inicio.getMonthValue();
+        int anoInicial = inicio.getYear();
+        
+        // Percorrer meses até a data final
+        for (int ano = anoInicial; ano <= fim.getYear(); ano++) {
+            int mesInicio = (ano == anoInicial) ? mesInicial : 1;
+            int mesFim = (ano == fim.getYear()) ? fim.getMonthValue() : 12;
+            
+            for (int mes = mesInicio; mes <= mesFim; mes++) {
+                YearMonth yearMonth = YearMonth.of(ano, mes);
+                
+                // Se diaDoMes é -1, usar o último dia do mês
+                LocalDate data;
+                if (diaDoMes == -1) {
+                    data = yearMonth.atEndOfMonth();
+                } else {
+                    // Garantir que não ultrapassamos o último dia do mês
+                    int ultimoDiaDoMes = yearMonth.lengthOfMonth();
+                    int diaReal = Math.min(diaDoMes, ultimoDiaDoMes);
+                    data = LocalDate.of(ano, mes, diaReal);
+                }
+                
+                // Verificar se a data está no intervalo
+                if (!data.isBefore(inicio) && !data.isAfter(fim)) {
+                    datas.add(data);
+                }
+            }
+        }
+        
+        return datas;
+    }
+    
+    /**
+     * Calcula datas para recorrência anual
+     * recurrenceValue é o dia do ano (1-366)
+     */
+    private List<LocalDate> calcularDatasRecorrenciaAnual(
+            RecurringExpense recurringExpense, LocalDate inicio, LocalDate fim) {
+        List<LocalDate> datas = new ArrayList<>();
+        
+        // Valor padrão: 1º de janeiro
+        int diaDoAno = recurringExpense.getRecurrenceValue() != null ? 
+                recurringExpense.getRecurrenceValue() : 1;
+        
+        for (int ano = inicio.getYear(); ano <= fim.getYear(); ano++) {
+            // Garantir que não ultrapassamos o último dia do ano
+            boolean ehAnoBissexto = LocalDate.of(ano, 1, 1).isLeapYear();
+            int ultimoDiaDoAno = ehAnoBissexto ? 366 : 365;
+            int diaReal = Math.min(diaDoAno, ultimoDiaDoAno);
+            
+            LocalDate data = LocalDate.ofYearDay(ano, diaReal);
+            
+            // Verificar se a data está no intervalo
+            if (!data.isBefore(inicio) && !data.isAfter(fim)) {
+                datas.add(data);
+            }
+        }
+        
+        return datas;
+    }
+    
+    /**
+     * Atualiza uma entidade RecurringExpense com os dados do DTO
+     */
+    private void updateFromDTO(RecurringExpense recurringExpense, RecurringExpenseRequestDTO dto) {
+        if (dto.getDescription() != null) {
+            recurringExpense.setDescription(dto.getDescription());
+        }
+        if (dto.getCategory() != null) {
+            recurringExpense.setCategory(dto.getCategory());
+        }
+        if (dto.getAmount() != null) {
+            recurringExpense.setAmount(dto.getAmount());
+        }
+        if (dto.getStartDate() != null) {
+            recurringExpense.setStartDate(dto.getStartDate());
+        }
+        // Aqui estava o erro: tentativa de converter RecurrenceType para LocalDate
+        recurringExpense.setEndDate(dto.getEndDate());
+        if (dto.getRecurrenceType() != null) {
+            recurringExpense.setRecurrenceType(dto.getRecurrenceType());
+        }
+        if (dto.getRecurrenceValue() != null) {
+            recurringExpense.setRecurrenceValue(dto.getRecurrenceValue());
+        }
+    }
+    
+    /**
+     * Converte uma RecurringExpense para seu DTO
      */
     private RecurringExpenseResponseDTO mapToDTO(RecurringExpense recurringExpense) {
         return new RecurringExpenseResponseDTO(
@@ -302,257 +524,13 @@ public class RecurringExpenseService {
             recurringExpense.getDescription(),
             recurringExpense.getCategory(),
             recurringExpense.getAmount(),
-            recurringExpense.getRecurrenceType(),
-            recurringExpense.getRecurrenceValue(),
             recurringExpense.getStartDate(),
             recurringExpense.getEndDate(),
+            recurringExpense.getRecurrenceType(),
+            recurringExpense.getRecurrenceValue(),
             recurringExpense.getActive(),
-            true // isFixo is always true for recurring expenses
+            "RECURRING",
+            recurringExpense.getPaid()
         );
-    }
-    
-    /**
-     * Atualiza entidade a partir de um DTO
-     */
-    private void updateFromDTO(RecurringExpense entity, RecurringExpenseRequestDTO dto) {
-        entity.setDescription(dto.getDescription());
-        entity.setCategory(dto.getCategory());
-        entity.setAmount(dto.getAmount());
-        entity.setStartDate(dto.getStartDate());
-        entity.setEndDate(dto.getEndDate());
-        entity.setRecurrenceType(dto.getRecurrenceType());
-        
-        // Para recorrência mensal, se o valor for nulo, use o dia da data de início
-        if (dto.getRecurrenceType() == RecurrenceType.MONTHLY && dto.getRecurrenceValue() == null) {
-            // Use o dia da data de início como valor de recorrência
-            entity.setRecurrenceValue(dto.getStartDate().getDayOfMonth());
-            logger.info("Usando o dia da data de início ({}) como valor de recorrência mensal", 
-                        dto.getStartDate().getDayOfMonth());
-        } else {
-            // Caso contrário, use o valor exato informado no DTO
-            entity.setRecurrenceValue(dto.getRecurrenceValue());
-        }
-        
-        entity.setActive(true);
-    }
-    
-    /**
-     * Atualiza o status de pagamento de uma despesa fixa e todas as suas instâncias no mês corrente
-     */
-    @Transactional
-    public RecurringExpenseResponseDTO atualizarStatusPagamento(Long id, boolean paid) {
-        try {
-            // Buscar a despesa fixa
-            RecurringExpense recurringExpense = recurringExpenseRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Despesa fixa não encontrada com ID: " + id));
-            
-            // Definir período do mês atual
-            LocalDate today = LocalDate.now();
-            LocalDate startOfMonth = today.withDayOfMonth(1);
-            LocalDate endOfMonth = today.withDayOfMonth(today.lengthOfMonth());
-            
-            // Buscar todas as despesas instantâneas geradas a partir desta despesa fixa para o mês atual
-            List<Expense> despesasDoMes = expenseRepository.findByRecurringExpenseIdAndDateBetween(
-                id, startOfMonth, endOfMonth);
-                
-            logger.info("Atualizando status de pagamento para {} da despesa fixa ID={}: {} despesas afetadas", 
-                paid ? "PAGO" : "PENDENTE", id, despesasDoMes.size());
-                
-            // Se não existirem despesas instantâneas para o mês atual,
-            // vamos gerar as instâncias necessárias
-            if (despesasDoMes.isEmpty()) {
-                // Calcular datas para o mês atual baseado no padrão de recorrência
-                List<LocalDate> datasNoMes = calcularDatasNoIntervalo(recurringExpense, startOfMonth, endOfMonth);
-                
-                if (!datasNoMes.isEmpty()) {
-                    logger.info("Gerando {} instâncias de despesa para o mês atual", datasNoMes.size());
-                    
-                    for (LocalDate data : datasNoMes) {
-                        Expense despesa = new Expense(
-                            recurringExpense.getDescription(),
-                            recurringExpense.getCategory(),
-                            data,
-                            recurringExpense.getAmount(),
-                            paid,  // já com o status correto
-                            recurringExpense.getId()
-                        );
-                        
-                        expenseRepository.save(despesa);
-                        despesasDoMes.add(despesa);
-                    }
-                } else {
-                    logger.warn("Nenhuma data válida encontrada para o mês atual");
-                    throw new RuntimeException("Não foi possível atualizar a despesa fixa pois não há instâncias para o mês atual");
-                }
-            } else {
-                // Atualizar o status de pagamento de todas as instâncias
-                for (Expense despesa : despesasDoMes) {
-                    despesa.setPaid(paid);
-                    expenseRepository.save(despesa);
-                }
-            }
-            
-            // Retornar a despesa fixa atualizada com o novo status
-            RecurringExpenseResponseDTO dto = mapToDTO(recurringExpense);
-            // Forçamos o status para refletir a alteração que acabamos de fazer
-            dto.setPaid(paid);
-            
-            return dto;
-        } catch (Exception e) {
-            logger.error("Erro ao atualizar status de pagamento da despesa fixa: {}", e.getMessage(), e);
-            throw new RuntimeException("Erro ao atualizar status de pagamento: " + e.getMessage());
-        }
-    }
-    
-    /**
-     * Resetar status de pagamento de uma despesa fixa problemática e suas instâncias
-     */
-    @Transactional
-    public RecurringExpenseResponseDTO resetarStatusPagamento(Long id) {
-        try {
-            // Buscar a despesa fixa
-            RecurringExpense recurringExpense = recurringExpenseRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Despesa fixa não encontrada: " + id));
-            
-            // Atualizar o status para não pago
-            recurringExpense.setPaid(false);
-            
-            // Salvar a despesa fixa atualizada
-            RecurringExpense savedExpense = recurringExpenseRepository.save(recurringExpense);
-            
-            // Também buscar e atualizar todas as instâncias desta despesa fixa no mês atual
-            LocalDate hoje = LocalDate.now();
-            LocalDate inicioDaMes = hoje.withDayOfMonth(1);
-            LocalDate fimDoMes = hoje.withDayOfMonth(hoje.lengthOfMonth());
-            
-            List<Expense> instancias = expenseRepository.findByRecurringExpenseIdAndDateBetween(
-                id, inicioDaMes, fimDoMes);
-            
-            for (Expense instancia : instancias) {
-                instancia.setPaid(false);
-                expenseRepository.save(instancia);
-            }
-            
-            logger.info("Resetado status de pagamento da despesa fixa ID {}: {} instâncias atualizadas", 
-                id, instancias.size());
-            
-            return mapToDTO(savedExpense);
-        } catch (Exception e) {
-            logger.error("Erro ao resetar status de pagamento da despesa fixa: {}", e.getMessage(), e);
-            throw e;
-        }
-    }
-
-    /**
-     * Corrigir uma despesa fixa problemática e suas instâncias
-     */
-    @Transactional
-    public boolean corrigirDespesaFixaProblematica(Long id) {
-        try {
-            RecurringExpense recurringExpense = recurringExpenseRepository.findById(id)
-                .orElse(null);
-            
-            if (recurringExpense == null) {
-                logger.warn("Despesa fixa não encontrada ao tentar corrigir: {}", id);
-                return false;
-            }
-            
-            // Realizar operações de correção:
-            
-            // 1. Verificar campos obrigatórios e preencher se necessário
-            if (recurringExpense.getDescription() == null || recurringExpense.getDescription().isEmpty()) {
-                recurringExpense.setDescription("Despesa Fixa #" + id);
-            }
-            
-            if (recurringExpense.getCategory() == null || recurringExpense.getCategory().isEmpty()) {
-                recurringExpense.setCategory("others");
-            }
-            
-            if (recurringExpense.getRecurrenceType() == null) {
-                recurringExpense.setRecurrenceType(RecurrenceType.MONTHLY);
-            }
-            
-            if (recurringExpense.getStartDate() == null) {
-                recurringExpense.setStartDate(LocalDate.now());
-            }
-            
-            // 2. Resetar status de pagamento
-            recurringExpense.setPaid(false);
-            
-            // 3. Garantir que está ativa
-            recurringExpense.setActive(true);
-            
-            // Salvar correções
-            recurringExpenseRepository.save(recurringExpense);
-            
-            // 4. Verificar e corrigir instâncias problemáticas
-            List<Expense> instancias = expenseRepository.findByRecurringExpenseId(id);
-            for (Expense instancia : instancias) {
-                // Corrigir relação
-                if (!id.equals(instancia.getRecurringExpenseId())) {
-                    instancia.setRecurringExpenseId(id);
-                }
-                
-                // Resetar status de pagamento
-                instancia.setPaid(false);
-                
-                // Corrigir descrição se necessário
-                if (instancia.getDescription() == null || instancia.getDescription().isEmpty()) {
-                    instancia.setDescription(recurringExpense.getDescription());
-                }
-                
-                // Corrigir valor
-                if (instancia.getAmount() == null || instancia.getAmount() <= 0) {
-                    instancia.setAmount(recurringExpense.getAmount());
-                }
-                
-                expenseRepository.save(instancia);
-            }
-            
-            logger.info("Despesa fixa ID {} corrigida com sucesso. {} instâncias atualizadas.", 
-                id, instancias.size());
-            
-            return true;
-        } catch (Exception e) {
-            logger.error("Erro ao corrigir despesa fixa problemática: {}", e.getMessage(), e);
-            return false;
-        }
-    }
-
-    private List<Expense> generateFutureExpenses(RecurringExpense recurringExpense) {
-        List<Expense> expenses = new ArrayList<>();
-        LocalDate currentDate = recurringExpense.getStartDate();
-        LocalDate endDate = recurringExpense.getEndDate();
-
-        while (!currentDate.isAfter(endDate)) {
-            Expense expense = new Expense();
-            expense.setDescription(recurringExpense.getDescription());
-            expense.setCategory(recurringExpense.getCategory());
-            expense.setAmount(recurringExpense.getAmount());
-            expense.setDate(currentDate);
-            expense.setPaid(false);
-            expense.setRecurringExpenseId(recurringExpense.getId());
-            expense.setIsFixo(true);
-            expense.setEndDate(recurringExpense.getEndDate());
-            expenses.add(expense);
-
-            // Move to next occurrence based on recurrence type
-            switch (recurringExpense.getRecurrenceType()) {
-                case DAILY:
-                    currentDate = currentDate.plusDays(1);
-                    break;
-                case WEEKLY:
-                    currentDate = currentDate.plusWeeks(1);
-                    break;
-                case MONTHLY:
-                    currentDate = currentDate.plusMonths(1);
-                    break;
-                case YEARLY:
-                    currentDate = currentDate.plusYears(1);
-                    break;
-            }
-        }
-
-        return expenseRepository.saveAll(expenses);
     }
 }
