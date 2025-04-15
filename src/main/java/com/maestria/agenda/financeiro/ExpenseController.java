@@ -59,6 +59,19 @@ public class ExpenseController {
         }
     }
 
+    @PutMapping("/expenses/{id}")
+    public ResponseEntity<?> editarDespesa(
+            @PathVariable Long id,
+            @RequestBody ExpenseRequestDTO requestDTO) {
+        try {
+            ExpenseResponseDTO updatedExpense = expenseService.updateExpense(id, requestDTO);
+            return ResponseEntity.ok(updatedExpense);
+        } catch (Exception e) {
+            logger.error("Erro ao atualizar despesa: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao atualizar despesa: " + e.getMessage());
+        }
+    }
+
     @DeleteMapping("/expenses/{id}")
     public ResponseEntity<?> deletarDespesa(@PathVariable Long id) {
         try {
@@ -94,6 +107,17 @@ public class ExpenseController {
         }
     }
 
+    @GetMapping("/recurring-expenses/{id}")
+    public ResponseEntity<?> buscarDespesaFixa(@PathVariable Long id) {
+        try {
+            RecurringExpenseResponseDTO despesaFixa = recurringExpenseService.buscarDespesaFixa(id);
+            return ResponseEntity.ok(despesaFixa);
+        } catch (Exception e) {
+            logger.error("Erro ao buscar despesa fixa: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao buscar despesa fixa: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/recurring-expenses")
     public ResponseEntity<?> criarDespesaFixa(@RequestBody RecurringExpenseRequestDTO requestDTO) {
         try {
@@ -102,6 +126,71 @@ public class ExpenseController {
         } catch (Exception e) {
             logger.error("Erro ao criar despesa fixa: {}", e.getMessage(), e);
             return ResponseEntity.status(500).body("Erro ao criar despesa fixa: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/recurring-expenses/{id}")
+    public ResponseEntity<?> editarDespesaFixa(
+            @PathVariable Long id,
+            @RequestBody RecurringExpenseRequestDTO requestDTO) {
+        try {
+            RecurringExpenseResponseDTO updatedRecurringExpense = 
+                recurringExpenseService.atualizarDespesaFixa(id, requestDTO);
+            return ResponseEntity.ok(updatedRecurringExpense);
+        } catch (Exception e) {
+            logger.error("Erro ao atualizar despesa fixa: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao atualizar despesa fixa: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/recurring-expenses/{id}/payment")
+    public ResponseEntity<?> atualizarStatusPagamentoDespesaFixa(
+            @PathVariable Long id,
+            @RequestBody ExpensePaymentUpdateRequest request) {
+        try {
+            recurringExpenseService.atualizarStatusPagamento(id, request.isPaid());
+            return ResponseEntity.ok("Status de pagamento atualizado com sucesso.");
+        } catch (Exception e) {
+            logger.error("Erro ao atualizar status de pagamento da despesa fixa: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao atualizar status de pagamento: " + e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/recurring-expenses/{id}")
+    public ResponseEntity<?> deletarDespesaFixa(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "true") boolean deleteInstances) {
+        try {
+            if (deleteInstances) {
+                recurringExpenseService.excluirDespesaFixa(id);
+            } else {
+                recurringExpenseService.desativarDespesaFixa(id);
+            }
+            return ResponseEntity.ok("Despesa fixa excluída com sucesso.");
+        } catch (Exception e) {
+            logger.error("Erro ao excluir despesa fixa: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao excluir despesa fixa: " + e.getMessage());
+        }
+    }
+    
+    @PutMapping("/recurring-expenses/{recurringId}/instances/{instanceId}")
+    public ResponseEntity<?> editarInstanciaDespesaFixa(
+            @PathVariable Long recurringId,
+            @PathVariable Long instanceId,
+            @RequestBody ExpenseRequestDTO requestDTO) {
+        try {
+            // Verifica se a instância pertence à despesa fixa informada
+            if (!expenseService.verificarSeInstanciaExiste(instanceId, recurringId)) {
+                return ResponseEntity.status(404)
+                    .body("Instância não encontrada ou não pertence à despesa fixa informada");
+            }
+            
+            ExpenseResponseDTO updatedInstance = expenseService.updateExpense(instanceId, requestDTO);
+            return ResponseEntity.ok(updatedInstance);
+        } catch (Exception e) {
+            logger.error("Erro ao atualizar instância de despesa fixa: {}", e.getMessage(), e);
+            return ResponseEntity.status(500)
+                .body("Erro ao atualizar instância de despesa fixa: " + e.getMessage());
         }
     }
     

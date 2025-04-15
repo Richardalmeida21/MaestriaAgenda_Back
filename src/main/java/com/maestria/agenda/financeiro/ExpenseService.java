@@ -54,6 +54,35 @@ public class ExpenseService {
             throw new RuntimeException("Error creating expense: " + e.getMessage());
         }
     }
+    
+    @Transactional
+    public ExpenseResponseDTO updateExpense(Long id, ExpenseRequestDTO requestDTO) {
+        try {
+            Expense expense = expenseRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Despesa não encontrada com ID: " + id));
+            
+            // Atualizar campos
+            if (requestDTO.getDescription() != null) {
+                expense.setDescription(requestDTO.getDescription());
+            }
+            if (requestDTO.getCategory() != null) {
+                expense.setCategory(requestDTO.getCategory());
+            }
+            if (requestDTO.getDate() != null) {
+                expense.setDate(requestDTO.getDate());
+            }
+            if (requestDTO.getAmount() != null) {
+                expense.setAmount(requestDTO.getAmount());
+            }
+            
+            // Salvar as alterações
+            Expense updatedExpense = expenseRepository.save(expense);
+            return convertToDTO(updatedExpense);
+        } catch (Exception e) {
+            logger.error("Erro ao atualizar despesa: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao atualizar despesa: " + e.getMessage());
+        }
+    }
 
     private void generateFutureExpenses(Expense fixedExpense) {
         LocalDate currentDate = fixedExpense.getDate();
@@ -142,17 +171,7 @@ public class ExpenseService {
         }
         
         return expenses.stream()
-                .map(expense -> new ExpenseResponseDTO(
-                        expense.getId(),
-                        expense.getDescription(),
-                        expense.getCategory(),
-                        expense.getDate(),
-                        expense.getAmount(),
-                        expense.getPaid(),
-                        expense.getIsFixo(),
-                        expense.getDayOfMonth(),
-                        expense.getEndDate()
-                ))
+                .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
     
