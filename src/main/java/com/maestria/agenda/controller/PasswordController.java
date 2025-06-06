@@ -16,7 +16,7 @@ public class PasswordController {
         }
 
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-        String encryptedPassword = encoder.encode(rawPassword);  // Criptografando a senha
+        String encryptedPassword = encoder.encode(rawPassword);  
 
         return ResponseEntity.ok().body(new PasswordResponse(encryptedPassword));
     }

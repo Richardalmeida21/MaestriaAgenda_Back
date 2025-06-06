@@ -28,7 +28,7 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticat
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/ping").permitAll()
-                .requestMatchers("/auth/login", "/auth/register", "/public/**", "/generate-password")
+                .requestMatchers("/auth/login", "/auth/register", "/public/**", "/generate-password", "/h2-console/**")
                     .permitAll()
                 .requestMatchers("/auth/me", "/agendamento/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
                 .requestMatchers("/cliente/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
@@ -67,7 +67,7 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticat
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfig = new CorsConfiguration();
         // Configuração para desenvolvimento e produção
-        corsConfig.setAllowedOrigins(List.of("http://localhost:8080", "https://agendamaestria.vercel.app"));
+        corsConfig.setAllowedOrigins(List.of("*"));
         corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         corsConfig.setAllowedHeaders(List.of("*"));
         corsConfig.setExposedHeaders(List.of("Authorization"));
