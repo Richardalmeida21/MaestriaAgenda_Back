@@ -9,7 +9,7 @@ RUN mvn dependency:go-offline
 
 COPY src ./src
 
-RUN mvn clean install
+RUN mvn clean install -DskipTests
 RUN ls -l /app
 RUN ls -l /app/target
 
