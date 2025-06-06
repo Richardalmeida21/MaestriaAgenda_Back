@@ -9,17 +9,22 @@ RUN mvn dependency:go-offline
 
 COPY src ./src
 
-RUN mvn clean install -DskipTests
-RUN ls -l /app
-RUN ls -l /app/target
+RUN mvn clean package -DskipTests
+RUN find /app/target -name "*.jar" -not -name "*sources.jar" -not -name "*javadoc.jar" -not -name "*tests.jar" -exec cp {} /app/app.jar \;
 
 # Stage 2: Runtime stage
 FROM openjdk:17-jdk-slim
 
 WORKDIR /app
 
-EXPOSE 8080
+EXPOSE 8081
 
-COPY --from=build /app/target/agenda-0.0.1-SNAPSHOT.jar app.jar
+# Copia o JAR renomeado
+COPY --from=build /app/app.jar app.jar
 
-ENTRYPOINT ["java", "-Dserver.port=8080", "-Dserver.address=0.0.0.0", "-jar", "app.jar"]
+# Definir variáveis de ambiente para a conexão com o banco de dados
+ENV JDBC_DATABASE_URL=jdbc:postgresql://dpg-d1132295pdvs73ei4pqg-a.oregon-postgres.render.com/maestriabd
+ENV JDBC_DATABASE_USERNAME=maestriabd_user
+ENV JDBC_DATABASE_PASSWORD=7FqwA1lUdLXrsdQLUGS7y3hO80aAsuvn
+
+ENTRYPOINT ["java", "-Dserver.port=8081", "-jar", "app.jar"]
