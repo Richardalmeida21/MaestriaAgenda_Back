@@ -24,7 +24,7 @@ public class Profissional {
     private String nome;
 
     @NotBlank(message = "Login não pode ser vazio")
-    @Size(min = 5, message = "Login deve ter pelo menos 5 caracteres")
+    @Size(min = 4, message = "Login deve ter pelo menos 4 caracteres")
     @Column(nullable = false, unique = true)
     private String login;
 
