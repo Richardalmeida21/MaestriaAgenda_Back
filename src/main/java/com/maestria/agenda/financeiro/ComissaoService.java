@@ -73,15 +73,16 @@ public class ComissaoService {
         
         // Calcular valor total e desconto de taxa para cada agendamento
         for (Agendamento agendamento : agendamentosNormais) {
-            if (agendamento.getServico() != null && agendamento.getServico().getValor() != null) {
+            // Só considera agendamentos que foram pagos
+            if (agendamento.getPago() != null && agendamento.getPago() && 
+                agendamento.getServico() != null && agendamento.getServico().getValor() != null) {
+                
                 double valorServico = agendamento.getServico().getValor();
                 
                 // Taxa conforme forma de pagamento (só se pago)
                 double taxa = 0.0;
-                if (agendamento.getPago() != null && agendamento.getPago() && agendamento.getFormaPagamento() != null) {
+                if (agendamento.getFormaPagamento() != null) {
                     taxa = agendamento.getFormaPagamento().getTaxa();
-                } else {
-                    taxa = 0.0; // Se não foi dado baixa ainda, não desconta taxa
                 }
                 
                 // Desconto devido à taxa
