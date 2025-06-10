@@ -122,24 +122,31 @@ public class ComissaoService {
         // Para cada agendamento fixo, calcular ocorrências no período
         for (AgendamentoFixo agendamentoFixo : agendamentosFixos) {
             if (agendamentoFixo.getServico() != null && agendamentoFixo.getServico().getValor() != null) {
-                int ocorrencias = calcularDiasExecutadosNoPeriodo(agendamentoFixo, inicio, fim);
+                // Buscar agendamentos gerados a partir deste fixo que foram pagos
+                List<Agendamento> agendamentosGerados = agendamentoRepository
+                    .findByAgendamentoFixoIdAndDataBetweenAndPagoTrue(agendamentoFixo.getId(), inicio, fim);
                 
-                if (ocorrencias > 0) {
+                if (!agendamentosGerados.isEmpty()) {
                     double valorServico = agendamentoFixo.getServico().getValor();
-                    double valorTotalServico = valorServico * ocorrencias;
+                    double valorTotalServico = valorServico * agendamentosGerados.size();
                     
-                    // Taxa conforme forma de pagamento (fixos não têm baixa individual, taxa 0%)
+                    // Taxa conforme forma de pagamento
                     double taxa = 0.0;
+                    double descontoTaxa = 0.0;
                     
-                    // Desconto devido à taxa
-                    double descontoTaxa = valorTotalServico * (taxa / 100.0);
-                    logger.info("DEBUG - Valor serviço = {}, desconto = {}", valorTotalServico, descontoTaxa);
+                    // Calcular desconto de taxa para cada agendamento pago
+                    for (Agendamento agendamento : agendamentosGerados) {
+                        if (agendamento.getFormaPagamento() != null) {
+                            taxa = agendamento.getFormaPagamento().getTaxa();
+                            descontoTaxa += valorServico * (taxa / 100.0);
+                        }
+                    }
                     
                     valorTotal += valorTotalServico;
                     descontoTaxaTotal += descontoTaxa;
                     
-                    logger.debug("Agendamento fixo ID {}: {} ocorrências x {} = {}, taxa {}%, desconto {}", 
-                            agendamentoFixo.getId(), ocorrencias, valorServico, 
+                    logger.debug("Agendamento fixo ID {}: {} ocorrências pagas x {} = {}, taxa {}%, desconto {}", 
+                            agendamentoFixo.getId(), agendamentosGerados.size(), valorServico, 
                             valorTotalServico, taxa, descontoTaxa);
                 }
             }

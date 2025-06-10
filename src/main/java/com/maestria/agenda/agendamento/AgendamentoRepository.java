@@ -121,4 +121,6 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
 
         // Adicione este método ao AgendamentoRepository
         List<Agendamento> findByAgendamentoFixoId(Long agendamentoFixoId);
+
+        List<Agendamento> findByAgendamentoFixoIdAndDataBetweenAndPagoTrue(Long agendamentoFixoId, LocalDate inicio, LocalDate fim);
 }
