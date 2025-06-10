@@ -40,23 +40,17 @@ public class Agendamento {
     @Column(columnDefinition = "TEXT")
     private String observacao;
 
+    @Column(nullable = false)
+    private Boolean pago = false;
+
+    @Column
+    private java.time.LocalDateTime dataPagamento;
+
     @Enumerated(EnumType.STRING)
-    @Column(name = "forma_pagamento", nullable = false)
+    @Column(name = "forma_pagamento")
     private PagamentoTipo formaPagamento;
 
     // Removemos o campo valor, pois será obtido do serviço
-
-    public Agendamento(PagamentoTipo formaPagamento) {
-        this.formaPagamento = formaPagamento;
-    }
-
-    public PagamentoTipo getFormaPagamento() {
-        return formaPagamento;
-    }
-
-    public void setFormaPagamento(PagamentoTipo formaPagamento) {
-        this.formaPagamento = formaPagamento;
-    }
 
     // Construtor com DadosCadastroAgendamento
     public Agendamento(DadosCadastroAgendamento dados, Cliente cliente, Profissional profissional, Servico servico) {
@@ -66,7 +60,9 @@ public class Agendamento {
         this.data = dados.data();
         this.hora = dados.hora();
         this.observacao = dados.observacao();
-        this.formaPagamento = dados.formaPagamento();
+        this.pago = false;
+        this.formaPagamento = null;
+        this.dataPagamento = null;
     }
 
     // Construtor padrão necessário para o JPA
@@ -159,6 +155,30 @@ public void setAgendamentoFixoId(Long agendamentoFixoId) {
         }
         long minutos = duracao.toMinutes();
         return minutos + " min";
+    }
+
+    public Boolean getPago() {
+        return pago;
+    }
+
+    public void setPago(Boolean pago) {
+        this.pago = pago;
+    }
+
+    public java.time.LocalDateTime getDataPagamento() {
+        return dataPagamento;
+    }
+
+    public void setDataPagamento(java.time.LocalDateTime dataPagamento) {
+        this.dataPagamento = dataPagamento;
+    }
+
+    public PagamentoTipo getFormaPagamento() {
+        return formaPagamento;
+    }
+
+    public void setFormaPagamento(PagamentoTipo formaPagamento) {
+        this.formaPagamento = formaPagamento;
     }
 
     @Override

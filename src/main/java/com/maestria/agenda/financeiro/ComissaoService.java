@@ -76,10 +76,12 @@ public class ComissaoService {
             if (agendamento.getServico() != null && agendamento.getServico().getValor() != null) {
                 double valorServico = agendamento.getServico().getValor();
                 
-                // Taxa conforme forma de pagamento
+                // Taxa conforme forma de pagamento (só se pago)
                 double taxa = 0.0;
-                if (agendamento.getFormaPagamento() != null) {
+                if (agendamento.getPago() != null && agendamento.getPago() && agendamento.getFormaPagamento() != null) {
                     taxa = agendamento.getFormaPagamento().getTaxa();
+                } else {
+                    taxa = 0.0; // Se não foi dado baixa ainda, não desconta taxa
                 }
                 
                 // Desconto devido à taxa
@@ -125,31 +127,8 @@ public class ComissaoService {
                     double valorServico = agendamentoFixo.getServico().getValor();
                     double valorTotalServico = valorServico * ocorrencias;
                     
-                    // Taxa conforme forma de pagamento
+                    // Taxa conforme forma de pagamento (fixos não têm baixa individual, taxa 0%)
                     double taxa = 0.0;
-                    
-                    // Adicionar logs detalhados para depurar o problema
-                    String formaPagamento = agendamentoFixo.getFormaPagamento();
-                    logger.info("DEBUG - AgendamentoFixo ID {}: forma pagamento = '{}', tipo = {}", 
-                            agendamentoFixo.getId(), formaPagamento, 
-                            formaPagamento != null ? formaPagamento.getClass().getName() : "null");
-                    
-                    PagamentoTipo pagamentoTipo = null;
-                    if (formaPagamento != null && !formaPagamento.trim().isEmpty()) {
-                        // Usar método melhorado para converter a string em PagamentoTipo
-                        pagamentoTipo = converterParaPagamentoTipo(formaPagamento);
-                        
-                        if (pagamentoTipo != null) {
-                            taxa = pagamentoTipo.getTaxa();
-                            logger.info("DEBUG - Forma de pagamento '{}' reconhecida como {}, taxa = {}%", 
-                                    formaPagamento, pagamentoTipo, taxa);
-                        } else {
-                            logger.warn("DEBUG - ⚠️ Forma de pagamento não reconhecida: '{}'", formaPagamento);
-                        }
-                    } else {
-                        logger.warn("DEBUG - ⚠️ Forma de pagamento nula ou vazia para agendamento fixo ID {}", 
-                                agendamentoFixo.getId());
-                    }
                     
                     // Desconto devido à taxa
                     double descontoTaxa = valorTotalServico * (taxa / 100.0);

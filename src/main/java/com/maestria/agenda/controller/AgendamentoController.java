@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/agendamento")
@@ -633,12 +634,6 @@ public class AgendamentoController {
                 return ResponseEntity.badRequest().body("Horário bloqueado.");
             }
 
-            PagamentoTipo pagamentoTipo = dados.formaPagamento();
-            if (pagamentoTipo == null) {
-                return ResponseEntity.badRequest().body("Forma de pagamento inválida. Opções válidas: " +
-                        "CREDITO_1X até CREDITO_10X, DEBITO, PIX, DINHEIRO.");
-            }
-
             Agendamento agendamento = new Agendamento();
             agendamento.setCliente(cliente);
             agendamento.setProfissional(profissional);
@@ -646,7 +641,9 @@ public class AgendamentoController {
             agendamento.setData(dados.data());
             agendamento.setHora(dados.hora());
             agendamento.setObservacao(dados.observacao());
-            agendamento.setFormaPagamento(pagamentoTipo);
+            agendamento.setPago(false);
+            agendamento.setFormaPagamento(null);
+            agendamento.setDataPagamento(null);
 
             agendamentoRepository.save(agendamento);
             logger.info("✅ Agendamento criado com sucesso: {}", agendamento);
@@ -761,6 +758,42 @@ public class AgendamentoController {
         } catch (Exception e) {
             logger.error("❌ Erro ao excluir agendamento", e);
             return ResponseEntity.status(500).body("Erro ao excluir agendamento: " + e.getMessage());
+        }
+    }
+
+    // Novo endpoint para dar baixa em agendamento
+    @PutMapping("/{id}/baixa")
+    public ResponseEntity<?> darBaixaEmAgendamento(
+            @PathVariable Long id,
+            @RequestParam("formaPagamento") PagamentoTipo formaPagamento,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        logger.info("🔄 Solicitação de baixa no agendamento ID {} por {}", id, userDetails.getUsername());
+        try {
+            Agendamento agendamento = agendamentoRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Agendamento não encontrado"));
+
+            // Permitir apenas ADMIN ou o próprio profissional
+            boolean isAdmin = userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"));
+            if (!isAdmin) {
+                Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
+                if (profissional == null || agendamento.getProfissional() == null || !Objects.equals(profissional.getId(), agendamento.getProfissional().getId())) {
+                    return ResponseEntity.status(403).body("Acesso negado. Você só pode dar baixa nos seus próprios agendamentos.");
+                }
+            }
+
+            if (agendamento.getPago() != null && agendamento.getPago()) {
+                return ResponseEntity.badRequest().body("Agendamento já está marcado como pago.");
+            }
+
+            agendamento.setPago(true);
+            agendamento.setDataPagamento(java.time.LocalDateTime.now());
+            agendamento.setFormaPagamento(formaPagamento);
+            agendamentoRepository.save(agendamento);
+
+            return ResponseEntity.ok("Baixa realizada com sucesso.");
+        } catch (Exception e) {
+            logger.error("Erro ao dar baixa no agendamento: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao dar baixa no agendamento: " + e.getMessage());
         }
     }
 }
