@@ -261,20 +261,22 @@ public class ComissaoService {
             .findPaidPeriodsByProfissionalIdWithOverlap(profissionalId, inicio, fim);
             
         if (!pagamentosComSobreposicao.isEmpty()) {
-            for (ComissaoPagamento pagamento : pagamentosComSobreposicao) {
-                // Verificar se o período está totalmente coberto
-                if (pagamento.getPeriodoInicio().compareTo(inicio) <= 0 && 
-                    pagamento.getPeriodoFim().compareTo(fim) >= 0) {
-                    // O período consultado está completamente coberto por um pagamento existente
-                    logger.info("Período {}-{} já está totalmente pago (período existente: {}-{})", 
-                        inicio, fim, pagamento.getPeriodoInicio(), pagamento.getPeriodoFim());
-                    return true;
-                }
+            // Calcular o valor total pago no período
+            double valorTotalPago = calcularValorJaPagoNoPeriodo(profissionalId, inicio, fim);
+            
+            // Calcular o valor total esperado para o período
+            ComissaoResponseDTO comissaoPeriodo = calcularComissaoPorPeriodo(profissionalId, inicio, fim);
+            double valorTotalEsperado = comissaoPeriodo.getComissaoLiquida();
+            
+            // Se o valor pago for maior ou igual ao esperado, considera como pago
+            if (valorTotalPago >= valorTotalEsperado) {
+                logger.info("Período {}-{} está pago. Valor pago: {}, Valor esperado: {}", 
+                    inicio, fim, valorTotalPago, valorTotalEsperado);
+                return true;
             }
             
-            // Se não está totalmente coberto, mas há sobreposições, vamos logar para debug
-            logger.info("Período {}-{} possui {} pagamentos com sobreposição, mas não está totalmente coberto", 
-                inicio, fim, pagamentosComSobreposicao.size());
+            logger.info("Período {}-{} possui {} pagamentos com sobreposição, mas valor pago ({}) é menor que o esperado ({})", 
+                inicio, fim, pagamentosComSobreposicao.size(), valorTotalPago, valorTotalEsperado);
         }
         
         return false;
