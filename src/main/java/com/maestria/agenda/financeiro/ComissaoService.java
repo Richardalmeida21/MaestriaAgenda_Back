@@ -203,11 +203,13 @@ public class ComissaoService {
                 .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
             
             // Criar registro de pagamento
+            LocalDate periodoFim = dataPagamento.withDayOfMonth(dataPagamento.lengthOfMonth());
             ComissaoPagamento pagamento = new ComissaoPagamento(
                 profissionalId,
                 dataPagamento,
                 valorPago,
-                observacao
+                observacao,
+                periodoFim
             );
             
             comissaoPagamentoRepository.save(pagamento);

@@ -30,15 +30,19 @@ public class ComissaoPagamento {
     @Column(nullable = false)
     private Boolean paid = true;
     
+    @Column(nullable = false)
+    private LocalDate periodoFim;
+    
     // Construtor padrão para JPA
     public ComissaoPagamento() {}
     
-    public ComissaoPagamento(Long profissionalId, LocalDate dataPagamento, Double valorPago, String observacao) {
+    public ComissaoPagamento(Long profissionalId, LocalDate dataPagamento, Double valorPago, String observacao, LocalDate periodoFim) {
         this.profissionalId = profissionalId;
         this.dataPagamento = dataPagamento;
         this.valorPago = valorPago;
         this.observacao = observacao;
         this.paid = true;
+        this.periodoFim = periodoFim;
     }
     
     // Getters e setters
@@ -88,5 +92,13 @@ public class ComissaoPagamento {
     
     public void setPaid(Boolean paid) {
         this.paid = paid;
+    }
+    
+    public LocalDate getPeriodoFim() {
+        return periodoFim;
+    }
+    
+    public void setPeriodoFim(LocalDate periodoFim) {
+        this.periodoFim = periodoFim;
     }
 }
