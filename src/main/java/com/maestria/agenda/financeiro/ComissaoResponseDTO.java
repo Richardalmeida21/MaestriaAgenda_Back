@@ -3,6 +3,7 @@ package com.maestria.agenda.financeiro;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 public class ComissaoResponseDTO {
     private Long profissionalId;
@@ -16,8 +17,7 @@ public class ComissaoResponseDTO {
     private Double descontoTaxa;
     private Double valorPago;
     private Double valorPendente;
-    private Long paymentId;
-    private String status;
+    private List<ComissaoIndividualDTO> comissoesIndividuais;
     
     @JsonIgnore
     private boolean pendente;
@@ -29,8 +29,7 @@ public class ComissaoResponseDTO {
                                Double comissaoAgendamentosFixos,
                                Double descontoTaxa,
                                Double valorPago,
-                               Long paymentId,
-                               String status) {
+                               List<ComissaoIndividualDTO> comissoesIndividuais) {
         this.profissionalId = profissionalId;
         this.nomeProfissional = nomeProfissional;
         this.dataInicio = dataInicio;
@@ -43,8 +42,7 @@ public class ComissaoResponseDTO {
         this.valorPago = valorPago;
         this.valorPendente = Math.max(0, comissaoLiquida - valorPago);
         this.pendente = valorPendente > 0;
-        this.paymentId = paymentId;
-        this.status = status;
+        this.comissoesIndividuais = comissoesIndividuais;
     }
 
     // Getters
@@ -109,11 +107,7 @@ public class ComissaoResponseDTO {
         this.pendente = pendente;
     }
 
-    public Long getPaymentId() {
-        return paymentId;
-    }
-
-    public String getStatus() {
-        return status;
+    public List<ComissaoIndividualDTO> getComissoesIndividuais() {
+        return comissoesIndividuais;
     }
 }

@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 @Service
 public class ComissaoService {
@@ -169,16 +170,18 @@ public class ComissaoService {
             // Calcular valor já pago no período
             double valorJaPago = comissaoPagamentoRepository.calcularValorTotalPagoNoPeriodo(profissionalId, inicio, fim);
             
-            // Buscar o pagamento mais recente do período
-            List<ComissaoPagamento> pagamentos = comissaoPagamentoRepository.findByProfissionalIdAndPeriodo(profissionalId, inicio, fim);
-            Long paymentId = null;
-            String status = "PENDENTE";
-            
-            if (!pagamentos.isEmpty()) {
-                ComissaoPagamento ultimoPagamento = pagamentos.get(pagamentos.size() - 1);
-                paymentId = ultimoPagamento.getId();
-                status = ultimoPagamento.getStatus().toString();
-            }
+            // Buscar todas as comissões do período
+            List<ComissaoPagamento> comissoes = comissaoPagamentoRepository.findByProfissionalIdAndPeriodo(profissionalId, inicio, fim);
+            List<ComissaoIndividualDTO> comissoesIndividuais = comissoes.stream()
+                .map(comissao -> new ComissaoIndividualDTO(
+                    comissao.getId(),
+                    comissao.getAgendamentoId(),
+                    comissao.getDataPagamento(),
+                    comissao.getValorComissao(),
+                    comissao.getStatus().toString(),
+                    comissao.getPaid()
+                ))
+                .collect(Collectors.toList());
             
             logger.info("Comissão de agendamentos normais: {} bruto, {} líquido, {} desconto", 
                     resultadoNormal.valorComissao, resultadoNormal.valorComissaoLiquida, resultadoNormal.valorDescontoTaxa);
@@ -198,8 +201,7 @@ public class ComissaoService {
                 resultadoFixo.valorComissao,
                 descontoTaxaTotal,
                 valorJaPago,
-                paymentId,
-                status);
+                comissoesIndividuais);
         } catch (Exception e) {
             logger.error("❌ Erro ao calcular comissão: {}", e.getMessage(), e);
             throw new RuntimeException("Erro ao calcular comissão: " + e.getMessage());
@@ -328,5 +330,101 @@ public class ComissaoService {
         }
         
         return resultados;
+    }
+
+    /**
+     * Paga as comissões de um período específico
+     */
+    public ComissaoResponseDTO pagarComissoesPorPeriodo(Long profissionalId, LocalDate dataPagamento, 
+            LocalDate periodoInicio, LocalDate periodoFim, Double valorPago, String observacao) {
+        logger.info("💰 Registrando pagamento de comissões para profissional {} no valor de {} em {}", 
+            profissionalId, valorPago, dataPagamento);
+            
+        Profissional profissional = profissionalRepository.findById(profissionalId)
+            .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+        
+        // Validar valor do pagamento
+        if (valorPago <= 0) {
+            throw new RuntimeException("O valor do pagamento deve ser maior que zero");
+        }
+        
+        // Buscar todas as comissões do período que ainda não foram pagas
+        List<ComissaoPagamento> comissoesPendentes = comissaoPagamentoRepository
+            .findByProfissionalIdAndPeriodo(profissionalId, periodoInicio, periodoFim)
+            .stream()
+            .filter(c -> c.getStatus() == ComissaoPagamento.StatusPagamento.PAGO && !c.getPaid())
+            .collect(Collectors.toList());
+            
+        if (comissoesPendentes.isEmpty()) {
+            throw new RuntimeException("Não há comissões pendentes para o período informado");
+        }
+        
+        // Calcular o valor total das comissões pendentes
+        double valorTotalPendente = comissoesPendentes.stream()
+            .mapToDouble(ComissaoPagamento::getValorComissao)
+            .sum();
+            
+        // Verificar se o valor pago é válido
+        if (valorPago > valorTotalPendente) {
+            throw new RuntimeException("Valor pago não pode ser maior que o valor pendente");
+        }
+        
+        // Distribuir o valor pago entre as comissões
+        double valorRestante = valorPago;
+        for (ComissaoPagamento comissao : comissoesPendentes) {
+            if (valorRestante <= 0) break;
+            
+            double valorComissao = comissao.getValorComissao();
+            if (valorRestante >= valorComissao) {
+                // Paga a comissão inteira
+                comissao.setValorPago(valorComissao);
+                comissao.setPaid(true);
+                valorRestante -= valorComissao;
+            } else {
+                // Paga parcialmente
+                comissao.setValorPago(valorRestante);
+                comissao.setPaid(false);
+                valorRestante = 0;
+            }
+            
+            comissao.setDataPagamento(dataPagamento);
+            comissao.setObservacao(observacao);
+            comissaoPagamentoRepository.save(comissao);
+        }
+        
+        // Recalcular a comissão para retornar os valores atualizados
+        return calcularComissaoPorPeriodo(profissionalId, periodoInicio, periodoFim);
+    }
+
+    /**
+     * Cancela as comissões de um período específico
+     */
+    public ComissaoResponseDTO cancelarComissoesPorPeriodo(Long profissionalId, 
+            LocalDate periodoInicio, LocalDate periodoFim) {
+        logger.info("❌ Cancelando comissões do profissional {} no período de {} a {}", 
+            profissionalId, periodoInicio, periodoFim);
+            
+        Profissional profissional = profissionalRepository.findById(profissionalId)
+            .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+        
+        // Buscar todas as comissões do período que estão pagas
+        List<ComissaoPagamento> comissoesPagas = comissaoPagamentoRepository
+            .findByProfissionalIdAndPeriodo(profissionalId, periodoInicio, periodoFim)
+            .stream()
+            .filter(c -> c.getStatus() == ComissaoPagamento.StatusPagamento.PAGO && c.getPaid())
+            .collect(Collectors.toList());
+            
+        if (comissoesPagas.isEmpty()) {
+            throw new RuntimeException("Não há comissões pagas para o período informado");
+        }
+        
+        // Cancelar cada comissão
+        for (ComissaoPagamento comissao : comissoesPagas) {
+            comissao.cancelarComissao();
+            comissaoPagamentoRepository.save(comissao);
+        }
+        
+        // Recalcular a comissão para retornar os valores atualizados
+        return calcularComissaoPorPeriodo(profissionalId, periodoInicio, periodoFim);
     }
 }
