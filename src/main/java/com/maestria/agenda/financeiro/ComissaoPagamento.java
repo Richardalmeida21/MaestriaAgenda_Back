@@ -20,7 +20,7 @@ public class ComissaoPagamento {
     @Column(name = "profissional_id", nullable = false)
     private Long profissionalId;
     
-    @Column(name = "agendamento_id", nullable = false)
+    @Column(name = "agendamento_id", nullable = true)
     private Long agendamentoId;
     
     @Column(name = "data_pagamento", nullable = false)

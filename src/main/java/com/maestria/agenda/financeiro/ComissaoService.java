@@ -231,6 +231,7 @@ public class ComissaoService {
         // Criar o registro de pagamento
         ComissaoPagamento pagamento = new ComissaoPagamento(
             profissionalId,
+            null, // agendamentoId será null para pagamentos gerais
             dataPagamento,
             valorPago,
             observacao,
