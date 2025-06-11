@@ -139,15 +139,18 @@ public class ComissaoController {
         }
         
         try {
-            String dataPagamentoStr = (String) payload.get("dataPagamento");
+            // Validar campos obrigatórios
+            if (!payload.containsKey("dataPagamento") || !payload.containsKey("valorPago")) {
+                return ResponseEntity.badRequest().body("Campos obrigatórios: dataPagamento e valorPago");
+            }
+            
+            String dataPagamentoStr = payload.get("dataPagamento").toString();
             Double valorPago = ((Number) payload.get("valorPago")).doubleValue();
-            String observacao = (String) payload.get("observacao");
-            String periodoInicioStr = (String) payload.get("periodoInicio");
-            String periodoFimStr = (String) payload.get("periodoFim");
+            String observacao = payload.containsKey("observacao") ? payload.get("observacao").toString() : null;
             
             LocalDate data = LocalDate.parse(dataPagamentoStr);
-            LocalDate periodoInicio = LocalDate.parse(periodoInicioStr);
-            LocalDate periodoFim = LocalDate.parse(periodoFimStr);
+            LocalDate periodoInicio = data.withDayOfMonth(1);
+            LocalDate periodoFim = data.withDayOfMonth(data.lengthOfMonth());
             
             ComissaoResponseDTO comissao = comissaoService.registrarPagamentoComissao(id, data, valorPago, observacao);
             
