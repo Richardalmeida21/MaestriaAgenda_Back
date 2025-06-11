@@ -27,6 +27,9 @@ public class ComissaoPagamento {
     @Column
     private String observacao;
     
+    @Column(nullable = false)
+    private Boolean paid = true;
+    
     // Construtor padrão para JPA
     public ComissaoPagamento() {}
     
@@ -35,6 +38,7 @@ public class ComissaoPagamento {
         this.dataPagamento = dataPagamento;
         this.valorPago = valorPago;
         this.observacao = observacao;
+        this.paid = true;
     }
     
     // Getters e setters
@@ -76,5 +80,13 @@ public class ComissaoPagamento {
     
     public void setObservacao(String observacao) {
         this.observacao = observacao;
+    }
+    
+    public Boolean getPaid() {
+        return paid;
+    }
+    
+    public void setPaid(Boolean paid) {
+        this.paid = paid;
     }
 }
