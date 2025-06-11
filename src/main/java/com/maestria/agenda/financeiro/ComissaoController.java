@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/financeiro")
@@ -124,13 +125,11 @@ public class ComissaoController {
     @PostMapping("/comissoes/profissional/{id}/pagamento")
     public ResponseEntity<?> registrarPagamentoComissao(
             @PathVariable Long id,
-            @RequestParam String dataPagamento,
-            @RequestParam Double valorPago,
-            @RequestParam(required = false) String observacao,
+            @RequestBody Map<String, Object> payload,
             @AuthenticationPrincipal UserDetails userDetails) {
             
         logger.info("💰 Registrando pagamento de comissão para profissional {} no valor de {} em {} por {}",
-                id, valorPago, dataPagamento, userDetails.getUsername());
+                id, payload.get("valorPago"), payload.get("dataPagamento"), userDetails.getUsername());
                 
         // Verificar se é ADMIN
         if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
@@ -140,7 +139,11 @@ public class ComissaoController {
         }
         
         try {
-            LocalDate data = LocalDate.parse(dataPagamento);
+            String dataPagamentoStr = (String) payload.get("dataPagamento");
+            Double valorPago = ((Number) payload.get("valorPago")).doubleValue();
+            String observacao = (String) payload.get("observacao");
+            
+            LocalDate data = LocalDate.parse(dataPagamentoStr);
             
             ComissaoResponseDTO comissao = comissaoService.registrarPagamentoComissao(id, data, valorPago, observacao);
             
