@@ -20,6 +20,9 @@ public class ComissaoPagamento {
     @Column(name = "profissional_id", nullable = false)
     private Long profissionalId;
     
+    @Column(name = "agendamento_id", nullable = false)
+    private Long agendamentoId;
+    
     @Column(name = "data_pagamento", nullable = false)
     private LocalDate dataPagamento;
     
@@ -55,13 +58,14 @@ public class ComissaoPagamento {
         this.dataCriacao = LocalDateTime.now();
     }
     
-    public ComissaoPagamento(Long profissionalId, LocalDate dataPagamento, Double valorPago, String observacao, 
+    public ComissaoPagamento(Long profissionalId, Long agendamentoId, LocalDate dataPagamento, Double valorPago, String observacao, 
             LocalDate periodoInicio, LocalDate periodoFim) {
         this();
         this.profissionalId = profissionalId;
+        this.agendamentoId = agendamentoId;
         this.dataPagamento = dataPagamento;
         this.valorPago = valorPago;
-        this.valorComissao = valorPago; // Inicialmente o valor da comissão é igual ao valor pago
+        this.valorComissao = valorPago;
         this.observacao = observacao;
         this.periodoInicio = periodoInicio;
         this.periodoFim = periodoFim;
@@ -82,6 +86,14 @@ public class ComissaoPagamento {
     
     public void setProfissionalId(Long profissionalId) {
         this.profissionalId = profissionalId;
+    }
+    
+    public Long getAgendamentoId() {
+        return agendamentoId;
+    }
+    
+    public void setAgendamentoId(Long agendamentoId) {
+        this.agendamentoId = agendamentoId;
     }
     
     public LocalDate getDataPagamento() {
@@ -168,5 +180,29 @@ public class ComissaoPagamento {
         this.valorComissao = novoValorPago;
         this.status = StatusPagamento.CANCELADO;
         this.paid = false;
+    }
+
+    public void cancelarComissao() {
+        if (this.status == StatusPagamento.CANCELADO) {
+            throw new IllegalStateException("Esta comissão já está cancelada");
+        }
+        this.status = StatusPagamento.CANCELADO;
+        this.paid = false;
+    }
+
+    public void reativarComissao() {
+        if (this.status == StatusPagamento.PAGO) {
+            throw new IllegalStateException("Esta comissão já está paga");
+        }
+        this.status = StatusPagamento.PAGO;
+        this.paid = true;
+    }
+
+    public boolean pertenceAoPeriodo(LocalDate dataInicio, LocalDate dataFim) {
+        return !this.dataPagamento.isBefore(dataInicio) && !this.dataPagamento.isAfter(dataFim);
+    }
+
+    public Double getValorEfetivo() {
+        return this.status == StatusPagamento.PAGO ? this.valorComissao : 0.0;
     }
 }
