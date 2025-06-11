@@ -169,6 +169,17 @@ public class ComissaoService {
             // Calcular valor já pago no período
             double valorJaPago = comissaoPagamentoRepository.calcularValorTotalPagoNoPeriodo(profissionalId, inicio, fim);
             
+            // Buscar o pagamento mais recente do período
+            List<ComissaoPagamento> pagamentos = comissaoPagamentoRepository.findByProfissionalIdAndPeriodo(profissionalId, inicio, fim);
+            Long paymentId = null;
+            String status = "PENDENTE";
+            
+            if (!pagamentos.isEmpty()) {
+                ComissaoPagamento ultimoPagamento = pagamentos.get(pagamentos.size() - 1);
+                paymentId = ultimoPagamento.getId();
+                status = ultimoPagamento.getStatus().toString();
+            }
+            
             logger.info("Comissão de agendamentos normais: {} bruto, {} líquido, {} desconto", 
                     resultadoNormal.valorComissao, resultadoNormal.valorComissaoLiquida, resultadoNormal.valorDescontoTaxa);
             logger.info("Comissão de agendamentos fixos: {} bruto, {} líquido, {} desconto", 
@@ -186,7 +197,9 @@ public class ComissaoService {
                 resultadoNormal.valorComissao,
                 resultadoFixo.valorComissao,
                 descontoTaxaTotal,
-                valorJaPago);
+                valorJaPago,
+                paymentId,
+                status);
         } catch (Exception e) {
             logger.error("❌ Erro ao calcular comissão: {}", e.getMessage(), e);
             throw new RuntimeException("Erro ao calcular comissão: " + e.getMessage());
