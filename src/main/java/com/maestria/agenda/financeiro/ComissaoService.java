@@ -195,34 +195,36 @@ public class ComissaoService {
     /**
      * Registra um pagamento de comissão
      */
-    public ComissaoResponseDTO registrarPagamentoComissao(Long profissionalId, LocalDate dataPagamento, 
-            Double valorPago, String observacao) {
-        try {
-            // Validar profissional
-            Profissional profissional = profissionalRepository.findById(profissionalId)
-                .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+    public ComissaoResponseDTO registrarPagamentoComissao(Long profissionalId, LocalDate dataPagamento, Double valorPago, String observacao) {
+        logger.info("💰 Registrando pagamento de comissão para profissional {} no valor de {} em {}", 
+            profissionalId, valorPago, dataPagamento);
             
-            // Criar registro de pagamento
-            LocalDate periodoInicio = dataPagamento.withDayOfMonth(1);
-            LocalDate periodoFim = dataPagamento.withDayOfMonth(dataPagamento.lengthOfMonth());
-            ComissaoPagamento pagamento = new ComissaoPagamento(
-                profissionalId,
-                dataPagamento,
-                valorPago,
-                observacao,
-                periodoInicio,
-                periodoFim
-            );
+        Profissional profissional = profissionalRepository.findById(profissionalId)
+            .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
             
-            comissaoPagamentoRepository.save(pagamento);
-            
-            // Calcular comissão atualizada para o mês atual
-            return calcularComissaoPorPeriodo(profissionalId, periodoInicio, periodoFim);
-            
-        } catch (Exception e) {
-            logger.error("❌ Erro ao registrar pagamento de comissão: {}", e.getMessage(), e);
-            throw new RuntimeException("Erro ao registrar pagamento de comissão: " + e.getMessage());
-        }
+        LocalDate periodoInicio = dataPagamento.withDayOfMonth(1);
+        LocalDate periodoFim = dataPagamento.withDayOfMonth(dataPagamento.lengthOfMonth());
+        
+        // Calcular a comissão do período
+        ComissaoResponseDTO comissao = calcularComissaoPorPeriodo(profissionalId, periodoInicio, periodoFim);
+        
+        // Criar o registro de pagamento
+        ComissaoPagamento pagamento = new ComissaoPagamento(
+            profissionalId,
+            dataPagamento,
+            valorPago,
+            observacao,
+            periodoInicio,
+            periodoFim
+        );
+        
+        // Definir o valor da comissão como o valor pago
+        pagamento.setValorComissao(valorPago);
+        
+        // Salvar o pagamento
+        comissaoPagamentoRepository.save(pagamento);
+        
+        return comissao;
     }
     
     /**

@@ -12,40 +12,47 @@ public class ComissaoPagamento {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(nullable = false)
+    @Column(name = "profissional_id", nullable = false)
     private Long profissionalId;
     
-    @Column(nullable = false)
+    @Column(name = "data_pagamento", nullable = false)
     private LocalDate dataPagamento;
     
-    @Column(nullable = false)
+    @Column(name = "valor_pago", nullable = false)
     private Double valorPago;
     
-    @Column(nullable = false)
-    private LocalDateTime dataCriacao = LocalDateTime.now();
+    @Column(name = "valor_comissao", nullable = false)
+    private Double valorComissao;
     
-    @Column
+    @Column(name = "observacao")
     private String observacao;
     
-    @Column(nullable = false)
-    private Boolean paid = true;
+    @Column(name = "paid", nullable = false)
+    private Boolean paid;
     
-    @Column(nullable = false)
+    @Column(name = "periodo_inicio", nullable = false)
     private LocalDate periodoInicio;
     
-    @Column(nullable = false)
+    @Column(name = "periodo_fim", nullable = false)
     private LocalDate periodoFim;
     
+    @Column(name = "data_criacao", nullable = false)
+    private LocalDateTime dataCriacao;
+    
     // Construtor padrão para JPA
-    public ComissaoPagamento() {}
+    public ComissaoPagamento() {
+        this.paid = true;
+        this.dataCriacao = LocalDateTime.now();
+    }
     
     public ComissaoPagamento(Long profissionalId, LocalDate dataPagamento, Double valorPago, String observacao, 
             LocalDate periodoInicio, LocalDate periodoFim) {
+        this();
         this.profissionalId = profissionalId;
         this.dataPagamento = dataPagamento;
         this.valorPago = valorPago;
+        this.valorComissao = valorPago; // Inicialmente o valor da comissão é igual ao valor pago
         this.observacao = observacao;
-        this.paid = true;
         this.periodoInicio = periodoInicio;
         this.periodoFim = periodoFim;
     }
@@ -53,6 +60,10 @@ public class ComissaoPagamento {
     // Getters e setters
     public Long getId() {
         return id;
+    }
+    
+    public void setId(Long id) {
+        this.id = id;
     }
     
     public Long getProfissionalId() {
@@ -79,8 +90,12 @@ public class ComissaoPagamento {
         this.valorPago = valorPago;
     }
     
-    public LocalDateTime getDataCriacao() {
-        return dataCriacao;
+    public Double getValorComissao() {
+        return valorComissao;
+    }
+    
+    public void setValorComissao(Double valorComissao) {
+        this.valorComissao = valorComissao;
     }
     
     public String getObservacao() {
@@ -113,5 +128,13 @@ public class ComissaoPagamento {
     
     public void setPeriodoFim(LocalDate periodoFim) {
         this.periodoFim = periodoFim;
+    }
+    
+    public LocalDateTime getDataCriacao() {
+        return dataCriacao;
+    }
+    
+    public void setDataCriacao(LocalDateTime dataCriacao) {
+        this.dataCriacao = dataCriacao;
     }
 }
