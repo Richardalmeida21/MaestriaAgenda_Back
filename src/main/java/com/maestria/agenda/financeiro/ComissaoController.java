@@ -31,44 +31,48 @@ public class ComissaoController {
 
     /**
      * Endpoint para listar todas as comissões (apenas ADMIN)
-     * Retorna comissões de todos os profissionais para o mês atual
+     * Retorna comissões de todos os profissionais para o período especificado
      */
     @GetMapping("/comissoes")
-public ResponseEntity<?> listarComissoes(
-        @RequestParam(required = false) String dataInicio,
-        @RequestParam(required = false) String dataFim,
-        @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<?> listarComissoes(
+            @RequestParam(required = false) String dataInicio,
+            @RequestParam(required = false) String dataFim,
+            @AuthenticationPrincipal UserDetails userDetails) {
         
-    logger.info("🔍 Solicitando listagem de comissões por {} no período de {} a {}", 
-        userDetails.getUsername(), dataInicio, dataFim);
+        logger.info("🔍 Solicitando listagem de comissões por {} no período de {} a {}", 
+            userDetails.getUsername(), dataInicio, dataFim);
 
-    // Verificar permissão ADMIN
-    if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-        logger.warn("❌ Tentativa de acesso não autorizado às comissões por {}", userDetails.getUsername());
-        return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode acessar todas as comissões.");
-    }
-
-    try {
-        LocalDate inicio;
-        LocalDate fim;
-        
-        // Use provided dates or default to current month
-        if (dataInicio != null && dataFim != null) {
-            inicio = LocalDate.parse(dataInicio);
-            fim = LocalDate.parse(dataFim);
-        } else {
-            // Define o mês atual como período padrão
-            inicio = LocalDate.now().withDayOfMonth(1);
-            fim = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
+        // Verificar permissão ADMIN
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            logger.warn("❌ Tentativa de acesso não autorizado às comissões por {}", userDetails.getUsername());
+            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode acessar todas as comissões.");
         }
-        
-        List<ComissaoResponseDTO> comissoes = comissaoService.listarTodasComissoesNoPeriodo(inicio, fim);
-        return ResponseEntity.ok(comissoes);
-    } catch (Exception e) {
-        logger.error("❌ Erro ao listar comissões: {}", e.getMessage(), e);
-        return ResponseEntity.status(500).body("Erro ao listar comissões: " + e.getMessage());
+
+        try {
+            LocalDate inicio;
+            LocalDate fim;
+            
+            // Use provided dates or default to current month
+            if (dataInicio != null && dataFim != null) {
+                inicio = LocalDate.parse(dataInicio);
+                fim = LocalDate.parse(dataFim);
+            } else {
+                // Define o mês atual como período padrão
+                inicio = LocalDate.now().withDayOfMonth(1);
+                fim = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
+            }
+            
+            List<Profissional> profissionais = profissionalRepository.findAll();
+            List<ComissaoResponseDTO> comissoes = profissionais.stream()
+                .map(prof -> comissaoService.calcularComissaoPorPeriodo(prof.getId(), inicio, fim))
+                .toList();
+                
+            return ResponseEntity.ok(comissoes);
+        } catch (Exception e) {
+            logger.error("❌ Erro ao listar comissões: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao listar comissões: " + e.getMessage());
+        }
     }
-}
 
     /**
      * Endpoint para calcular comissão de um profissional específico por período
@@ -114,41 +118,79 @@ public ResponseEntity<?> listarComissoes(
     }
     
     /**
-     * Endpoint para marcar uma comissão como paga ou não paga
+     * Endpoint para registrar um pagamento de comissão
      * Apenas administradores podem usar este endpoint
      */
-    @PutMapping("/comissoes/profissional/{id}/paid")
-    public ResponseEntity<?> marcarComissaoComoPaga(
+    @PostMapping("/comissoes/profissional/{id}/pagamento")
+    public ResponseEntity<?> registrarPagamentoComissao(
             @PathVariable Long id,
-            @RequestParam String dataInicio,
-            @RequestParam String dataFim,
-            @RequestParam boolean paid,
+            @RequestParam String dataPagamento,
+            @RequestParam Double valorPago,
+            @RequestParam(required = false) String observacao,
             @AuthenticationPrincipal UserDetails userDetails) {
             
-        logger.info("🔄 Marcando comissão do profissional {} entre {} e {} como {} por {}",
-                id, dataInicio, dataFim, paid ? "PAGA" : "NÃO PAGA", userDetails.getUsername());
+        logger.info("💰 Registrando pagamento de comissão para profissional {} no valor de {} em {} por {}",
+                id, valorPago, dataPagamento, userDetails.getUsername());
                 
         // Verificar se é ADMIN
         if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-            logger.warn("❌ Tentativa não autorizada de atualizar status de pagamento por {}", 
+            logger.warn("❌ Tentativa não autorizada de registrar pagamento por {}", 
                     userDetails.getUsername());
-            return ResponseEntity.status(403).body("Acesso negado. Apenas administradores podem atualizar status de pagamento.");
+            return ResponseEntity.status(403).body("Acesso negado. Apenas administradores podem registrar pagamentos.");
+        }
+        
+        try {
+            LocalDate data = LocalDate.parse(dataPagamento);
+            
+            ComissaoResponseDTO comissao = comissaoService.registrarPagamentoComissao(id, data, valorPago, observacao);
+            
+            return ResponseEntity.ok(comissao);
+        } catch (Exception e) {
+            logger.error("❌ Erro ao registrar pagamento de comissão: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao registrar pagamento: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Endpoint para listar os pagamentos de comissão de um profissional em um período
+     * Permite acesso pelo ADMIN ou pelo próprio profissional
+     */
+    @GetMapping("/comissoes/profissional/{id}/pagamentos")
+    public ResponseEntity<?> listarPagamentosComissao(
+            @PathVariable Long id,
+            @RequestParam String dataInicio,
+            @RequestParam String dataFim,
+            @AuthenticationPrincipal UserDetails userDetails) {
+            
+        logger.info("🔍 Solicitando pagamentos de comissão do profissional {} entre {} e {} por {}",
+                id, dataInicio, dataFim, userDetails.getUsername());
+                
+        // Verificação de permissão
+        boolean isAdmin = userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"));
+        boolean isProfissionalAcessandoPropriosDados = false;
+
+        if (!isAdmin) {
+            Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
+            if (profissional != null && profissional.getId() == id) {
+                isProfissionalAcessandoPropriosDados = true;
+            }
+        }
+
+        if (!isAdmin && !isProfissionalAcessandoPropriosDados) {
+            logger.warn("❌ Acesso negado para visualizar pagamentos do profissional {}", id);
+            return ResponseEntity.status(403).body("Acesso negado. Você só pode ver seus próprios pagamentos.");
         }
         
         try {
             LocalDate inicio = LocalDate.parse(dataInicio);
             LocalDate fim = LocalDate.parse(dataFim);
             
-            // O serviço já fará todas as verificações de períodos sobrepostos e status
-            ComissaoResponseDTO comissao = comissaoService.atualizarStatusPagamento(id, inicio, fim, paid);
+            List<ComissaoPagamento> pagamentos = comissaoService.listarPagamentosPorPeriodo(id, inicio, fim);
             
-            return ResponseEntity.ok(comissao);
-        } catch (RuntimeException e) {
-            logger.warn("⚠️ Erro de validação ao atualizar status de pagamento: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.ok(pagamentos);
         } catch (Exception e) {
-            logger.error("❌ Erro ao atualizar status de pagamento da comissão: {}", e.getMessage(), e);
-            return ResponseEntity.status(500).body("Erro ao atualizar status de pagamento: " + e.getMessage());
+            logger.error("❌ Erro ao listar pagamentos: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao listar pagamentos: " + e.getMessage());
         }
     }
 }
