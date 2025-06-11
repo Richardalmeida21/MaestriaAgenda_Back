@@ -63,6 +63,9 @@ public class AgendamentoFixo {
     @Column(name = "forma_pagamento")
     private String formaPagamento;
 
+    @Column(nullable = false)
+    private Boolean ativo = true;
+
     public String getFormaPagamento() {
         return formaPagamento;
     }
@@ -178,6 +181,14 @@ public class AgendamentoFixo {
 
     public void setObservacao(String observacao) {
         this.observacao = observacao;
+    }
+
+    public Boolean getAtivo() {
+        return ativo;
+    }
+
+    public void setAtivo(Boolean ativo) {
+        this.ativo = ativo;
     }
 
     public Double getValor() {
