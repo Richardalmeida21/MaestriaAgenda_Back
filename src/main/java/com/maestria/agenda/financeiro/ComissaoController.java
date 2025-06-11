@@ -12,6 +12,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -230,6 +231,74 @@ public class ComissaoController {
         } catch (RuntimeException e) {
             logger.error("❌ Erro ao cancelar pagamento de comissão: {}", e.getMessage(), e);
             return ResponseEntity.status(500).body("Erro ao cancelar pagamento: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Endpoint para cancelar múltiplos pagamentos de comissão
+     * Apenas ADMIN pode cancelar pagamentos
+     */
+    @PostMapping("/comissoes/pagamentos/cancelar")
+    public ResponseEntity<?> cancelarMultiplosPagamentos(
+            @RequestBody List<Long> ids,
+            @AuthenticationPrincipal UserDetails userDetails) {
+            
+        logger.info("❌ Cancelando múltiplos pagamentos de comissão: {} por {}", ids, userDetails.getUsername());
+        
+        // Verificar se é ADMIN
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            logger.warn("❌ Tentativa não autorizada de cancelar pagamentos por {}", 
+                    userDetails.getUsername());
+            return ResponseEntity.status(403).body("Acesso negado. Apenas administradores podem cancelar pagamentos.");
+        }
+        
+        try {
+            List<ComissaoResponseDTO> resultados = new ArrayList<>();
+            for (Long id : ids) {
+                try {
+                    ComissaoResponseDTO comissao = comissaoService.cancelarPagamentoComissao(id);
+                    resultados.add(comissao);
+                } catch (Exception e) {
+                    logger.error("❌ Erro ao cancelar pagamento {}: {}", id, e.getMessage());
+                }
+            }
+            return ResponseEntity.ok(resultados);
+        } catch (Exception e) {
+            logger.error("❌ Erro ao cancelar pagamentos: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao cancelar pagamentos: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Endpoint para limpar pagamentos inválidos (zerados) de um profissional
+     * Apenas ADMIN pode usar este endpoint
+     */
+    @PostMapping("/comissoes/profissional/{id}/limpar-pagamentos")
+    public ResponseEntity<?> limparPagamentosInvalidos(
+            @PathVariable Long id,
+            @RequestParam String dataInicio,
+            @RequestParam String dataFim,
+            @AuthenticationPrincipal UserDetails userDetails) {
+            
+        logger.info("🧹 Limpando pagamentos inválidos do profissional {} entre {} e {} por {}", 
+            id, dataInicio, dataFim, userDetails.getUsername());
+        
+        // Verificar se é ADMIN
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            logger.warn("❌ Tentativa não autorizada de limpar pagamentos por {}", 
+                    userDetails.getUsername());
+            return ResponseEntity.status(403).body("Acesso negado. Apenas administradores podem limpar pagamentos.");
+        }
+        
+        try {
+            LocalDate inicio = LocalDate.parse(dataInicio);
+            LocalDate fim = LocalDate.parse(dataFim);
+            
+            List<ComissaoResponseDTO> resultados = comissaoService.limparPagamentosInvalidos(id, inicio, fim);
+            return ResponseEntity.ok(resultados);
+        } catch (Exception e) {
+            logger.error("❌ Erro ao limpar pagamentos: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao limpar pagamentos: " + e.getMessage());
         }
     }
 }

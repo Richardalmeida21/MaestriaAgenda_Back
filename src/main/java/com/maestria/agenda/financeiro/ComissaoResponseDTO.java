@@ -37,7 +37,7 @@ public class ComissaoResponseDTO {
         this.comissaoAgendamentosFixos = comissaoAgendamentosFixos;
         this.descontoTaxa = descontoTaxa;
         this.valorPago = valorPago;
-        this.valorPendente = comissaoLiquida - valorPago;
+        this.valorPendente = Math.max(0, comissaoLiquida - valorPago);
         this.pendente = valorPendente > 0;
     }
 

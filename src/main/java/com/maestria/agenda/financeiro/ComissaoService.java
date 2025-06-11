@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.ArrayList;
 
 @Service
 public class ComissaoService {
@@ -203,6 +204,22 @@ public class ComissaoService {
         Profissional profissional = profissionalRepository.findById(profissionalId)
             .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
         
+        // Validar valor do pagamento
+        if (valorPago <= 0) {
+            throw new RuntimeException("O valor do pagamento deve ser maior que zero");
+        }
+        
+        // Verificar se já existe pagamento no período
+        List<ComissaoPagamento> pagamentosExistentes = comissaoPagamentoRepository
+            .findByProfissionalIdAndPeriodo(profissionalId, periodoInicio, periodoFim);
+            
+        for (ComissaoPagamento pagamento : pagamentosExistentes) {
+            if (pagamento.getStatus() == ComissaoPagamento.StatusPagamento.PAGO && 
+                pagamento.getValorPago() > 0) {
+                throw new RuntimeException("Já existe um pagamento registrado para este período");
+            }
+        }
+        
         // Calcular a comissão do período
         ComissaoResponseDTO comissao = calcularComissaoPorPeriodo(profissionalId, periodoInicio, periodoFim);
         
@@ -270,5 +287,32 @@ public class ComissaoService {
             pagamento.getPeriodoInicio(),
             pagamento.getPeriodoFim()
         );
+    }
+
+    /**
+     * Limpa pagamentos inválidos (zerados) de um profissional em um período
+     */
+    public List<ComissaoResponseDTO> limparPagamentosInvalidos(Long profissionalId, LocalDate inicio, LocalDate fim) {
+        logger.info("🧹 Limpando pagamentos inválidos do profissional {} entre {} e {}", 
+            profissionalId, inicio, fim);
+            
+        List<ComissaoPagamento> pagamentos = comissaoPagamentoRepository
+            .findByProfissionalIdAndPeriodo(profissionalId, inicio, fim);
+            
+        List<ComissaoResponseDTO> resultados = new ArrayList<>();
+        
+        for (ComissaoPagamento pagamento : pagamentos) {
+            if (pagamento.getValorPago() == 0 || pagamento.getValorPago() == null) {
+                try {
+                    ComissaoResponseDTO comissao = cancelarPagamentoComissao(pagamento.getId());
+                    resultados.add(comissao);
+                } catch (Exception e) {
+                    logger.error("❌ Erro ao cancelar pagamento inválido {}: {}", 
+                        pagamento.getId(), e.getMessage());
+                }
+            }
+        }
+        
+        return resultados;
     }
 }

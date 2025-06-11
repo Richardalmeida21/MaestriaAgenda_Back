@@ -27,7 +27,8 @@ public interface ComissaoPagamentoRepository extends JpaRepository<ComissaoPagam
     @Query("SELECT COALESCE(SUM(cp.valorPago), 0) FROM ComissaoPagamento cp " +
            "WHERE cp.profissionalId = :profissionalId " +
            "AND cp.dataPagamento BETWEEN :inicio AND :fim " +
-           "AND cp.status = 'PAGO'")
+           "AND cp.status = 'PAGO' " +
+           "AND cp.valorPago > 0")
     Double calcularValorTotalPagoNoPeriodo(
         @Param("profissionalId") Long profissionalId,
         @Param("inicio") LocalDate inicio,
