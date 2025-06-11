@@ -228,9 +228,34 @@ public class ComissaoService {
         }
     }
     
-    /**
-     * Verifica se existe algum período de pagamento que se sobreponha ao período consultado
-     */
+    private double calcularValorJaPagoNoPeriodo(Long profissionalId, LocalDate inicio, LocalDate fim) {
+        List<ComissaoPagamento> pagamentosComSobreposicao = comissaoPagamentoRepository
+            .findPaidPeriodsByProfissionalIdWithOverlap(profissionalId, inicio, fim);
+            
+        double valorTotalPago = 0.0;
+        
+        for (ComissaoPagamento pagamento : pagamentosComSobreposicao) {
+            if (pagamento.getPaid()) {
+                // Calcular a sobreposição de dias
+                LocalDate inicioSobreposicao = pagamento.getPeriodoInicio().isAfter(inicio) ? 
+                    pagamento.getPeriodoInicio() : inicio;
+                LocalDate fimSobreposicao = pagamento.getPeriodoFim().isBefore(fim) ? 
+                    pagamento.getPeriodoFim() : fim;
+                    
+                // Calcular a proporção do valor pago
+                long diasTotal = java.time.temporal.ChronoUnit.DAYS.between(
+                    pagamento.getPeriodoInicio(), pagamento.getPeriodoFim()) + 1;
+                long diasSobreposicao = java.time.temporal.ChronoUnit.DAYS.between(
+                    inicioSobreposicao, fimSobreposicao) + 1;
+                    
+                double proporcao = (double) diasSobreposicao / diasTotal;
+                valorTotalPago += pagamento.getValorComissao() * proporcao;
+            }
+        }
+        
+        return valorTotalPago;
+    }
+    
     private boolean verificarSePeriodoPossuiPagamento(Long profissionalId, LocalDate inicio, LocalDate fim) {
         List<ComissaoPagamento> pagamentosComSobreposicao = comissaoPagamentoRepository
             .findPaidPeriodsByProfissionalIdWithOverlap(profissionalId, inicio, fim);
@@ -279,13 +304,19 @@ public class ComissaoService {
             double descontoTaxaTotal = resultadoNormal.valorDescontoTaxa + resultadoFixo.valorDescontoTaxa;
             double comissaoLiquida = comissaoTotal - descontoTaxaTotal;
             
+            // 4. Calcular valor já pago no período
+            double valorJaPago = calcularValorJaPagoNoPeriodo(profissionalId, inicio, fim);
+            
+            // 5. Subtrair o valor já pago da comissão líquida
+            comissaoLiquida -= valorJaPago;
+            
             logger.info("RESUMO DA COMISSÃO DE {}", profissional.getNome());
             logger.info("Comissão de agendamentos normais: {} bruto, {} líquido, {} desconto", 
                     resultadoNormal.valorComissao, resultadoNormal.valorComissaoLiquida, resultadoNormal.valorDescontoTaxa);
             logger.info("Comissão de agendamentos fixos: {} bruto, {} líquido, {} desconto", 
                     resultadoFixo.valorComissao, resultadoFixo.valorComissaoLiquida, resultadoFixo.valorDescontoTaxa);
-            logger.info("Comissão total: {} bruto, {} líquido, {} desconto", 
-                    comissaoTotal, comissaoLiquida, descontoTaxaTotal);
+            logger.info("Comissão total: {} bruto, {} líquido, {} desconto, {} já pago", 
+                    comissaoTotal, comissaoLiquida, descontoTaxaTotal, valorJaPago);
             
             // Verificar se já existe registro de pagamento para este período e profissional
             boolean isPaid = false;
