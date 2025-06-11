@@ -1,0 +1,106 @@
+DOCUMENTAÇÃO - BAIXA EM AGENDAMENTO
+===================================
+
+ENDPOINT
+--------
+PUT /agendamento/{id}/baixa
+
+PARÂMETROS
+----------
+1. Path Parameter:
+   - id: ID do agendamento (número)
+
+2. Query Parameter:
+   - formaPagamento: Tipo de pagamento (enum PagamentoTipo)
+     Valores possíveis:
+     * PIX
+     * DINHEIRO
+     * DEBITO
+     * CREDITO_1X
+     * CREDITO_2X
+     * CREDITO_3X
+     * CREDITO_4X
+     * CREDITO_5X
+     * CREDITO_6X
+     * CREDITO_7X
+     * CREDITO_8X
+     * CREDITO_9X
+     * CREDITO_10X
+
+HEADERS
+-------
+1. Authorization: Bearer {token}
+   - O token JWT deve ser enviado no header
+   - Exemplo: "Bearer eyJhbGciOiJIUzI1NiJ9..."
+
+PERMISSÕES
+----------
+- ADMIN: pode dar baixa em qualquer agendamento
+- PROFISSIONAL: só pode dar baixa em seus próprios agendamentos
+
+EXEMPLO DE REQUISIÇÃO
+--------------------
+```javascript
+// Exemplo usando Axios
+axios.put(`/agendamento/${id}/baixa?formaPagamento=PIX`, null, {
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  }
+});
+```
+
+RESPOSTAS
+---------
+1. Sucesso (200 OK):
+   ```json
+   "Baixa realizada com sucesso."
+   ```
+
+2. Erro de Permissão (403 Forbidden):
+   ```json
+   "Acesso negado. Você só pode dar baixa nos seus próprios agendamentos."
+   ```
+
+3. Agendamento já pago (400 Bad Request):
+   ```json
+   "Agendamento já está marcado como pago."
+   ```
+
+4. Agendamento não encontrado (404 Not Found):
+   ```json
+   "Agendamento não encontrado"
+   ```
+
+5. Erro interno (500 Internal Server Error):
+   ```json
+   "Erro ao dar baixa no agendamento: {mensagem de erro}"
+   ```
+
+ALTERAÇÕES NECESSÁRIAS NO FRONTEND
+---------------------------------
+1. Mudar o método da requisição de POST para PUT
+2. Mudar a URL de `/agendamento/{id}/pagar` para `/agendamento/{id}/baixa`
+3. Enviar a forma de pagamento como query parameter ao invés de body
+4. Remover o campo "status" do body da requisição, pois não é necessário
+
+EXEMPLO DE CÓDIGO CORRIGIDO
+---------------------------
+```javascript
+// Antes (incorreto)
+axios.post(`/agendamento/${id}/pagar`, {
+  formaPagamento: "PIX",
+  status: "AGENDADO"
+});
+
+// Depois (correto)
+axios.put(`/agendamento/${id}/baixa?formaPagamento=PIX`);
+```
+
+OBSERVAÇÕES
+----------
+1. O token JWT deve estar válido e não expirado
+2. O usuário deve ter a role ADMIN ou PROFISSIONAL
+3. Se for PROFISSIONAL, só pode dar baixa em seus próprios agendamentos
+4. A forma de pagamento é obrigatória e deve ser um dos valores válidos do enum
+5. Não é necessário enviar body na requisição 

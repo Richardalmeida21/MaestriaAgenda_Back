@@ -43,9 +43,6 @@ public class AgendamentoFixo {
         if (diaDoMes == null) {
             diaDoMes = 1;
         }
-        if (formaPagamento == null || formaPagamento.trim().isEmpty()) {
-            throw new IllegalArgumentException("A forma de pagamento é obrigatória.");
-        }
     }
 
     @Column(name = "intervalo_repeticao")
@@ -63,7 +60,7 @@ public class AgendamentoFixo {
     @Column(columnDefinition = "TEXT")
     private String observacao;
 
-    @Column(name = "forma_pagamento", nullable = false)
+    @Column(name = "forma_pagamento")
     private String formaPagamento;
 
     public String getFormaPagamento() {

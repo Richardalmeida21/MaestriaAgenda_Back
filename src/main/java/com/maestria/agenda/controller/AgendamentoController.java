@@ -93,10 +93,10 @@ public class AgendamentoController {
             agendamentoFixo.setHora(dados.hora());
             agendamentoFixo.setObservacao(dados.observacao());
 
-            if (dados.tipoRepeticao() == AgendamentoFixo.TipoRepeticao.MENSAL && dados.diaDoMes() == null) {
-                agendamentoFixo.setDiaDoMes(dados.valorRepeticao());
+            if (dados.tipoRepeticao() == AgendamentoFixo.TipoRepeticao.MENSAL) {
+                agendamentoFixo.setDiaDoMes(dados.diaDoMes() != null ? dados.diaDoMes() : dados.valorRepeticao());
             } else {
-                agendamentoFixo.setDiaDoMes(dados.diaDoMes());
+                agendamentoFixo.setDiaDoMes(1);
             }
 
             if (dados.formaPagamento() == null || dados.formaPagamento().isEmpty()) {
