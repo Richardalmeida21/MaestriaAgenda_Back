@@ -203,22 +203,21 @@ public class ComissaoService {
                 .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
             
             // Criar registro de pagamento
+            LocalDate periodoInicio = dataPagamento.withDayOfMonth(1);
             LocalDate periodoFim = dataPagamento.withDayOfMonth(dataPagamento.lengthOfMonth());
             ComissaoPagamento pagamento = new ComissaoPagamento(
                 profissionalId,
                 dataPagamento,
                 valorPago,
                 observacao,
+                periodoInicio,
                 periodoFim
             );
             
             comissaoPagamentoRepository.save(pagamento);
             
             // Calcular comissão atualizada para o mês atual
-            LocalDate inicioMes = dataPagamento.withDayOfMonth(1);
-            LocalDate fimMes = dataPagamento.withDayOfMonth(dataPagamento.lengthOfMonth());
-            
-            return calcularComissaoPorPeriodo(profissionalId, inicioMes, fimMes);
+            return calcularComissaoPorPeriodo(profissionalId, periodoInicio, periodoFim);
             
         } catch (Exception e) {
             logger.error("❌ Erro ao registrar pagamento de comissão: {}", e.getMessage(), e);

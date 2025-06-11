@@ -142,8 +142,12 @@ public class ComissaoController {
             String dataPagamentoStr = (String) payload.get("dataPagamento");
             Double valorPago = ((Number) payload.get("valorPago")).doubleValue();
             String observacao = (String) payload.get("observacao");
+            String periodoInicioStr = (String) payload.get("periodoInicio");
+            String periodoFimStr = (String) payload.get("periodoFim");
             
             LocalDate data = LocalDate.parse(dataPagamentoStr);
+            LocalDate periodoInicio = LocalDate.parse(periodoInicioStr);
+            LocalDate periodoFim = LocalDate.parse(periodoFimStr);
             
             ComissaoResponseDTO comissao = comissaoService.registrarPagamentoComissao(id, data, valorPago, observacao);
             
