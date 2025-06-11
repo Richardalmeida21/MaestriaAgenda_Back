@@ -218,8 +218,9 @@ public class ComissaoService {
             periodoFim
         );
         
-        // Definir o valor da comissão como o valor pago
+        // Definir o valor da comissão como o valor pago e garantir que paid seja true
         pagamento.setValorComissao(valorPago);
+        pagamento.setPaid(true);
         
         // Salvar o pagamento
         comissaoPagamentoRepository.save(pagamento);
