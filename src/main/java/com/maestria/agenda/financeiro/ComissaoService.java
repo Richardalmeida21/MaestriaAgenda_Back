@@ -193,20 +193,23 @@ public class ComissaoService {
     }
     
     /**
-     * Registra um pagamento de comissão
+     * Registra um pagamento de comissão para um período específico
      */
-    public ComissaoResponseDTO registrarPagamentoComissao(Long profissionalId, LocalDate dataPagamento, Double valorPago, String observacao) {
+    public ComissaoResponseDTO registrarPagamentoComissao(Long profissionalId, LocalDate dataPagamento, 
+            Double valorPago, String observacao, LocalDate periodoInicio, LocalDate periodoFim) {
         logger.info("💰 Registrando pagamento de comissão para profissional {} no valor de {} em {}", 
             profissionalId, valorPago, dataPagamento);
             
         Profissional profissional = profissionalRepository.findById(profissionalId)
             .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
-            
-        LocalDate periodoInicio = dataPagamento.withDayOfMonth(1);
-        LocalDate periodoFim = dataPagamento.withDayOfMonth(dataPagamento.lengthOfMonth());
         
         // Calcular a comissão do período
         ComissaoResponseDTO comissao = calcularComissaoPorPeriodo(profissionalId, periodoInicio, periodoFim);
+        
+        // Verificar se o valor pago é válido
+        if (valorPago > comissao.getValorPendente()) {
+            throw new RuntimeException("Valor pago não pode ser maior que o valor pendente");
+        }
         
         // Criar o registro de pagamento
         ComissaoPagamento pagamento = new ComissaoPagamento(
@@ -225,6 +228,15 @@ public class ComissaoService {
         // Salvar o pagamento
         comissaoPagamentoRepository.save(pagamento);
         
+        // Recalcular a comissão para retornar os valores atualizados
+        return calcularComissaoPorPeriodo(profissionalId, periodoInicio, periodoFim);
+    }
+
+    /**
+     * Calcula a comissão pendente para um profissional em um período específico
+     */
+    public ComissaoResponseDTO calcularComissaoPendente(Long profissionalId, LocalDate inicio, LocalDate fim) {
+        ComissaoResponseDTO comissao = calcularComissaoPorPeriodo(profissionalId, inicio, fim);
         return comissao;
     }
     
