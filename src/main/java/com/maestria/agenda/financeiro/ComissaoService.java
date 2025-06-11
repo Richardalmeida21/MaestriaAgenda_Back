@@ -246,4 +246,29 @@ public class ComissaoService {
     public List<ComissaoPagamento> listarPagamentosPorPeriodo(Long profissionalId, LocalDate inicio, LocalDate fim) {
         return comissaoPagamentoRepository.findByProfissionalIdAndPeriodo(profissionalId, inicio, fim);
     }
+
+    /**
+     * Cancela um pagamento de comissão
+     */
+    public ComissaoResponseDTO cancelarPagamentoComissao(Long pagamentoId) {
+        logger.info("❌ Cancelando pagamento de comissão ID: {}", pagamentoId);
+        
+        ComissaoPagamento pagamento = comissaoPagamentoRepository.findById(pagamentoId)
+            .orElseThrow(() -> new RuntimeException("Pagamento não encontrado"));
+            
+        if (pagamento.getStatus() == ComissaoPagamento.StatusPagamento.CANCELADO) {
+            throw new RuntimeException("Este pagamento já está cancelado");
+        }
+        
+        // Cancelar o pagamento
+        pagamento.setStatus(ComissaoPagamento.StatusPagamento.CANCELADO);
+        comissaoPagamentoRepository.save(pagamento);
+        
+        // Recalcular a comissão para retornar os valores atualizados
+        return calcularComissaoPorPeriodo(
+            pagamento.getProfissionalId(),
+            pagamento.getPeriodoInicio(),
+            pagamento.getPeriodoFim()
+        );
+    }
 }

@@ -22,10 +22,12 @@ public interface ComissaoPagamentoRepository extends JpaRepository<ComissaoPagam
         
     /**
      * Calcula o valor total pago em comissões para um profissional em um período específico
+     * Considera apenas pagamentos não cancelados
      */
     @Query("SELECT COALESCE(SUM(cp.valorPago), 0) FROM ComissaoPagamento cp " +
            "WHERE cp.profissionalId = :profissionalId " +
-           "AND cp.dataPagamento BETWEEN :inicio AND :fim")
+           "AND cp.dataPagamento BETWEEN :inicio AND :fim " +
+           "AND cp.status = 'PAGO'")
     Double calcularValorTotalPagoNoPeriodo(
         @Param("profissionalId") Long profissionalId,
         @Param("inicio") LocalDate inicio,

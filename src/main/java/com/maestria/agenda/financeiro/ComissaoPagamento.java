@@ -8,6 +8,11 @@ import java.time.LocalDateTime;
 @Table(name = "comissoes_pagamentos")
 public class ComissaoPagamento {
 
+    public enum StatusPagamento {
+        PAGO,
+        CANCELADO
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -30,6 +35,10 @@ public class ComissaoPagamento {
     @Column(name = "paid", nullable = false)
     private Boolean paid;
     
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private StatusPagamento status;
+    
     @Column(name = "periodo_inicio", nullable = false)
     private LocalDate periodoInicio;
     
@@ -42,6 +51,7 @@ public class ComissaoPagamento {
     // Construtor padrão para JPA
     public ComissaoPagamento() {
         this.paid = true;
+        this.status = StatusPagamento.PAGO;
         this.dataCriacao = LocalDateTime.now();
     }
     
@@ -136,5 +146,14 @@ public class ComissaoPagamento {
     
     public void setDataCriacao(LocalDateTime dataCriacao) {
         this.dataCriacao = dataCriacao;
+    }
+    
+    public StatusPagamento getStatus() {
+        return status;
+    }
+    
+    public void setStatus(StatusPagamento status) {
+        this.status = status;
+        this.paid = status == StatusPagamento.PAGO;
     }
 }

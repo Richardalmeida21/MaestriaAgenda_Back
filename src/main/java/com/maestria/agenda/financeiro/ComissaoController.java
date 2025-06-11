@@ -205,4 +205,31 @@ public class ComissaoController {
             return ResponseEntity.status(500).body("Erro ao listar pagamentos: " + e.getMessage());
         }
     }
+
+    /**
+     * Endpoint para cancelar um pagamento de comissão
+     * Apenas ADMIN pode cancelar pagamentos
+     */
+    @PostMapping("/comissoes/pagamento/{id}/cancelar")
+    public ResponseEntity<?> cancelarPagamentoComissao(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+            
+        logger.info("❌ Cancelando pagamento de comissão ID: {} por {}", id, userDetails.getUsername());
+        
+        // Verificar se é ADMIN
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            logger.warn("❌ Tentativa não autorizada de cancelar pagamento por {}", 
+                    userDetails.getUsername());
+            return ResponseEntity.status(403).body("Acesso negado. Apenas administradores podem cancelar pagamentos.");
+        }
+        
+        try {
+            ComissaoResponseDTO comissao = comissaoService.cancelarPagamentoComissao(id);
+            return ResponseEntity.ok(comissao);
+        } catch (RuntimeException e) {
+            logger.error("❌ Erro ao cancelar pagamento de comissão: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao cancelar pagamento: " + e.getMessage());
+        }
+    }
 }
