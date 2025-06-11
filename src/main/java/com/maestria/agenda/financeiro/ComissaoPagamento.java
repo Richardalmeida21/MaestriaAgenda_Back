@@ -16,36 +16,25 @@ public class ComissaoPagamento {
     private Long profissionalId;
     
     @Column(nullable = false)
-    private LocalDate periodoInicio;
+    private LocalDate dataPagamento;
     
     @Column(nullable = false)
-    private LocalDate periodoFim;
-    
-    @Column(nullable = false)
-    private Double valorComissao;
-    
-    @Column(nullable = false)
-    private Boolean paid = false;
+    private Double valorPago;
     
     @Column(nullable = false)
     private LocalDateTime dataCriacao = LocalDateTime.now();
     
     @Column
-    private LocalDateTime dataPagamento;
+    private String observacao;
     
     // Construtor padrão para JPA
     public ComissaoPagamento() {}
     
-    public ComissaoPagamento(Long profissionalId, LocalDate periodoInicio, LocalDate periodoFim, 
-                            Double valorComissao, Boolean paid) {
+    public ComissaoPagamento(Long profissionalId, LocalDate dataPagamento, Double valorPago, String observacao) {
         this.profissionalId = profissionalId;
-        this.periodoInicio = periodoInicio;
-        this.periodoFim = periodoFim;
-        this.valorComissao = valorComissao;
-        this.paid = paid;
-        if (paid) {
-            this.dataPagamento = LocalDateTime.now();
-        }
+        this.dataPagamento = dataPagamento;
+        this.valorPago = valorPago;
+        this.observacao = observacao;
     }
     
     // Getters e setters
@@ -61,52 +50,31 @@ public class ComissaoPagamento {
         this.profissionalId = profissionalId;
     }
     
-    public LocalDate getPeriodoInicio() {
-        return periodoInicio;
+    public LocalDate getDataPagamento() {
+        return dataPagamento;
     }
     
-    public void setPeriodoInicio(LocalDate periodoInicio) {
-        this.periodoInicio = periodoInicio;
+    public void setDataPagamento(LocalDate dataPagamento) {
+        this.dataPagamento = dataPagamento;
     }
     
-    public LocalDate getPeriodoFim() {
-        return periodoFim;
+    public Double getValorPago() {
+        return valorPago;
     }
     
-    public void setPeriodoFim(LocalDate periodoFim) {
-        this.periodoFim = periodoFim;
-    }
-    
-    public Double getValorComissao() {
-        return valorComissao;
-    }
-    
-    public void setValorComissao(Double valorComissao) {
-        this.valorComissao = valorComissao;
-    }
-    
-    public Boolean getPaid() {
-        return paid;
-    }
-    
-    public void setPaid(Boolean paid) {
-        this.paid = paid;
-        if (paid && dataPagamento == null) {
-            this.dataPagamento = LocalDateTime.now();
-        } else if (!paid) {
-            this.dataPagamento = null;
-        }
+    public void setValorPago(Double valorPago) {
+        this.valorPago = valorPago;
     }
     
     public LocalDateTime getDataCriacao() {
         return dataCriacao;
     }
     
-    public LocalDateTime getDataPagamento() {
-        return dataPagamento;
+    public String getObservacao() {
+        return observacao;
     }
     
-    public void setDataPagamento(LocalDateTime dataPagamento) {
-        this.dataPagamento = dataPagamento;
+    public void setObservacao(String observacao) {
+        this.observacao = observacao;
     }
 }

@@ -14,7 +14,8 @@ public class ComissaoResponseDTO {
     private Double comissaoAgendamentosNormais;
     private Double comissaoAgendamentosFixos;
     private Double descontoTaxa;
-    private boolean paid;
+    private Double valorPago;
+    private Double valorPendente;
     
     @JsonIgnore
     private boolean pendente;
@@ -25,7 +26,7 @@ public class ComissaoResponseDTO {
                                Double comissaoAgendamentosNormais,
                                Double comissaoAgendamentosFixos,
                                Double descontoTaxa,
-                               boolean paid) {
+                               Double valorPago) {
         this.profissionalId = profissionalId;
         this.nomeProfissional = nomeProfissional;
         this.dataInicio = dataInicio;
@@ -35,8 +36,9 @@ public class ComissaoResponseDTO {
         this.comissaoAgendamentosNormais = comissaoAgendamentosNormais;
         this.comissaoAgendamentosFixos = comissaoAgendamentosFixos;
         this.descontoTaxa = descontoTaxa;
-        this.paid = paid;
-        this.pendente = false;
+        this.valorPago = valorPago;
+        this.valorPendente = comissaoLiquida - valorPago;
+        this.pendente = valorPendente > 0;
     }
 
     // Getters
@@ -84,15 +86,14 @@ public class ComissaoResponseDTO {
         return descontoTaxa;
     }
     
-    public boolean isPaid() {
-        return paid;
+    public Double getValorPago() {
+        return valorPago;
     }
     
-    public void setPaid(boolean paid) {
-        this.paid = paid;
+    public Double getValorPendente() {
+        return valorPendente;
     }
     
-    @JsonIgnore
     public boolean isPendente() {
         return pendente;
     }

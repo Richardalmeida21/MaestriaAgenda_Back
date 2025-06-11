@@ -61,4 +61,6 @@ List<AgendamentoFixo> findActiveQuinzenalSchedules(@Param("hoje") LocalDate hoje
     List<AgendamentoFixo> findActiveSchedulesForDate(@Param("data") LocalDate data);
 
     List<AgendamentoFixo> findByProfissional(Profissional profissional);
+
+    List<AgendamentoFixo> findByProfissionalIdAndAtivoTrue(Long profissionalId);
 }
