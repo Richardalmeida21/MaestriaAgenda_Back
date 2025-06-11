@@ -99,11 +99,6 @@ public class AgendamentoController {
                 agendamentoFixo.setDiaDoMes(1);
             }
 
-            if (dados.formaPagamento() == null || dados.formaPagamento().isEmpty()) {
-                return ResponseEntity.badRequest().body("Forma de pagamento é obrigatória.");
-            }
-            agendamentoFixo.setFormaPagamento(dados.formaPagamento().toUpperCase());
-
             agendamentoFixoRepository.save(agendamentoFixo);
 
             LocalDate dataFimGeracao = LocalDate.now().plusDays(30);
@@ -253,11 +248,8 @@ public class AgendamentoController {
         agendamento.setData(data);
         agendamento.setHora(agendamentoFixo.getHora());
         agendamento.setObservacao(agendamentoFixo.getObservacao());
-        agendamento.setFormaPagamento(PagamentoTipo.valueOf(agendamentoFixo.getFormaPagamento()));
         agendamento.setAgendamentoFixoId(agendamentoFixo.getId());
-
         agendamentoRepository.save(agendamento);
-        logger.info("✅ Agendamento gerado a partir do agendamento fixo {}: {}", agendamentoFixo.getId(), agendamento);
     }
 
     @PutMapping("/fixo/{id}")
@@ -265,14 +257,12 @@ public class AgendamentoController {
             @PathVariable Long id,
             @RequestBody DadosCadastroAgendamentoFixo dados,
             @AuthenticationPrincipal UserDetails userDetails) {
-        logger.info("🔍 Solicitação para atualizar agendamento fixo ID {} por: {}", id, userDetails.getUsername());
-
-        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
-            logger.warn("❌ Tentativa de atualização sem permissão por {}", userDetails.getUsername());
-            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode atualizar agendamentos fixos.");
-        }
 
         try {
+            if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+                return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode atualizar agendamentos fixos.");
+            }
+
             AgendamentoFixo agendamentoFixo = agendamentoFixoRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Agendamento fixo não encontrado"));
 
@@ -282,13 +272,6 @@ public class AgendamentoController {
                     .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
             Servico servico = servicoRepository.findById(dados.servicoId())
                     .orElseThrow(() -> new RuntimeException("Serviço não encontrado"));
-
-            Cliente clienteOriginal = agendamentoFixo.getCliente();
-            Profissional profissionalOriginal = agendamentoFixo.getProfissional();
-            Servico servicoOriginal = agendamentoFixo.getServico();
-            String observacaoOriginal = agendamentoFixo.getObservacao();
-            String formaPagamentoOriginal = agendamentoFixo.getFormaPagamento();
-            LocalTime horaOriginal = agendamentoFixo.getHora();
 
             agendamentoFixo.setCliente(cliente);
             agendamentoFixo.setProfissional(profissional);
@@ -300,10 +283,6 @@ public class AgendamentoController {
             agendamentoFixo.setDataFim(dados.dataFim());
             agendamentoFixo.setHora(dados.hora());
             agendamentoFixo.setObservacao(dados.observacao());
-
-            if (dados.formaPagamento() != null && !dados.formaPagamento().isEmpty()) {
-                agendamentoFixo.setFormaPagamento(dados.formaPagamento().toUpperCase());
-            }
 
             if (dados.tipoRepeticao() == AgendamentoFixo.TipoRepeticao.MENSAL) {
                 agendamentoFixo.setDiaDoMes(dados.diaDoMes() != null ? dados.diaDoMes() : dados.valorRepeticao());
@@ -327,19 +306,13 @@ public class AgendamentoController {
                 agendamento.setCliente(cliente);
                 agendamento.setProfissional(profissional);
                 agendamento.setServico(servico);
-                agendamento.setHora(dados.hora());
-                agendamento.setObservacao(dados.observacao());
-                if (dados.formaPagamento() != null && !dados.formaPagamento().isEmpty()) {
-                    agendamento.setFormaPagamento(PagamentoTipo.valueOf(dados.formaPagamento().toUpperCase()));
-                }
-
+                agendamento.setHora(agendamentoFixo.getHora());
+                agendamento.setObservacao(agendamentoFixo.getObservacao());
                 agendamentoRepository.save(agendamento);
             }
 
-            logger.info("✅ Agendamento fixo e {} agendamentos futuros atualizados com sucesso",
-                    agendamentosFuturos.size());
-            return ResponseEntity
-                    .ok("Agendamento fixo e todas as suas ocorrências futuras foram atualizados com sucesso.");
+            return ResponseEntity.ok(agendamentoFixo);
+
         } catch (Exception e) {
             logger.error("❌ Erro ao atualizar agendamento fixo", e);
             return ResponseEntity.status(500).body("Erro ao atualizar agendamento fixo: " + e.getMessage());
