@@ -48,7 +48,10 @@ public class ExpenseService {
                 
                 return convertToDTO(savedExpense);
             } else {
-                expense.setDate(requestDTO.getDate());
+                // Para despesas normais, também usar o fuso horário de São Paulo
+                ZoneId zonaSaoPaulo = ZoneId.of("America/Sao_Paulo");
+                LocalDate dataSaoPaulo = requestDTO.getDate().atStartOfDay(zonaSaoPaulo).toLocalDate();
+                expense.setDate(dataSaoPaulo);
                 Expense savedExpense = expenseRepository.save(expense);
                 return convertToDTO(savedExpense);
             }
