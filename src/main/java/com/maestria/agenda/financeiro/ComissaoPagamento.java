@@ -26,6 +26,9 @@ public class ComissaoPagamento {
     @Column(name = "data_pagamento", nullable = false)
     private LocalDate dataPagamento;
     
+    @Column(name = "data_hora_pagamento", nullable = false)
+    private LocalDateTime dataHoraPagamento;
+    
     @Column(name = "valor_pago", nullable = false)
     private Double valorPago;
     
@@ -56,6 +59,7 @@ public class ComissaoPagamento {
         this.paid = true;
         this.status = StatusPagamento.PAGO;
         this.dataCriacao = LocalDateTime.now();
+        this.dataHoraPagamento = LocalDateTime.now();
     }
     
     public ComissaoPagamento(Long profissionalId, Long agendamentoId, LocalDate dataPagamento, Double valorPago, String observacao, 
@@ -102,6 +106,14 @@ public class ComissaoPagamento {
     
     public void setDataPagamento(LocalDate dataPagamento) {
         this.dataPagamento = dataPagamento;
+    }
+    
+    public LocalDateTime getDataHoraPagamento() {
+        return dataHoraPagamento;
+    }
+    
+    public void setDataHoraPagamento(LocalDateTime dataHoraPagamento) {
+        this.dataHoraPagamento = dataHoraPagamento;
     }
     
     public Double getValorPago() {

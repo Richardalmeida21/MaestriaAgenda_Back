@@ -177,6 +177,7 @@ public class ComissaoService {
                     comissao.getId(),
                     comissao.getAgendamentoId(),
                     comissao.getDataPagamento(),
+                    comissao.getDataHoraPagamento(),
                     comissao.getValorComissao(),
                     comissao.getStatus().toString(),
                     comissao.getPaid()
@@ -243,6 +244,9 @@ public class ComissaoService {
             periodoInicio,
             periodoFim
         );
+        
+        // Definir a data e hora exata do pagamento
+        pagamento.setDataHoraPagamento(LocalDateTime.now());
         
         // Definir o valor da comissão como o valor pago e garantir que paid seja true
         pagamento.setValorComissao(valorPago);
