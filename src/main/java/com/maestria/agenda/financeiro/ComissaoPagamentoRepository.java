@@ -13,7 +13,7 @@ public interface ComissaoPagamentoRepository extends JpaRepository<ComissaoPagam
      * Encontra todos os pagamentos de comissão para um profissional em um período específico
      */
     @Query("SELECT cp FROM ComissaoPagamento cp WHERE cp.profissionalId = :profissionalId " +
-           "AND cp.dataPagamento BETWEEN :inicio AND :fim " +
+           "AND cp.periodoInicio <= :fim AND cp.periodoFim >= :inicio " +
            "ORDER BY cp.dataPagamento")
     List<ComissaoPagamento> findByProfissionalIdAndPeriodo(
         @Param("profissionalId") Long profissionalId, 
@@ -26,7 +26,7 @@ public interface ComissaoPagamentoRepository extends JpaRepository<ComissaoPagam
      */
     @Query("SELECT COALESCE(SUM(cp.valorPago), 0) FROM ComissaoPagamento cp " +
            "WHERE cp.profissionalId = :profissionalId " +
-           "AND cp.dataPagamento BETWEEN :inicio AND :fim " +
+           "AND cp.periodoInicio <= :fim AND cp.periodoFim >= :inicio " +
            "AND cp.status = 'PAGO' " +
            "AND cp.valorPago > 0")
     Double calcularValorTotalPagoNoPeriodo(
