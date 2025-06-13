@@ -1,0 +1,71 @@
+DOCUMENTAÇÃO DO SISTEMA DE COMISSÕES
+
+1. ESTRUTURA DE DADOS
+-------------------
+ComissaoPagamento:
+- id: Long
+- profissionalId: Long
+- agendamentoId: Long (opcional)
+- dataPagamento: LocalDate
+- valorPago: Double
+- valorComissao: Double
+- observacao: String
+- paid: Boolean
+- status: StatusPagamento (PAGO ou CANCELADO)
+- periodoInicio: LocalDate
+- periodoFim: LocalDate
+- dataCriacao: LocalDateTime
+
+2. STATUS DE PAGAMENTO
+---------------------
+- PAGO: Comissão foi paga e está ativa
+- CANCELADO: Comissão foi cancelada
+  * Quando cancelada, os valores são zerados (valorPago = 0 e valorComissao = 0)
+  * O flag paid é definido como false
+
+3. ENDPOINTS DISPONÍVEIS
+-----------------------
+a) Listar Pagamentos:
+   GET /financeiro/comissoes/profissional/{id}/pagamentos
+   Parâmetros:
+   - dataInicio: String (formato: yyyy-MM-dd)
+   - dataFim: String (formato: yyyy-MM-dd)
+
+b) Cancelar Pagamento:
+   POST /financeiro/comissoes/pagamento/{id}/cancelar
+   - Requer permissão de ADMIN
+   - Ao cancelar, o pagamento terá:
+     * status = CANCELADO
+     * valorPago = 0
+     * valorComissao = 0
+     * paid = false
+
+4. COMPORTAMENTO NO FRONTEND
+---------------------------
+a) Ao exibir pagamentos:
+   - Verificar o status do pagamento
+   - Se CANCELADO:
+     * Mostrar status como "Cancelado"
+     * Exibir valor como 0
+     * Não incluir no cálculo de valores totais
+
+b) Ao cancelar um pagamento:
+   - Confirmar ação com o usuário
+   - Enviar requisição para o endpoint de cancelamento
+   - Atualizar a interface para refletir:
+     * Status alterado para "Cancelado"
+     * Valores zerados
+     * Recalcular totais
+
+5. CÁLCULOS DE VALORES
+---------------------
+- Valor Total Pago: Soma dos valores de pagamentos com status PAGO
+- Valor Pendente: Comissão Líquida - Valor Total Pago
+- Comissão Líquida: Valor total das comissões após descontos
+
+6. OBSERVAÇÕES IMPORTANTES
+-------------------------
+- Apenas usuários ADMIN podem cancelar pagamentos
+- Ao cancelar, todos os valores são zerados
+- O histórico de pagamentos mantém o registro do cancelamento
+- Os valores são recalculados automaticamente após cancelamento 

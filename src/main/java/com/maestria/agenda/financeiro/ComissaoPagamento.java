@@ -188,6 +188,8 @@ public class ComissaoPagamento {
         }
         this.status = StatusPagamento.CANCELADO;
         this.paid = false;
+        this.valorPago = 0.0;
+        this.valorComissao = 0.0;
     }
 
     public void reativarComissao() {
