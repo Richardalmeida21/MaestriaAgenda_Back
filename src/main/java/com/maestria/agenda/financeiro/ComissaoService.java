@@ -201,7 +201,8 @@ public class ComissaoService {
                 resultadoFixo.valorComissao,
                 descontoTaxaTotal,
                 valorJaPago,
-                comissoesIndividuais);
+                comissoesIndividuais,
+                comissoes);
         } catch (Exception e) {
             logger.error("❌ Erro ao calcular comissão: {}", e.getMessage(), e);
             throw new RuntimeException("Erro ao calcular comissão: " + e.getMessage());

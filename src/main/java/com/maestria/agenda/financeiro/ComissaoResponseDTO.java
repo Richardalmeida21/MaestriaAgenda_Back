@@ -18,6 +18,7 @@ public class ComissaoResponseDTO {
     private Double valorPago;
     private Double valorPendente;
     private List<ComissaoIndividualDTO> comissoesIndividuais;
+    private List<ComissaoPagamento> historicoPagamentos;
     
     @JsonIgnore
     private boolean pendente;
@@ -29,7 +30,8 @@ public class ComissaoResponseDTO {
                                Double comissaoAgendamentosFixos,
                                Double descontoTaxa,
                                Double valorPago,
-                               List<ComissaoIndividualDTO> comissoesIndividuais) {
+                               List<ComissaoIndividualDTO> comissoesIndividuais,
+                               List<ComissaoPagamento> historicoPagamentos) {
         this.profissionalId = profissionalId;
         this.nomeProfissional = nomeProfissional;
         this.dataInicio = dataInicio;
@@ -43,6 +45,7 @@ public class ComissaoResponseDTO {
         this.valorPendente = Math.max(0, comissaoLiquida - valorPago);
         this.pendente = valorPendente > 0;
         this.comissoesIndividuais = comissoesIndividuais;
+        this.historicoPagamentos = historicoPagamentos;
     }
 
     // Getters
@@ -109,5 +112,13 @@ public class ComissaoResponseDTO {
 
     public List<ComissaoIndividualDTO> getComissoesIndividuais() {
         return comissoesIndividuais;
+    }
+
+    public List<ComissaoPagamento> getHistoricoPagamentos() {
+        return historicoPagamentos;
+    }
+
+    public void setHistoricoPagamentos(List<ComissaoPagamento> historicoPagamentos) {
+        this.historicoPagamentos = historicoPagamentos;
     }
 }
