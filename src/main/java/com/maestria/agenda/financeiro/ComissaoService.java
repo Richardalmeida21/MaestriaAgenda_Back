@@ -225,17 +225,6 @@ public class ComissaoService {
             throw new RuntimeException("O valor do pagamento deve ser maior que zero");
         }
         
-        // Verificar se já existe pagamento no período
-        List<ComissaoPagamento> pagamentosExistentes = comissaoPagamentoRepository
-            .findByProfissionalIdAndPeriodo(profissionalId, periodoInicio, periodoFim);
-            
-        for (ComissaoPagamento pagamento : pagamentosExistentes) {
-            if (pagamento.getStatus() == ComissaoPagamento.StatusPagamento.PAGO && 
-                pagamento.getValorPago() > 0) {
-                throw new RuntimeException("Já existe um pagamento registrado para este período");
-            }
-        }
-        
         // Calcular a comissão do período
         ComissaoResponseDTO comissao = calcularComissaoPorPeriodo(profissionalId, periodoInicio, periodoFim);
         
@@ -427,5 +416,31 @@ public class ComissaoService {
         
         // Recalcular a comissão para retornar os valores atualizados
         return calcularComissaoPorPeriodo(profissionalId, periodoInicio, periodoFim);
+    }
+
+    /**
+     * Cancela parcialmente um pagamento de comissão
+     */
+    public ComissaoResponseDTO cancelarParcialmentePagamentoComissao(Long pagamentoId, Double valorACancelar) {
+        logger.info("❌ Cancelando parcialmente pagamento de comissão ID: {} no valor de {}", 
+            pagamentoId, valorACancelar);
+        
+        ComissaoPagamento pagamento = comissaoPagamentoRepository.findById(pagamentoId)
+            .orElseThrow(() -> new RuntimeException("Pagamento não encontrado"));
+            
+        if (pagamento.getStatus() == ComissaoPagamento.StatusPagamento.CANCELADO) {
+            throw new RuntimeException("Este pagamento já está cancelado");
+        }
+        
+        // Cancelar parcialmente o pagamento
+        pagamento.cancelarParcialmente(valorACancelar);
+        comissaoPagamentoRepository.save(pagamento);
+        
+        // Recalcular a comissão para retornar os valores atualizados
+        return calcularComissaoPorPeriodo(
+            pagamento.getProfissionalId(),
+            pagamento.getPeriodoInicio(),
+            pagamento.getPeriodoFim()
+        );
     }
 }

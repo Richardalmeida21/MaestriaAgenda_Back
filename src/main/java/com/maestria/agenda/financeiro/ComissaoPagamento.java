@@ -169,17 +169,26 @@ public class ComissaoPagamento {
         this.paid = status == StatusPagamento.PAGO;
     }
 
-    public void cancelarParcialmente(Double novoValorPago) {
-        if (novoValorPago == null || novoValorPago <= 0) {
-            throw new IllegalArgumentException("O novo valor pago deve ser maior que zero");
+    public void cancelarParcialmente(Double valorACancelar) {
+        if (valorACancelar == null || valorACancelar <= 0) {
+            throw new IllegalArgumentException("O valor a cancelar deve ser maior que zero");
         }
-        if (novoValorPago >= this.valorPago) {
-            throw new IllegalArgumentException("O novo valor pago deve ser menor que o valor atual");
+        if (valorACancelar >= this.valorPago) {
+            throw new IllegalArgumentException("O valor a cancelar deve ser menor que o valor atual");
         }
-        this.valorPago = novoValorPago;
-        this.valorComissao = novoValorPago;
-        this.status = StatusPagamento.CANCELADO;
-        this.paid = false;
+        
+        // Calcula o novo valor após o cancelamento parcial
+        Double novoValor = this.valorPago - valorACancelar;
+        
+        // Atualiza os valores
+        this.valorPago = novoValor;
+        this.valorComissao = novoValor;
+        
+        // Se o valor restante for zero, marca como cancelado
+        if (novoValor == 0) {
+            this.status = StatusPagamento.CANCELADO;
+            this.paid = false;
+        }
     }
 
     public void cancelarComissao() {
