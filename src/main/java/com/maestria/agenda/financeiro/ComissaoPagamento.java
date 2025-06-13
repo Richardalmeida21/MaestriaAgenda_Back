@@ -3,6 +3,7 @@ package com.maestria.agenda.financeiro;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Entity
 @Table(name = "comissoes_pagamentos")
@@ -58,8 +59,10 @@ public class ComissaoPagamento {
     public ComissaoPagamento() {
         this.paid = true;
         this.status = StatusPagamento.PAGO;
-        this.dataCriacao = LocalDateTime.now();
-        this.dataHoraPagamento = LocalDateTime.now();
+        ZoneId zonaSaoPaulo = ZoneId.of("America/Sao_Paulo");
+        LocalDateTime dataHoraSaoPaulo = LocalDateTime.now(zonaSaoPaulo);
+        this.dataCriacao = dataHoraSaoPaulo;
+        this.dataHoraPagamento = dataHoraSaoPaulo;
     }
     
     public ComissaoPagamento(Long profissionalId, Long agendamentoId, LocalDate dataPagamento, Double valorPago, String observacao, 
