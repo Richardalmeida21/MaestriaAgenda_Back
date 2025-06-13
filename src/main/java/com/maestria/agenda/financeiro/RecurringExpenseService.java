@@ -2,6 +2,7 @@ package com.maestria.agenda.financeiro;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -102,8 +103,9 @@ public class RecurringExpenseService {
             recurringExpense = recurringExpenseRepository.save(recurringExpense);
             logger.info("Despesa fixa criada com ID: {}", recurringExpense.getId());
             
-            // Gerar despesas futuras por 3 meses
-            LocalDate hoje = LocalDate.now();
+            // Gerar despesas futuras por 3 meses usando fuso horário de São Paulo
+            ZoneId zonaSaoPaulo = ZoneId.of("America/Sao_Paulo");
+            LocalDate hoje = LocalDate.now(zonaSaoPaulo);
             LocalDate limiteGeracao = hoje.plusMonths(3);
             LocalDate dataFim = requestDTO.getEndDate() != null && requestDTO.getEndDate().isBefore(limiteGeracao) 
                     ? requestDTO.getEndDate() 

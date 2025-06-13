@@ -1,6 +1,7 @@
 package com.maestria.agenda.financeiro;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -36,8 +37,10 @@ public class ExpenseService {
                 expense.setDayOfMonth(requestDTO.getDayOfMonth());
                 expense.setEndDate(requestDTO.getEndDate());
                 
-                // Create the first expense
-                expense.setDate(LocalDate.now().withDayOfMonth(requestDTO.getDayOfMonth()));
+                // Create the first expense with São Paulo timezone
+                ZoneId zonaSaoPaulo = ZoneId.of("America/Sao_Paulo");
+                LocalDate hoje = LocalDate.now(zonaSaoPaulo);
+                expense.setDate(hoje.withDayOfMonth(requestDTO.getDayOfMonth()));
                 Expense savedExpense = expenseRepository.save(expense);
                 
                 // Generate future expenses
@@ -50,8 +53,8 @@ public class ExpenseService {
                 return convertToDTO(savedExpense);
             }
         } catch (Exception e) {
-            logger.error("Error creating expense: {}", e.getMessage(), e);
-            throw new RuntimeException("Error creating expense: " + e.getMessage());
+            logger.error("Erro ao criar despesa: {}", e.getMessage(), e);
+            throw new RuntimeException("Erro ao criar despesa: " + e.getMessage());
         }
     }
     
