@@ -8,5 +8,8 @@ public record MetricasGeraisDTO(
     Double avgTicket,
     Integer newClients,
     Integer clientsCount,
-    Double returnRate
+    Double returnRate,
+    Double totalExpenses,
+    Double totalCommissions,
+    Double profit
 ) {}

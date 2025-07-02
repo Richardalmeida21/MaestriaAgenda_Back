@@ -62,6 +62,9 @@ public class MetricsController {
             response.put("servicosAgendados", serviceData); // Mudança de nome para corresponder ao frontend
             response.put("clientesNovosRecorrentes", clientData); // Mudança de nome para corresponder ao frontend
             response.put("horariosMaisProcurados", horarioData); // Adicionado
+            response.put("totalExpenses", metricas.totalExpenses());
+            response.put("totalCommissions", metricas.totalCommissions());
+            response.put("profit", metricas.profit());
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {

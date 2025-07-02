@@ -7,6 +7,8 @@ import com.maestria.agenda.financeiro.MetricasGeraisDTO;
 import com.maestria.agenda.financeiro.RevenueData;
 import com.maestria.agenda.financeiro.ServiceData;
 import com.maestria.agenda.financeiro.HorarioData;
+import com.maestria.agenda.financeiro.ExpenseRepository;
+import com.maestria.agenda.financeiro.ComissaoPagamentoRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -26,9 +28,13 @@ import java.util.Set;
 public class MetricsService {
 
     private final AgendamentoRepository agendamentoRepository;
+    private final ExpenseRepository expenseRepository;
+    private final ComissaoPagamentoRepository comissaoPagamentoRepository;
 
-    public MetricsService(AgendamentoRepository agendamentoRepository) {
+    public MetricsService(AgendamentoRepository agendamentoRepository, ExpenseRepository expenseRepository, ComissaoPagamentoRepository comissaoPagamentoRepository) {
         this.agendamentoRepository = agendamentoRepository;
+        this.expenseRepository = expenseRepository;
+        this.comissaoPagamentoRepository = comissaoPagamentoRepository;
     }
 
     public MetricasGeraisDTO obterMetricasGerais(LocalDate dataInicio, LocalDate dataFim) {
@@ -48,7 +54,19 @@ public class MetricsService {
 
         Double returnRate = calcularTaxaRetorno(dataInicio, dataFim);
 
-        return new MetricasGeraisDTO(totalRevenue, servicesCount, avgTicket, newClients, clientsCount, returnRate);
+        // Novos cálculos
+        Double totalExpenses = expenseRepository.calcularTotalDespesasPagas(dataInicio, dataFim);
+        totalExpenses = (totalExpenses != null) ? totalExpenses : 0.0;
+
+        Double totalCommissions = comissaoPagamentoRepository.calcularValorTotalPagoTodosProfissionaisNoPeriodo(dataInicio, dataFim);
+        totalCommissions = (totalCommissions != null) ? totalCommissions : 0.0;
+
+        Double profit = totalRevenue - totalExpenses - totalCommissions;
+
+        return new MetricasGeraisDTO(
+            totalRevenue, servicesCount, avgTicket, newClients, clientsCount, returnRate,
+            totalExpenses, totalCommissions, profit
+        );
     }
     
     // Método para obter faturamento mensal
