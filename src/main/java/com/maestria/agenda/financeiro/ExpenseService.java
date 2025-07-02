@@ -192,9 +192,9 @@ public class ExpenseService {
         }
         
         List<ExpenseResponseDTO> result = expenses.stream()
-                .map(this::convertToDTO)
-                .sorted(Comparator.comparing(ExpenseResponseDTO::getDate))
-                .collect(Collectors.toList());
+            .map(this::convertToDTO)
+            .sorted(Comparator.comparing(dto -> dto.getDate()))
+            .collect(Collectors.toList());
                 
         return result;
     }

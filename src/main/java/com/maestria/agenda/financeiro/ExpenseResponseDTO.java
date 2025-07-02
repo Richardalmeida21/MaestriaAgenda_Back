@@ -48,4 +48,6 @@ public class ExpenseResponseDTO {
     public String getDateFormatted() {
         return date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
     }
+
+    public LocalDate getDate() { return date; }
 }
