@@ -104,4 +104,38 @@ public class NotificacaoController {
             return ResponseEntity.status(500).body("Falha ao enviar mensagem de teste");
         }
     }
+    
+    /**
+     * Endpoint para testar o envio de mensagem de texto pelo WhatsApp
+     * Só funciona após iniciar uma conversa com o template
+     */
+    @PostMapping("/teste-whatsapp-texto")
+    public ResponseEntity<?> testarEnvioWhatsAppTexto(
+            @RequestBody Map<String, String> payload,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        
+        // Verifica se o usuário tem permissão de administrador
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode testar o envio de WhatsApp.");
+        }
+        
+        String telefone = payload.get("telefone");
+        String mensagem = payload.get("mensagem");
+        
+        if (telefone == null || telefone.isEmpty()) {
+            return ResponseEntity.badRequest().body("Telefone é obrigatório");
+        }
+        
+        if (mensagem == null || mensagem.isEmpty()) {
+            mensagem = "Esta é uma mensagem de texto direta do sistema MaestriaAgenda.";
+        }
+        
+        boolean enviado = notificacaoService.enviarMensagemTexto(telefone, mensagem);
+        
+        if (enviado) {
+            return ResponseEntity.ok("Mensagem de texto enviada com sucesso");
+        } else {
+            return ResponseEntity.status(500).body("Falha ao enviar mensagem de texto");
+        }
+    }
 }

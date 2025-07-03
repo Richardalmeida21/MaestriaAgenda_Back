@@ -100,6 +100,90 @@ public class NotificacaoService {
             requestBody.put("messaging_product", "whatsapp");
             requestBody.put("recipient_type", "individual");
             requestBody.put("to", telefoneFormatado);
+            
+            // Usamos um template para iniciar a conversa em vez de mensagem de texto direta
+            requestBody.put("type", "template");
+            
+            ObjectNode templateNode = objectMapper.createObjectNode();
+            templateNode.put("name", "hello_world");
+            
+            ObjectNode languageNode = objectMapper.createObjectNode();
+            languageNode.put("code", "pt_BR");
+            templateNode.set("language", languageNode);
+            
+            // Se precisarmos passar parâmetros para o template, adicionaríamos aqui
+            // ObjectNode componentsNode = objectMapper.createObjectNode();
+            // templateNode.set("components", componentsNode);
+            
+            requestBody.set("template", templateNode);
+            
+            // Log do payload para depuração
+            logger.info("Enviando mensagem WhatsApp: {}", requestBody.toString());
+            
+            // Log dos detalhes completos da requisição
+            logger.info("Detalhes da requisição WhatsApp:");
+            logger.info(" - URL: {}", "https://graph.facebook.com/" + apiVersion + "/" + phoneNumberId + "/messages");
+            logger.info(" - Phone Number ID: {}", phoneNumberId);
+            logger.info(" - Token configurado: {}", apiToken != null ? "Presente (tamanho: " + apiToken.length() + ")" : "Ausente");
+            logger.info(" - Telefone destino (original): {}", telefone);
+            logger.info(" - Telefone destino (formatado): {}", telefoneFormatado);
+            logger.info(" - Payload: {}", requestBody.toString());
+            
+            try {
+                // Enviar a mensagem usando o WebClient
+                String response = whatsappApiClient.post()
+                        .uri("/" + phoneNumberId + "/messages")
+                        .header("Authorization", "Bearer " + apiToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(Mono.just(requestBody), ObjectNode.class)
+                        .retrieve()
+                        .bodyToMono(String.class)
+                        .block();
+                
+                logger.info("Mensagem enviada com sucesso. Resposta: {}", response);
+                return true;
+            } catch (Exception e) {
+                logger.error("Erro específico ao enviar mensagem para a API do WhatsApp: {}", e.getMessage());
+                logger.error("Detalhes do erro:", e);
+                return false;
+            }
+        } catch (Exception e) {
+            logger.error("Erro ao enviar mensagem WhatsApp: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+    
+    /**
+     * Envia uma mensagem de texto (só funciona dentro da janela de 24h após receber uma mensagem do usuário)
+     * 
+     * @param telefone O número de telefone de destino
+     * @param mensagem A mensagem a ser enviada
+     * @return true se a mensagem foi enviada com sucesso, false caso contrário
+     */
+    public boolean enviarMensagemTexto(String telefone, String mensagem) {
+        if (!whatsappEnabled) {
+            logger.info("WhatsApp API está desativada. Simulando envio de mensagem de texto para: {}", telefone);
+            return true;
+        }
+        
+        // Verificar se as configurações necessárias estão presentes
+        if (apiToken == null || apiToken.trim().isEmpty() || phoneNumberId == null || phoneNumberId.trim().isEmpty()) {
+            logger.error("Configuração de WhatsApp incompleta. Token API ou Phone Number ID não configurados.");
+            return false;
+        }
+        
+        try {
+            String telefoneFormatado = formatarNumeroTelefone(telefone);
+            if (telefoneFormatado == null) {
+                logger.error("Número de telefone inválido: {}", telefone);
+                return false;
+            }
+            
+            // Criar o payload para a API do WhatsApp
+            ObjectNode requestBody = objectMapper.createObjectNode();
+            requestBody.put("messaging_product", "whatsapp");
+            requestBody.put("recipient_type", "individual");
+            requestBody.put("to", telefoneFormatado);
             requestBody.put("type", "text");
             
             ObjectNode textNode = objectMapper.createObjectNode();
@@ -108,22 +192,34 @@ public class NotificacaoService {
             requestBody.set("text", textNode);
             
             // Log do payload para depuração
-            logger.info("Enviando mensagem WhatsApp: {}", requestBody.toString());
+            logger.info("Enviando mensagem de texto WhatsApp: {}", requestBody.toString());
             
-            // Enviar a mensagem usando o WebClient
-            String response = whatsappApiClient.post()
-                    .uri("/" + phoneNumberId + "/messages")
-                    .header("Authorization", "Bearer " + apiToken)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(Mono.just(requestBody), ObjectNode.class)
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .block();
+            // Log dos detalhes completos da requisição
+            logger.info("Detalhes da requisição WhatsApp (texto):");
+            logger.info(" - URL: {}", "https://graph.facebook.com/" + apiVersion + "/" + phoneNumberId + "/messages");
+            logger.info(" - Phone Number ID: {}", phoneNumberId);
+            logger.info(" - Telefone destino (formatado): {}", telefoneFormatado);
             
-            logger.info("Mensagem enviada com sucesso. Resposta: {}", response);
-            return true;
+            try {
+                // Enviar a mensagem usando o WebClient
+                String response = whatsappApiClient.post()
+                        .uri("/" + phoneNumberId + "/messages")
+                        .header("Authorization", "Bearer " + apiToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(Mono.just(requestBody), ObjectNode.class)
+                        .retrieve()
+                        .bodyToMono(String.class)
+                        .block();
+                
+                logger.info("Mensagem de texto enviada com sucesso. Resposta: {}", response);
+                return true;
+            } catch (Exception e) {
+                logger.error("Erro específico ao enviar mensagem de texto para a API do WhatsApp: {}", e.getMessage());
+                logger.error("Detalhes do erro:", e);
+                return false;
+            }
         } catch (Exception e) {
-            logger.error("Erro ao enviar mensagem WhatsApp: {}", e.getMessage(), e);
+            logger.error("Erro ao enviar mensagem de texto WhatsApp: {}", e.getMessage(), e);
             return false;
         }
     }
