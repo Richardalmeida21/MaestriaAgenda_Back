@@ -24,16 +24,16 @@ public class NotificacaoService {
     private final WebClient whatsappApiClient;
     private final ObjectMapper objectMapper;
     
-    @Value("${whatsapp.cloud.api.token}")
+    @Value("${whatsapp.cloud.api.token:#{null}}")
     private String apiToken;
     
-    @Value("${whatsapp.cloud.api.phone.number.id}")
+    @Value("${whatsapp.cloud.api.phone.number.id:#{null}}")
     private String phoneNumberId;
     
     @Value("${whatsapp.enabled:false}")
     private boolean whatsappEnabled;
     
-    @Value("${whatsapp.cloud.api.version}")
+    @Value("${whatsapp.cloud.api.version:v22.0}")
     private String apiVersion;
     
     public NotificacaoService(WebClient whatsappApiClient, ObjectMapper objectMapper) {
@@ -80,6 +80,12 @@ public class NotificacaoService {
         if (!whatsappEnabled) {
             logger.info("WhatsApp API está desativada. Simulando envio de mensagem para: {}", telefone);
             return true;
+        }
+        
+        // Verificar se as configurações necessárias estão presentes
+        if (apiToken == null || apiToken.trim().isEmpty() || phoneNumberId == null || phoneNumberId.trim().isEmpty()) {
+            logger.error("Configuração de WhatsApp incompleta. Token API ou Phone Number ID não configurados.");
+            return false;
         }
         
         try {
@@ -134,11 +140,11 @@ public class NotificacaoService {
         status.put("whatsappEnabled", whatsappEnabled);
         
         // Verificar se o token de API está configurado
-        boolean tokenConfigurado = apiToken != null && !apiToken.isEmpty() && !apiToken.equals("${WHATSAPP_API_TOKEN}");
+        boolean tokenConfigurado = apiToken != null && !apiToken.isEmpty();
         status.put("tokenConfigurado", tokenConfigurado);
         
         // Verificar se o ID do número de telefone está configurado
-        boolean phoneIdConfigurado = phoneNumberId != null && !phoneNumberId.isEmpty() && !phoneNumberId.equals("${WHATSAPP_PHONE_NUMBER_ID}");
+        boolean phoneIdConfigurado = phoneNumberId != null && !phoneNumberId.isEmpty();
         status.put("phoneIdConfigurado", phoneIdConfigurado);
         
         // Verificar a versão da API
