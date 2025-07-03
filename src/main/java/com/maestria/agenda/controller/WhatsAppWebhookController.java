@@ -22,7 +22,7 @@ public class WhatsAppWebhookController {
     
     private static final Logger logger = LoggerFactory.getLogger(WhatsAppWebhookController.class);
     
-    @Value("${whatsapp.webhook.verification-token:seu_token_de_verificacao}")
+    @Value("${whatsapp.webhook.verification-token:whatsapp_mastria_2025_token_seguro_IIrr2931!}")
     private String verificationToken;
     
     /**
@@ -35,17 +35,27 @@ public class WhatsAppWebhookController {
             @RequestParam(value = "hub.verify_token", required = false) String token,
             @RequestParam(value = "hub.challenge", required = false) String challenge) {
         
-        logger.info("Recebida solicitação de verificação do webhook: mode={}, token={}", mode, token);
+        logger.info("Recebida solicitação de verificação do webhook: mode={}, token={}, challenge={}", mode, token, challenge);
+        logger.info("Token configurado: {}", verificationToken);
         
-        // Verificar se o token recebido corresponde ao nosso token configurado
-        if (mode != null && token != null && challenge != null && 
-            "subscribe".equals(mode) && verificationToken.equals(token)) {
-            logger.info("Verificação de webhook bem-sucedida");
-            return ResponseEntity.ok(challenge);
+        // Verificar se todos os parâmetros foram recebidos
+        if (mode == null || token == null || challenge == null) {
+            logger.error("Verificação falhou: parâmetros incompletos. mode={}, token={}, challenge={}", 
+                    mode, token != null ? "presente" : "ausente", challenge != null ? "presente" : "ausente");
+            return ResponseEntity.badRequest().body("Parâmetros incompletos");
         }
         
-        logger.warn("Falha na verificação do webhook: token inválido ou modo incorreto");
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        // Verificar se o token recebido corresponde ao nosso token configurado
+        if ("subscribe".equals(mode) && verificationToken.equals(token)) {
+            logger.info("Verificação de webhook bem-sucedida. Challenge: {}", challenge);
+            return ResponseEntity.ok(challenge);
+        } else {
+            logger.warn("Falha na verificação do webhook: {} {} {}", 
+                    "subscribe".equals(mode) ? "Modo correto" : "Modo incorreto: " + mode,
+                    verificationToken.equals(token) ? "Token correto" : "Token incorreto",
+                    "Challenge: " + challenge);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Token de verificação inválido");
+        }
     }
     
     /**
