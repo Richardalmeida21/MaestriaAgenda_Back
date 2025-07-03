@@ -138,4 +138,65 @@ public class NotificacaoController {
             return ResponseEntity.status(500).body("Falha ao enviar mensagem de texto");
         }
     }
+    
+    /**
+     * Endpoint para testar o envio de lembrete de agendamento usando o template personalizado
+     * Usa o template "lembrete_agendamento" com as variáveis definidas
+     */
+    @PostMapping("/teste-lembrete-agendamento")
+    public ResponseEntity<?> testarLembreteAgendamento(
+            @RequestBody Map<String, String> payload,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        
+        // Verifica se o usuário tem permissão de administrador
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode testar o envio de lembretes.");
+        }
+        
+        String telefone = payload.get("telefone");
+        String nomeCliente = payload.get("nomeCliente");
+        String dataAgendamento = payload.get("dataAgendamento");
+        String servico = payload.get("servico");
+        String nomeProfissional = payload.get("nomeProfissional");
+        
+        // Validações básicas
+        Map<String, String> camposFaltantes = new HashMap<>();
+        
+        if (telefone == null || telefone.isEmpty()) camposFaltantes.put("telefone", "Telefone é obrigatório");
+        if (nomeCliente == null || nomeCliente.isEmpty()) camposFaltantes.put("nomeCliente", "Nome do cliente é obrigatório");
+        if (dataAgendamento == null || dataAgendamento.isEmpty()) camposFaltantes.put("dataAgendamento", "Data do agendamento é obrigatória");
+        if (servico == null || servico.isEmpty()) camposFaltantes.put("servico", "Nome do serviço é obrigatório");
+        if (nomeProfissional == null || nomeProfissional.isEmpty()) camposFaltantes.put("nomeProfissional", "Nome do profissional é obrigatório");
+        
+        if (!camposFaltantes.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "mensagem", "Campos obrigatórios não informados",
+                "camposFaltantes", camposFaltantes
+            ));
+        }
+        
+        // Envia o lembrete de agendamento
+        boolean enviado = notificacaoService.enviarLembreteAgendamentoTemplate(
+            telefone, nomeCliente, dataAgendamento, servico, nomeProfissional
+        );
+        
+        if (enviado) {
+            return ResponseEntity.ok(Map.of(
+                "sucesso", true,
+                "mensagem", "Lembrete de agendamento enviado com sucesso",
+                "detalhes", Map.of(
+                    "telefone", telefone,
+                    "nomeCliente", nomeCliente,
+                    "dataAgendamento", dataAgendamento,
+                    "servico", servico,
+                    "nomeProfissional", nomeProfissional
+                )
+            ));
+        } else {
+            return ResponseEntity.status(500).body(Map.of(
+                "sucesso", false,
+                "mensagem", "Falha ao enviar lembrete de agendamento"
+            ));
+        }
+    }
 }

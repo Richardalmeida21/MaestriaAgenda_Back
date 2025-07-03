@@ -48,10 +48,10 @@ public class AgendamentoReminderService {
             int sucessos = 0;
             int falhas = 0;
             
-            // Envia mensagem para cada agendamento
+            // Envia mensagem para cada agendamento usando o novo template personalizado
             for (Agendamento agendamento : agendamentosAmanha) {
                 try {
-                    boolean enviado = notificacaoService.enviarLembreteWhatsApp(agendamento);
+                    boolean enviado = notificacaoService.enviarLembreteAgendamentoTemplate(agendamento);
                     if (enviado) {
                         sucessos++;
                     } else {
@@ -76,10 +76,13 @@ public class AgendamentoReminderService {
      */
     public boolean enviarLembreteManual(Long agendamentoId) {
         try {
+            logger.info("Enviando lembrete manual para agendamento ID: {}", agendamentoId);
+            
             Agendamento agendamento = agendamentoRepository.findById(agendamentoId)
                     .orElseThrow(() -> new RuntimeException("Agendamento não encontrado com ID: " + agendamentoId));
             
-            return notificacaoService.enviarLembreteWhatsApp(agendamento);
+            // Usar o novo método que utiliza o template personalizado
+            return notificacaoService.enviarLembreteAgendamentoTemplate(agendamento);
         } catch (Exception e) {
             logger.error("Erro ao enviar lembrete manual para agendamento ID {}: {}", 
                     agendamentoId, e.getMessage(), e);

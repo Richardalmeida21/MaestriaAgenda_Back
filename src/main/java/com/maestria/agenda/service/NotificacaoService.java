@@ -225,6 +225,157 @@ public class NotificacaoService {
     }
     
     /**
+     * Envia uma mensagem usando o template lembrete_agendamento
+     * 
+     * @param telefone O número de telefone do cliente
+     * @param nomeCliente O nome do cliente
+     * @param dataAgendamento A data do agendamento (formato DD/MM/YYYY)
+     * @param servico O nome do serviço
+     * @param nomeProfissional O nome do profissional
+     * @return true se a mensagem foi enviada com sucesso, false caso contrário
+     */
+    public boolean enviarLembreteAgendamentoTemplate(String telefone, String nomeCliente, 
+                                                   String dataAgendamento, String servico, 
+                                                   String nomeProfissional) {
+        if (!whatsappEnabled) {
+            logger.info("WhatsApp API está desativada. Simulando envio de lembrete de agendamento para: {}", telefone);
+            return true;
+        }
+        
+        // Verificar se as configurações necessárias estão presentes
+        if (apiToken == null || apiToken.trim().isEmpty() || phoneNumberId == null || phoneNumberId.trim().isEmpty()) {
+            logger.error("Configuração de WhatsApp incompleta. Token API ou Phone Number ID não configurados.");
+            return false;
+        }
+        
+        try {
+            String telefoneFormatado = formatarNumeroTelefone(telefone);
+            if (telefoneFormatado == null) {
+                logger.error("Número de telefone inválido: {}", telefone);
+                return false;
+            }
+            
+            // Criar o payload para a API do WhatsApp
+            ObjectNode requestBody = objectMapper.createObjectNode();
+            requestBody.put("messaging_product", "whatsapp");
+            requestBody.put("recipient_type", "individual");
+            requestBody.put("to", telefoneFormatado);
+            requestBody.put("type", "template");
+            
+            ObjectNode templateNode = objectMapper.createObjectNode();
+            templateNode.put("name", "lembrete_agendamento");
+            
+            ObjectNode languageNode = objectMapper.createObjectNode();
+            languageNode.put("code", "pt_BR");
+            templateNode.set("language", languageNode);
+            
+            // Adicionar componentes do template com os parâmetros
+            com.fasterxml.jackson.databind.node.ArrayNode componentsArray = objectMapper.createArrayNode();
+            
+            // Componente de texto do corpo da mensagem
+            ObjectNode textComponent = objectMapper.createObjectNode();
+            textComponent.put("type", "body");
+            
+            // Parâmetros do corpo do texto
+            com.fasterxml.jackson.databind.node.ArrayNode parametersArray = objectMapper.createArrayNode();
+            
+            // 1. Nome do cliente
+            ObjectNode param1 = objectMapper.createObjectNode();
+            param1.put("type", "text");
+            param1.put("text", nomeCliente);
+            parametersArray.add(param1);
+            
+            // 2. Data do agendamento
+            ObjectNode param2 = objectMapper.createObjectNode();
+            param2.put("type", "text");
+            param2.put("text", dataAgendamento);
+            parametersArray.add(param2);
+            
+            // 3. Nome do serviço
+            ObjectNode param3 = objectMapper.createObjectNode();
+            param3.put("type", "text");
+            param3.put("text", servico);
+            parametersArray.add(param3);
+            
+            // 4. Nome do profissional
+            ObjectNode param4 = objectMapper.createObjectNode();
+            param4.put("type", "text");
+            param4.put("text", nomeProfissional);
+            parametersArray.add(param4);
+            
+            textComponent.set("parameters", parametersArray);
+            componentsArray.add(textComponent);
+            
+            templateNode.set("components", componentsArray);
+            requestBody.set("template", templateNode);
+            
+            // Log do payload para depuração
+            logger.info("Enviando lembrete de agendamento via WhatsApp: {}", requestBody.toString());
+            
+            // Log dos detalhes completos da requisição
+            logger.info("Detalhes da requisição WhatsApp (lembrete de agendamento):");
+            logger.info(" - URL: {}", "https://graph.facebook.com/" + apiVersion + "/" + phoneNumberId + "/messages");
+            logger.info(" - Phone Number ID: {}", phoneNumberId);
+            logger.info(" - Telefone destino (formatado): {}", telefoneFormatado);
+            logger.info(" - Nome do cliente: {}", nomeCliente);
+            logger.info(" - Data do agendamento: {}", dataAgendamento);
+            logger.info(" - Serviço: {}", servico);
+            logger.info(" - Profissional: {}", nomeProfissional);
+            
+            try {
+                // Enviar a mensagem usando o WebClient
+                String response = whatsappApiClient.post()
+                        .uri("/" + phoneNumberId + "/messages")
+                        .header("Authorization", "Bearer " + apiToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(Mono.just(requestBody), ObjectNode.class)
+                        .retrieve()
+                        .bodyToMono(String.class)
+                        .block();
+                
+                logger.info("Lembrete de agendamento enviado com sucesso. Resposta: {}", response);
+                return true;
+            } catch (Exception e) {
+                logger.error("Erro ao enviar lembrete de agendamento para a API do WhatsApp: {}", e.getMessage());
+                logger.error("Detalhes do erro:", e);
+                return false;
+            }
+        } catch (Exception e) {
+            logger.error("Erro ao preparar lembrete de agendamento WhatsApp: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+    
+    /**
+     * Envia um lembrete de agendamento usando o template personalizado para um agendamento existente
+     * 
+     * @param agendamento O agendamento para o qual enviar o lembrete
+     * @return true se a mensagem foi enviada com sucesso, false caso contrário
+     */
+    public boolean enviarLembreteAgendamentoTemplate(Agendamento agendamento) {
+        if (agendamento == null || agendamento.getCliente() == null) {
+            logger.error("Agendamento ou cliente nulo. Não é possível enviar lembrete.");
+            return false;
+        }
+        
+        try {
+            // Formatar a data no padrão brasileiro (DD/MM/YYYY)
+            String dataFormatada = agendamento.getData().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            
+            return enviarLembreteAgendamentoTemplate(
+                agendamento.getCliente().getTelefone(),
+                agendamento.getCliente().getNome(),
+                dataFormatada,
+                agendamento.getServico().getNome(),
+                agendamento.getProfissional().getNome()
+            );
+        } catch (Exception e) {
+            logger.error("Erro ao preparar lembrete de agendamento com template: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+    
+    /**
      * Verifica se a configuração do WhatsApp está correta
      * 
      * @return Um mapa com informações sobre o status da configuração
@@ -249,9 +400,39 @@ public class NotificacaoService {
         // Status geral da configuração
         status.put("configuracaoCompleta", whatsappEnabled && tokenConfigurado && phoneIdConfigurado);
         
-        // Adicionar URL de endpoint de teste
-        status.put("endpointTesteWhatsApp", "/notificacoes/teste-whatsapp");
-        status.put("formatoTesteWhatsApp", "{\"telefone\": \"5511999999999\", \"mensagem\": \"Teste\"}");
+        // Adicionar URL dos endpoints de teste
+        Map<String, Object> endpointsInfo = new HashMap<>();
+        endpointsInfo.put("testeWhatsApp", Map.of(
+            "endpoint", "/notificacoes/teste-whatsapp",
+            "formato", "{\"telefone\": \"5511999999999\", \"mensagem\": \"Teste\"}"
+        ));
+        
+        endpointsInfo.put("testeWhatsAppTexto", Map.of(
+            "endpoint", "/notificacoes/teste-whatsapp-texto",
+            "formato", "{\"telefone\": \"5511999999999\", \"mensagem\": \"Teste\"}"
+        ));
+        
+        endpointsInfo.put("testeLembreteAgendamento", Map.of(
+            "endpoint", "/notificacoes/teste-lembrete-agendamento",
+            "formato", "{\"telefone\": \"5511999999999\", \"nomeCliente\": \"João Silva\", \"dataAgendamento\": \"01/08/2025\", \"servico\": \"Corte de Cabelo\", \"nomeProfissional\": \"Maria Oliveira\"}"
+        ));
+        
+        status.put("endpointsTeste", endpointsInfo);
+        
+        // Templates disponíveis
+        Map<String, Object> templatesInfo = new HashMap<>();
+        templatesInfo.put("hello_world", Map.of(
+            "idioma", "en_US",
+            "descricao", "Template padrão para iniciar conversas"
+        ));
+        
+        templatesInfo.put("lembrete_agendamento", Map.of(
+            "idioma", "pt_BR",
+            "descricao", "Template personalizado para lembretes de agendamento",
+            "variaveis", new String[]{"nome", "data_agendamento", "servico", "nome_profissional"}
+        ));
+        
+        status.put("templatesDisponiveis", templatesInfo);
         
         // Próximos passos
         if (!whatsappEnabled) {
@@ -261,7 +442,7 @@ public class NotificacaoService {
         } else if (!phoneIdConfigurado) {
             status.put("proximoPasso", "Configurar ID do número de telefone (WHATSAPP_PHONE_NUMBER_ID)");
         } else {
-            status.put("proximoPasso", "Configuração completa! Teste o envio de mensagens com o endpoint /notificacoes/teste-whatsapp");
+            status.put("proximoPasso", "Configuração completa! Teste o envio de mensagens com um dos endpoints de teste");
         }
         
         return status;
@@ -269,7 +450,7 @@ public class NotificacaoService {
     
     /**
      * Formata o número de telefone para o formato aceito pelo WhatsApp
-     * Remove caracteres não numéricos e adiciona o código do país se necessário
+     * Removes caracteres não numéricos e adiciona o código do país se necessário
      */
     private String formatarNumeroTelefone(String telefone) {
         if (telefone == null || telefone.isEmpty()) {
