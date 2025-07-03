@@ -108,7 +108,7 @@ public class NotificacaoService {
             templateNode.put("name", "hello_world");
             
             ObjectNode languageNode = objectMapper.createObjectNode();
-            languageNode.put("code", "pt_BR");
+            languageNode.put("code", "en_US");
             templateNode.set("language", languageNode);
             
             // Se precisarmos passar parâmetros para o template, adicionaríamos aqui
