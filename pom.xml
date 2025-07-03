@@ -94,6 +94,18 @@
             <version>1.18.30</version>
             <scope>provided</scope>
         </dependency>
+        
+        <!-- Para requisições HTTP ao WhatsApp Cloud API -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+        
+        <!-- JSON processing -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
