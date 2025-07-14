@@ -37,7 +37,6 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticat
                 .requestMatchers("/servico/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
                 .requestMatchers("/bloqueio/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
                 .requestMatchers("/metricas").hasAuthority("ADMIN")
-                .requestMatchers("/notificacoes/**").hasAuthority("ADMIN")
                 .requestMatchers("/agendamento/comissoes/total/**").hasAuthority("ADMIN")
                 .requestMatchers("/agendamento/fixo/**").hasAuthority("ADMIN")
                 .requestMatchers("/financeiro/comissoes").hasAuthority("ADMIN")

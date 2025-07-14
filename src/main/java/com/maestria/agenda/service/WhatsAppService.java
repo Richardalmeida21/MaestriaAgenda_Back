@@ -11,7 +11,9 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -62,50 +64,56 @@ public class WhatsAppService {
             
             // Montar o payload para a API do WhatsApp
             Map<String, Object> request = new HashMap<>();
-            Map<String, Object> template = new HashMap<>();
-            Map<String, Object> language = new HashMap<>();
+            request.put("messaging_product", "whatsapp");
+            request.put("recipient_type", "individual");
+            request.put("to", telefoneNormalizado);
+            request.put("type", "template");
             
-            language.put("code", "pt_BR");
+            Map<String, Object> template = new HashMap<>();
             template.put("name", TEMPLATE_LEMBRETE_AGENDAMENTO);
+            
+            Map<String, String> language = new HashMap<>();
+            language.put("code", "pt_BR");
             template.put("language", language);
             
-            // Adicionar os componentes do template (variáveis)
-            Map<String, Object> componentsMap = new HashMap<>();
-            componentsMap.put("type", "body");
+            // Criar a lista de componentes
+            List<Map<String, Object>> components = new ArrayList<>();
             
-            // Configurar os parâmetros
+            // Adicionar o componente body
+            Map<String, Object> bodyComponent = new HashMap<>();
+            bodyComponent.put("type", "body");
+            
+            // Configurar os parâmetros como uma lista
+            List<Map<String, Object>> parameters = new ArrayList<>();
+            
+            // Parâmetro 1: Nome
             Map<String, Object> param1 = new HashMap<>();
             param1.put("type", "text");
             param1.put("text", nome);
+            parameters.add(param1);
             
+            // Parâmetro 2: Data
             Map<String, Object> param2 = new HashMap<>();
             param2.put("type", "text");
             param2.put("text", dataFormatada);
+            parameters.add(param2);
             
+            // Parâmetro 3: Serviço
             Map<String, Object> param3 = new HashMap<>();
             param3.put("type", "text");
             param3.put("text", servico);
+            parameters.add(param3);
             
+            // Parâmetro 4: Profissional
             Map<String, Object> param4 = new HashMap<>();
             param4.put("type", "text");
             param4.put("text", profissional);
+            parameters.add(param4);
             
-            Map<String, Object>[] parameters = new Map[4];
-            parameters[0] = param1;
-            parameters[1] = param2;
-            parameters[2] = param3;
-            parameters[3] = param4;
-            
-            componentsMap.put("parameters", parameters);
-            
-            Map<String, Object>[] components = new Map[1];
-            components[0] = componentsMap;
+            bodyComponent.put("parameters", parameters);
+            components.add(bodyComponent);
             
             template.put("components", components);
-            
-            request.put("messaging_product", "whatsapp");
-            request.put("to", telefoneNormalizado);
-            request.put("type", "template");
             request.put("template", template);
             
             // Configurar cabeçalhos
@@ -119,6 +127,7 @@ public class WhatsAppService {
             String url = "https://graph.facebook.com/" + apiVersion + "/" + phoneNumberId + "/messages";
             
             // Fazer a requisição para a API
+            @SuppressWarnings("unchecked")
             Map<String, Object> response = restTemplate.postForObject(url, entity, Map.class);
             
             logger.info("Lembrete de agendamento enviado com sucesso para {} ({}). Resposta: {}", 
@@ -157,52 +166,58 @@ public class WhatsAppService {
             logger.info("Enviando teste de lembrete para {} ({}): Data: {}, Serviço: {}, Profissional: {}", 
                     nome, telefoneNormalizado, dataString, servico, profissional);
             
-            // Montar o payload para a API do WhatsApp
+            // Montar o payload para a API do WhatsApp seguindo exatamente o formato requerido
             Map<String, Object> request = new HashMap<>();
-            Map<String, Object> template = new HashMap<>();
-            Map<String, Object> language = new HashMap<>();
+            request.put("messaging_product", "whatsapp");
+            request.put("recipient_type", "individual"); // Este campo é importante e estava faltando
+            request.put("to", telefoneNormalizado);
+            request.put("type", "template");
             
-            language.put("code", "pt_BR");
+            Map<String, Object> template = new HashMap<>();
             template.put("name", TEMPLATE_LEMBRETE_AGENDAMENTO);
+            
+            Map<String, String> language = new HashMap<>();
+            language.put("code", "pt_BR");
             template.put("language", language);
             
-            // Adicionar os componentes do template (variáveis)
-            Map<String, Object> componentsMap = new HashMap<>();
-            componentsMap.put("type", "body");
+            // Criar a lista de componentes
+            List<Map<String, Object>> components = new ArrayList<>();
             
-            // Configurar os parâmetros
+            // Adicionar o componente body
+            Map<String, Object> bodyComponent = new HashMap<>();
+            bodyComponent.put("type", "body");
+            
+            // Configurar os parâmetros como uma lista (não como array)
+            List<Map<String, Object>> parameters = new ArrayList<>();
+            
+            // Parâmetro 1: Nome
             Map<String, Object> param1 = new HashMap<>();
             param1.put("type", "text");
             param1.put("text", nome);
+            parameters.add(param1);
             
+            // Parâmetro 2: Data
             Map<String, Object> param2 = new HashMap<>();
             param2.put("type", "text");
             param2.put("text", dataString);
+            parameters.add(param2);
             
+            // Parâmetro 3: Serviço
             Map<String, Object> param3 = new HashMap<>();
             param3.put("type", "text");
             param3.put("text", servico);
+            parameters.add(param3);
             
+            // Parâmetro 4: Profissional
             Map<String, Object> param4 = new HashMap<>();
             param4.put("type", "text");
             param4.put("text", profissional);
+            parameters.add(param4);
             
-            Map<String, Object>[] parameters = new Map[4];
-            parameters[0] = param1;
-            parameters[1] = param2;
-            parameters[2] = param3;
-            parameters[3] = param4;
-            
-            componentsMap.put("parameters", parameters);
-            
-            Map<String, Object>[] components = new Map[1];
-            components[0] = componentsMap;
+            bodyComponent.put("parameters", parameters);
+            components.add(bodyComponent);
             
             template.put("components", components);
-            
-            request.put("messaging_product", "whatsapp");
-            request.put("to", telefoneNormalizado);
-            request.put("type", "template");
             request.put("template", template);
             
             // Configurar cabeçalhos
@@ -215,10 +230,11 @@ public class WhatsAppService {
             // URL da API do WhatsApp
             String url = "https://graph.facebook.com/" + apiVersion + "/" + phoneNumberId + "/messages";
             
-            // Log do payload para debug
-            logger.debug("Payload de teste: {}", request);
+            // Log completo do payload para debug
+            logger.info("Payload de teste completo: {}", request);
             
             // Fazer a requisição para a API
+            @SuppressWarnings("unchecked")
             Map<String, Object> response = restTemplate.postForObject(url, entity, Map.class);
             
             logger.info("Teste de lembrete enviado com sucesso para {} ({}). Resposta: {}", 
@@ -261,6 +277,7 @@ public class WhatsAppService {
             template.put("language", language);
             
             request.put("messaging_product", "whatsapp");
+            request.put("recipient_type", "individual"); // Adicionar recipient_type
             request.put("to", telefoneNormalizado);
             request.put("type", "template");
             request.put("template", template);
@@ -276,6 +293,7 @@ public class WhatsAppService {
             String url = "https://graph.facebook.com/" + apiVersion + "/" + phoneNumberId + "/messages";
             
             // Fazer a requisição para a API
+            @SuppressWarnings("unchecked")
             Map<String, Object> response = restTemplate.postForObject(url, entity, Map.class);
             
             logger.info("Teste hello_world enviado com sucesso para {}. Resposta: {}", 
