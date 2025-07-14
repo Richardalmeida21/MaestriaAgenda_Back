@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.maestria.agenda.service.AgendamentoReminderService;
 import com.maestria.agenda.service.NotificacaoService;
+import com.maestria.agenda.service.WhatsAppService;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,12 +24,15 @@ public class NotificacaoController {
     
     private final AgendamentoReminderService reminderService;
     private final NotificacaoService notificacaoService;
+    private final WhatsAppService whatsAppService;
     
     public NotificacaoController(
             AgendamentoReminderService reminderService,
-            NotificacaoService notificacaoService) {
+            NotificacaoService notificacaoService,
+            WhatsAppService whatsAppService) {
         this.reminderService = reminderService;
         this.notificacaoService = notificacaoService;
+        this.whatsAppService = whatsAppService;
     }
     
     /**
@@ -197,6 +201,137 @@ public class NotificacaoController {
                 "sucesso", false,
                 "mensagem", "Falha ao enviar lembrete de agendamento"
             ));
+        }
+    }
+    
+    /**
+     * Endpoint para testar o envio de lembrete de agendamento usando o novo template
+     * Restrito a usuários com papel ADMIN
+     */
+    @PostMapping("/teste-template")
+    public ResponseEntity<?> testarTemplateAgendamento(
+            @RequestBody Map<String, String> dados,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        
+        // Verifica se o usuário tem permissão de administrador
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode testar o template.");
+        }
+        
+        // Extrair dados do payload
+        String telefone = dados.get("telefone");
+        String nome = dados.get("nome");
+        String data = dados.get("data");
+        String servico = dados.get("servico");
+        String profissional = dados.get("profissional");
+        
+        // Validar dados obrigatórios
+        if (telefone == null || nome == null || data == null || servico == null || profissional == null) {
+            Map<String, Object> resposta = new HashMap<>();
+            resposta.put("sucesso", false);
+            resposta.put("erro", "Todos os campos são obrigatórios: telefone, nome, data, servico, profissional");
+            return ResponseEntity.badRequest().body(resposta);
+        }
+        
+        boolean enviado = notificacaoService.enviarLembreteTemplate(
+                telefone, nome, data, servico, profissional);
+        
+        Map<String, Object> resposta = new HashMap<>();
+        resposta.put("sucesso", enviado);
+        resposta.put("mensagem", enviado ? 
+                "Lembrete enviado com sucesso" : 
+                "Falha ao enviar lembrete. Verifique os logs para mais detalhes.");
+        
+        return ResponseEntity.ok(resposta);
+    }
+    
+    /**
+     * Endpoint para testar o template de lembrete_agendamento
+     * Restrito a usuários com papel ADMIN
+     */
+    @PostMapping("/teste-template-lembrete")
+    public ResponseEntity<?> testarTemplateLembrete(
+            @RequestBody Map<String, String> dados,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        
+        // Verifica se o usuário tem permissão de administrador
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode testar templates.");
+        }
+        
+        try {
+            String telefone = dados.get("telefone");
+            String nome = dados.get("nome");
+            String data = dados.get("data");
+            String servico = dados.get("servico");
+            String profissional = dados.get("profissional");
+            
+            // Validar dados obrigatórios
+            if (telefone == null || nome == null || data == null || 
+                servico == null || profissional == null) {
+                Map<String, Object> resposta = new HashMap<>();
+                resposta.put("sucesso", false);
+                resposta.put("mensagem", "Todos os campos são obrigatórios: telefone, nome, data, servico, profissional");
+                return ResponseEntity.badRequest().body(resposta);
+            }
+            
+            boolean enviado = notificacaoService.enviarLembreteAgendamentoTemplate(
+                    telefone, nome, data, servico, profissional);
+            
+            Map<String, Object> resposta = new HashMap<>();
+            resposta.put("sucesso", enviado);
+            resposta.put("mensagem", enviado ? 
+                    "Lembrete de teste enviado com sucesso!" : 
+                    "Falha ao enviar lembrete. Verifique os logs para mais detalhes.");
+            
+            return ResponseEntity.ok(resposta);
+        } catch (Exception e) {
+            Map<String, Object> resposta = new HashMap<>();
+            resposta.put("sucesso", false);
+            resposta.put("mensagem", "Erro ao processar requisição: " + e.getMessage());
+            return ResponseEntity.status(500).body(resposta);
+        }
+    }
+    
+    /**
+     * Endpoint para testar o template hello_world (básico)
+     * Restrito a usuários com papel ADMIN
+     */
+    @PostMapping("/teste-hello-world")
+    public ResponseEntity<?> testarHelloWorld(
+            @RequestBody Map<String, String> dados,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        
+        // Verifica se o usuário tem permissão de administrador
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode testar templates.");
+        }
+        
+        try {
+            String telefone = dados.get("telefone");
+            
+            // Validar telefone
+            if (telefone == null || telefone.isEmpty()) {
+                Map<String, Object> resposta = new HashMap<>();
+                resposta.put("sucesso", false);
+                resposta.put("mensagem", "O campo telefone é obrigatório");
+                return ResponseEntity.badRequest().body(resposta);
+            }
+            
+            boolean enviado = notificacaoService.enviarMensagemDireta(telefone, "Olá, este é um teste do template Hello World!");
+            
+            Map<String, Object> resposta = new HashMap<>();
+            resposta.put("sucesso", enviado);
+            resposta.put("mensagem", enviado ? 
+                    "Mensagem Hello World enviada com sucesso!" : 
+                    "Falha ao enviar mensagem. Verifique os logs para mais detalhes.");
+            
+            return ResponseEntity.ok(resposta);
+        } catch (Exception e) {
+            Map<String, Object> resposta = new HashMap<>();
+            resposta.put("sucesso", false);
+            resposta.put("mensagem", "Erro ao processar requisição: " + e.getMessage());
+            return ResponseEntity.status(500).body(resposta);
         }
     }
 }

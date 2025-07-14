@@ -491,4 +491,133 @@ public class NotificacaoService {
                 agendamento.getServico().getNome()
         );
     }
+    
+    /**
+     * Envia uma mensagem de lembrete usando o template "lembrete_agendamento"
+     * 
+     * @param telefone Número de telefone do cliente
+     * @param nome Nome do cliente
+     * @param data Data formatada do agendamento
+     * @param servico Serviço agendado
+     * @param profissional Nome do profissional
+     * @return true se a mensagem foi enviada com sucesso, false caso contrário
+     */
+    public boolean enviarLembreteTemplate(String telefone, String nome, String data, 
+                                          String servico, String profissional) {
+        if (!whatsappEnabled || apiToken == null || phoneNumberId == null) {
+            logger.warn("Notificações WhatsApp desabilitadas ou configuração incompleta. Token: {}, Phone ID: {}", 
+                    apiToken != null ? "configurado" : "não configurado", 
+                    phoneNumberId != null ? "configurado" : "não configurado");
+            return false;
+        }
+        
+        try {
+            // Normalizar o número de telefone
+            String numeroNormalizado = normalizarTelefone(telefone);
+            
+            logger.info("Enviando lembrete por template para {} ({}): {}, {}, {}", 
+                    nome, numeroNormalizado, data, servico, profissional);
+            
+            ObjectNode requestBody = objectMapper.createObjectNode();
+            requestBody.put("messaging_product", "whatsapp");
+            requestBody.put("to", numeroNormalizado);
+            requestBody.put("type", "template");
+            
+            ObjectNode templateNode = objectMapper.createObjectNode();
+            templateNode.put("name", "lembrete_agendamento");
+            
+            ObjectNode languageNode = objectMapper.createObjectNode();
+            languageNode.put("code", "pt_BR");
+            templateNode.set("language", languageNode);
+            
+            // Configurando as variáveis do template
+            ObjectNode templateComponents = objectMapper.createObjectNode();
+            
+            // Criar o componente de corpo
+            ObjectNode bodyComponent = objectMapper.createObjectNode();
+            bodyComponent.put("type", "body");
+            
+            // Criar array de parâmetros
+            com.fasterxml.jackson.databind.node.ArrayNode parametersArray = objectMapper.createArrayNode();
+            
+            // Parâmetro 1: Nome
+            ObjectNode param1 = objectMapper.createObjectNode();
+            param1.put("type", "text");
+            param1.put("text", nome);
+            parametersArray.add(param1);
+            
+            // Parâmetro 2: Data
+            ObjectNode param2 = objectMapper.createObjectNode();
+            param2.put("type", "text");
+            param2.put("text", data);
+            parametersArray.add(param2);
+            
+            // Parâmetro 3: Serviço
+            ObjectNode param3 = objectMapper.createObjectNode();
+            param3.put("type", "text");
+            param3.put("text", servico);
+            parametersArray.add(param3);
+            
+            // Parâmetro 4: Profissional
+            ObjectNode param4 = objectMapper.createObjectNode();
+            param4.put("type", "text");
+            param4.put("text", profissional);
+            parametersArray.add(param4);
+            
+            // Adicionar array de parâmetros ao componente de corpo
+            bodyComponent.set("parameters", parametersArray);
+            
+            // Criar array de componentes e adicionar o componente de corpo
+            com.fasterxml.jackson.databind.node.ArrayNode componentsArray = objectMapper.createArrayNode();
+            componentsArray.add(bodyComponent);
+            
+            // Adicionar array de componentes ao template
+            templateNode.set("components", componentsArray);
+            requestBody.set("template", templateNode);
+            
+            // Enviar a requisição
+            String requestBodyJson = objectMapper.writeValueAsString(requestBody);
+            logger.debug("Corpo da requisição WhatsApp: {}", requestBodyJson);
+            
+            String apiUrl = "https://graph.facebook.com/" + apiVersion + "/" + phoneNumberId + "/messages";
+            
+            return whatsappApiClient.post()
+                .uri(apiUrl)
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + apiToken)
+                .bodyValue(requestBody)
+                .retrieve()
+                .bodyToMono(String.class)
+                .map(response -> {
+                    logger.info("Resposta do WhatsApp API: {}", response);
+                    return true;
+                })
+                .onErrorResume(error -> {
+                    logger.error("Erro ao enviar mensagem WhatsApp: {}", error.getMessage(), error);
+                    return Mono.just(false);
+                })
+                .block();
+        } catch (Exception e) {
+            logger.error("Erro ao preparar mensagem de lembrete WhatsApp: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+    
+    /**
+     * Normaliza um número de telefone para o formato internacional usado pelo WhatsApp
+     * 
+     * @param telefone Número de telefone em qualquer formato
+     * @return Número normalizado (ex: 5511999999999)
+     */
+    private String normalizarTelefone(String telefone) {
+        // Remover caracteres não numéricos
+        String apenasNumeros = telefone.replaceAll("[^0-9]", "");
+        
+        // Se não começar com 55 (código do Brasil), adicionar
+        if (!apenasNumeros.startsWith("55")) {
+            apenasNumeros = "55" + apenasNumeros;
+        }
+        
+        return apenasNumeros;
+    }
 }
