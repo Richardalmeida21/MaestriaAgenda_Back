@@ -33,7 +33,7 @@ public class NotificacaoService {
     @Value("${whatsapp.enabled:false}")
     private boolean whatsappEnabled;
     
-    @Value("${whatsapp.cloud.api.version:v22.0}")
+    @Value("${whatsapp.cloud.api.version:v17.0}")
     private String apiVersion;
     
     public NotificacaoService(WebClient whatsappApiClient, ObjectMapper objectMapper) {
@@ -263,7 +263,7 @@ public class NotificacaoService {
             requestBody.put("type", "template");
             
             ObjectNode templateNode = objectMapper.createObjectNode();
-            templateNode.put("name", "lembrete_agendamento");
+            templateNode.put("name", "lembrete_agendamento_v2");
             
             ObjectNode languageNode = objectMapper.createObjectNode();
             languageNode.put("code", "pt_BR");
@@ -426,7 +426,7 @@ public class NotificacaoService {
             "descricao", "Template padrão para iniciar conversas"
         ));
         
-        templatesInfo.put("lembrete_agendamento", Map.of(
+        templatesInfo.put("lembrete_agendamento_v2", Map.of(
             "idioma", "pt_BR",
             "descricao", "Template personalizado para lembretes de agendamento",
             "variaveis", new String[]{"nome", "data_agendamento", "servico", "nome_profissional"}
@@ -524,7 +524,7 @@ public class NotificacaoService {
             requestBody.put("type", "template");
             
             ObjectNode templateNode = objectMapper.createObjectNode();
-            templateNode.put("name", "lembrete_agendamento");
+            templateNode.put("name", "lembrete_agendamento_v2");
             
             ObjectNode languageNode = objectMapper.createObjectNode();
             languageNode.put("code", "pt_BR");
