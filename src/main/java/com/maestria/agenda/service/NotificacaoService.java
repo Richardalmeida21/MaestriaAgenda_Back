@@ -23,6 +23,7 @@ public class NotificacaoService {
     
     private final WebClient whatsappApiClient;
     private final ObjectMapper objectMapper;
+    private final WppConnectService wppConnectService;
     
     @Value("${whatsapp.cloud.api.token:#{null}}")
     private String apiToken;
@@ -35,10 +36,14 @@ public class NotificacaoService {
     
     @Value("${whatsapp.cloud.api.version:v17.0}")
     private String apiVersion;
+
+    @Value("${notification.provider}")
+    private String notificationProvider;
     
-    public NotificacaoService(WebClient whatsappApiClient, ObjectMapper objectMapper) {
+    public NotificacaoService(WebClient whatsappApiClient, ObjectMapper objectMapper, WppConnectService wppConnectService) {
         this.whatsappApiClient = whatsappApiClient;
         this.objectMapper = objectMapper;
+        this.wppConnectService = wppConnectService;
     }
     
     /**
@@ -48,6 +53,11 @@ public class NotificacaoService {
      * @return true se a mensagem foi enviada com sucesso, false caso contrário
      */
     public boolean enviarLembreteWhatsApp(Agendamento agendamento) {
+        if ("wppconnect".equalsIgnoreCase(notificationProvider)) {
+            String mensagem = criarMensagemLembrete(agendamento);
+            return wppConnectService.enviarMensagem(agendamento.getCliente().getTelefone(), mensagem);
+        }
+
         if (!whatsappEnabled) {
             logger.info("WhatsApp API está desativada. Simulando envio de mensagem para: {}", agendamento.getCliente().getTelefone());
             return true;
@@ -77,6 +87,10 @@ public class NotificacaoService {
      * @return true se a mensagem foi enviada com sucesso, false caso contrário
      */
     public boolean enviarMensagemDireta(String telefone, String mensagem) {
+        if ("wppconnect".equalsIgnoreCase(notificationProvider)) {
+            return wppConnectService.enviarMensagem(telefone, mensagem);
+        }
+
         if (!whatsappEnabled) {
             logger.info("WhatsApp API está desativada. Simulando envio de mensagem para: {}", telefone);
             return true;
@@ -237,6 +251,14 @@ public class NotificacaoService {
     public boolean enviarLembreteAgendamentoTemplate(String telefone, String nomeCliente, 
                                                    String dataAgendamento, String servico, 
                                                    String nomeProfissional) {
+        if ("wppconnect".equalsIgnoreCase(notificationProvider)) {
+            String mensagem = String.format(
+                "Olá %s! Lembrete de agendamento para %s: %s com %s.",
+                nomeCliente, dataAgendamento, servico, nomeProfissional
+            );
+            return wppConnectService.enviarMensagem(telefone, mensagem);
+        }
+
         if (!whatsappEnabled) {
             logger.info("WhatsApp API está desativada. Simulando envio de lembrete de agendamento para: {}", telefone);
             return true;
@@ -504,6 +526,13 @@ public class NotificacaoService {
      */
     public boolean enviarLembreteTemplate(String telefone, String nome, String data, 
                                           String servico, String profissional) {
+        if ("wppconnect".equalsIgnoreCase(notificationProvider)) {
+            String mensagem = String.format(
+                "Olá %s! Lembrete de agendamento para %s: %s com %s.",
+                nome, data, servico, profissional
+            );
+            return wppConnectService.enviarMensagem(telefone, mensagem);
+        }
         if (!whatsappEnabled || apiToken == null || phoneNumberId == null) {
             logger.warn("Notificações WhatsApp desabilitadas ou configuração incompleta. Token: {}, Phone ID: {}", 
                     apiToken != null ? "configurado" : "não configurado", 
@@ -513,7 +542,7 @@ public class NotificacaoService {
         
         try {
             // Normalizar o número de telefone
-            String numeroNormalizado = normalizarTelefone(telefone);
+            String numeroNormalizado = formatarNumeroTelefone(telefone);
             
             logger.info("Enviando lembrete por template para {} ({}): {}, {}, {}", 
                     nome, numeroNormalizado, data, servico, profissional);
@@ -531,7 +560,6 @@ public class NotificacaoService {
             templateNode.set("language", languageNode);
             
             // Configurando as variáveis do template
-            ObjectNode templateComponents = objectMapper.createObjectNode();
             
             // Criar o componente de corpo
             ObjectNode bodyComponent = objectMapper.createObjectNode();
@@ -579,7 +607,7 @@ public class NotificacaoService {
             String requestBodyJson = objectMapper.writeValueAsString(requestBody);
             logger.debug("Corpo da requisição WhatsApp: {}", requestBodyJson);
             
-            String apiUrl = "https://graph.facebook.com/" + apiVersion + "/" + phoneNumberId + "/messages";
+            String apiUrl = "/" + phoneNumberId + "/messages";
             
             return whatsappApiClient.post()
                 .uri(apiUrl)
@@ -593,31 +621,18 @@ public class NotificacaoService {
                     return true;
                 })
                 .onErrorResume(error -> {
-                    logger.error("Erro ao enviar mensagem WhatsApp: {}", error.getMessage(), error);
+                    logger.error("Erro ao enviar lembrete por template: {}", error.getMessage(), error);
                     return Mono.just(false);
                 })
                 .block();
         } catch (Exception e) {
-            logger.error("Erro ao preparar mensagem de lembrete WhatsApp: {}", e.getMessage(), e);
+            logger.error("Erro ao construir a requisição de lembrete por template: {}", e.getMessage(), e);
             return false;
         }
     }
-    
-    /**
-     * Normaliza um número de telefone para o formato internacional usado pelo WhatsApp
-     * 
-     * @param telefone Número de telefone em qualquer formato
-     * @return Número normalizado (ex: 5511999999999)
-     */
+
     private String normalizarTelefone(String telefone) {
-        // Remover caracteres não numéricos
-        String apenasNumeros = telefone.replaceAll("[^0-9]", "");
-        
-        // Se não começar com 55 (código do Brasil), adicionar
-        if (!apenasNumeros.startsWith("55")) {
-            apenasNumeros = "55" + apenasNumeros;
-        }
-        
-        return apenasNumeros;
+        if (telefone == null) return null;
+        return telefone.replaceAll("[^0-9]", "");
     }
 }
