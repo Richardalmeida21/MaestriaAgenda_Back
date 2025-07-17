@@ -788,7 +788,13 @@ public class AgendamentoController {
             List<Agendamento> agendamentos = agendamentoRepository.findByData(amanha);
             List<Map<String, Object>> resultado = agendamentos.stream().map(a -> {
                 Map<String, Object> map = new HashMap<>();
-                map.put("cliente", a.getCliente() != null ? a.getCliente().getNome() : null);
+                if (a.getCliente() != null) {
+                    map.put("cliente", a.getCliente().getNome());
+                    map.put("telefone_cliente", a.getCliente().getTelefone());
+                } else {
+                    map.put("cliente", null);
+                    map.put("telefone_cliente", null);
+                }
                 map.put("horario", a.getHora());
                 map.put("servico", a.getServico() != null ? a.getServico().getNome() : null);
                 map.put("profissional", a.getProfissional() != null ? a.getProfissional().getNome() : null);
