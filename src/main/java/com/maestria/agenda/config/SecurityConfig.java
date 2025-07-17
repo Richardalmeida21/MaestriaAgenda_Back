@@ -29,8 +29,8 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticat
         .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/ping").permitAll()
                 .requestMatchers("/api/whatsapp/webhook/**").permitAll()
-                .requestMatchers("/auth/login", "/auth/register", "/public/**", "/generate-password", "/h2-console/**")
-                    .permitAll()
+                .requestMatchers("/auth/login", "/auth/register", "/public/**", "/generate-password", "/h2-console/**").permitAll()
+                .requestMatchers("/agendamento/amanha").permitAll()
                 .requestMatchers("/auth/me", "/agendamento/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
                 .requestMatchers("/cliente/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
                 .requestMatchers("/profissional/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
