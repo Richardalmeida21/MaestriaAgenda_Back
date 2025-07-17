@@ -384,7 +384,7 @@ public class AgendamentoController {
                 logger.warn("❌ Profissional não encontrado: {}", userDetails.getUsername());
                 return ResponseEntity.status(403).body("Profissional não encontrado.");
             }
-            logger.info("✅ PROFISSIONAL {} solicitou seus agendamentos.", profissional.getNome());
+            logger.info("✅ PROFISSIONAL {} solicitando seus agendamentos.", profissional.getNome());
             List<Agendamento> agendamentos = agendamentoRepository.findByProfissional(profissional);
             List<Map<String, Object>> resultado = agendamentos.stream().map(a -> {
                 Map<String, Object> map = new HashMap<>();
@@ -767,6 +767,38 @@ public class AgendamentoController {
         } catch (Exception e) {
             logger.error("Erro ao dar baixa no agendamento: {}", e.getMessage(), e);
             return ResponseEntity.status(500).body("Erro ao dar baixa no agendamento: " + e.getMessage());
+        }
+    }
+
+    // Endpoint para listar agendamentos do dia seguinte com autenticação por API Key (variável de ambiente)
+    @GetMapping("/amanha")
+    public ResponseEntity<?> listarAgendamentosAmanha(@RequestHeader(value = "X-API-KEY", required = false) String apiKey) {
+        final String API_KEY_ESPERADA = System.getenv("API_KEY_AGENDAMENTO");
+        if (API_KEY_ESPERADA == null) {
+            logger.error("❌ Variável de ambiente API_KEY_AGENDAMENTO não configurada!");
+            return ResponseEntity.status(500).body("API Key do agendamento não configurada no servidor");
+        }
+        if (apiKey == null || !apiKey.equals(API_KEY_ESPERADA)) {
+            logger.warn("❌ API Key inválida ou ausente na requisição para /amanha");
+            return ResponseEntity.status(401).body("Acesso não autorizado: API Key inválida");
+        }
+        logger.info("🔍 Solicitando agendamentos do dia seguinte via API Key");
+        try {
+            LocalDate amanha = LocalDate.now().plusDays(1);
+            List<Agendamento> agendamentos = agendamentoRepository.findByData(amanha);
+            List<Map<String, Object>> resultado = agendamentos.stream().map(a -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("cliente", a.getCliente() != null ? a.getCliente().getNome() : null);
+                map.put("horario", a.getHora());
+                map.put("servico", a.getServico() != null ? a.getServico().getNome() : null);
+                map.put("profissional", a.getProfissional() != null ? a.getProfissional().getNome() : null);
+                map.put("data", a.getData());
+                return map;
+            }).collect(Collectors.toList());
+            return ResponseEntity.ok(resultado);
+        } catch (Exception e) {
+            logger.error("❌ Erro ao listar agendamentos do dia seguinte", e);
+            return ResponseEntity.status(500).body("Erro ao listar agendamentos do dia seguinte: " + e.getMessage());
         }
     }
 }
