@@ -73,7 +73,7 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticat
             "http://localhost:8080",
             "http://localhost:8081", 
             "http://localhost:3000",
-            "https://your-frontend-domain.com" // Substitua pelo domínio do frontend em produção
+            "https://agendamaestria.vercel.app" // Frontend em produção na Vercel
         ));
         corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         corsConfig.setAllowedHeaders(List.of("*"));

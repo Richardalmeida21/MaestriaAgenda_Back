@@ -1,0 +1,57 @@
+# 🔧 CORS CORRIGIDO - GUIA RÁPIDO
+
+## ✅ O QUE FOI FEITO
+
+Ajustei a configuração de CORS no backend para permitir requisições do seu frontend local.
+
+**Arquivo alterado:** `SecurityConfig.java`
+
+### **Mudanças:**
+- ✅ Adicionado `http://localhost:8080` nos origins permitidos
+- ✅ Adicionado método `PATCH` para o novo endpoint
+- ✅ Habilitado `allowCredentials(true)` para envio de tokens JWT
+
+### **Origins permitidos agora:**
+```
+- http://localhost:8080  ← SEU FRONTEND
+- http://localhost:8081  
+- http://localhost:3000
+```
+
+---
+
+## 🚀 PRÓXIMOS PASSOS
+
+### **1. Deploy do Backend**
+- ✅ Build executado com sucesso
+- 🔄 **Agora faça o deploy no Render** para que as mudanças entrem em vigor
+
+### **2. Teste no Frontend**
+Após o deploy, teste novamente:
+```tsx
+// Isso deve funcionar agora:
+await api.patch('/profissional/5/desconto-taxas', {
+  descontarTaxas: false
+});
+```
+
+---
+
+## 🔍 COMO VERIFICAR SE FUNCIONOU
+
+1. **Abra o DevTools** do navegador
+2. **Tente alterar** uma configuração de desconto
+3. **Verifique se** não há mais erros de CORS
+4. **Sucesso:** Mensagem de "Configuração alterada" aparece
+
+---
+
+## 📞 SE AINDA DER ERRO
+
+Se ainda houver problemas após o deploy:
+
+1. **Verifique a URL** do backend no frontend
+2. **Confirme** que está usando `http://localhost:8080`
+3. **Limpe cache** do navegador (Ctrl+Shift+R)
+
+**🎉 Pronto! O erro de CORS foi corrigido!**
