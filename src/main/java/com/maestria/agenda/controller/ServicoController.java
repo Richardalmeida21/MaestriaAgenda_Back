@@ -63,6 +63,7 @@ public class ServicoController {
             servico.setValor(dados.valor());
             servico.setDescricao(dados.descricao());
             servico.setDuracao(dados.duracao());
+            servico.setComissaoPercentual(dados.comissaoPercentual());
             
             servicoRepository.save(servico);
             
@@ -97,6 +98,7 @@ public class ServicoController {
                         servico.setValor(dados.valor());
                         servico.setDescricao(dados.descricao());
                         servico.setDuracao(dados.duracao());
+                        servico.setComissaoPercentual(dados.comissaoPercentual());
                         
                         servicoRepository.save(servico);
                         

@@ -32,6 +32,11 @@ public class Servico {
     @Column(nullable = false)
     private String duracao; // ISO-8601 format (PT1H30M)
 
+    @NotNull(message = "Percentual de comissão não pode ser nulo")
+    @Positive(message = "Percentual de comissão deve ser positivo")
+    @Column(nullable = false)
+    private Double comissaoPercentual; // Percentual de comissão específico deste serviço
+
     // Construtor padrão
     public Servico() {}
 
@@ -74,6 +79,14 @@ public class Servico {
 
     public void setDuracao(String duracao) {
         this.duracao = duracao;
+    }
+
+    public Double getComissaoPercentual() {
+        return comissaoPercentual;
+    }
+
+    public void setComissaoPercentual(Double comissaoPercentual) {
+        this.comissaoPercentual = comissaoPercentual;
     }
     
     /**

@@ -18,7 +18,6 @@ import com.maestria.agenda.servico.ServicoRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -47,8 +46,7 @@ public class AgendamentoController {
     private final ServicoRepository servicoRepository;
     private final BloqueioAgendaRepository bloqueioRepository;
 
-    @Value("${comissao.percentual}")
-    private double comissaoPercentual;
+    // Removida a injeção da comissão global pois agora cada serviço tem sua própria comissão
 
     public AgendamentoController(AgendamentoRepository agendamentoRepository,
             AgendamentoFixoRepository agendamentoFixoRepository,

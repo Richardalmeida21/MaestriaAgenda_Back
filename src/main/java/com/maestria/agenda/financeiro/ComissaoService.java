@@ -8,7 +8,6 @@ import com.maestria.agenda.profissional.Profissional;
 import com.maestria.agenda.profissional.ProfissionalRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
@@ -26,8 +25,7 @@ public class ComissaoService {
     private final ComissaoPagamentoRepository comissaoPagamentoRepository;
     private final Logger logger = LoggerFactory.getLogger(ComissaoService.class);
     
-    @Value("${comissao.percentual}")
-    private double comissaoPercentual;
+    // Removida a injeção da comissão global pois agora cada serviço tem sua própria comissão
 
     public ComissaoService(AgendamentoRepository agendamentoRepository,
             AgendamentoFixoRepository agendamentoFixoRepository,
@@ -64,6 +62,7 @@ public class ComissaoService {
                 profissionalId, inicio, fim);
         
         double valorTotal = 0.0;
+        double comissaoTotal = 0.0;
         double descontoTaxaTotal = 0.0;
         
         List<Agendamento> agendamentosNormais = agendamentoRepository
@@ -73,9 +72,11 @@ public class ComissaoService {
         
         for (Agendamento agendamento : agendamentosNormais) {
             if (agendamento.getPago() != null && agendamento.getPago() && 
-                agendamento.getServico() != null && agendamento.getServico().getValor() != null) {
+                agendamento.getServico() != null && agendamento.getServico().getValor() != null &&
+                agendamento.getServico().getComissaoPercentual() != null) {
                 
                 double valorServico = agendamento.getServico().getValor();
+                double comissaoPercentualServico = agendamento.getServico().getComissaoPercentual();
                 double taxa = 0.0;
                 
                 if (agendamento.getFormaPagamento() != null) {
@@ -83,21 +84,21 @@ public class ComissaoService {
                 }
                 
                 double descontoTaxa = valorServico * (taxa / 100.0);
+                double comissaoServico = valorServico * (comissaoPercentualServico / 100.0);
                 
                 valorTotal += valorServico;
+                comissaoTotal += comissaoServico;
                 descontoTaxaTotal += descontoTaxa;
                 
-                logger.debug("Agendamento normal ID {}: valor {}, taxa {}%, desconto {}", 
-                        agendamento.getId(), valorServico, taxa, descontoTaxa);
+                logger.debug("Agendamento normal ID {}: valor {}, comissão {}%, valor comissão {}, taxa {}%, desconto {}", 
+                        agendamento.getId(), valorServico, comissaoPercentualServico, comissaoServico, taxa, descontoTaxa);
             }
         }
         
-        double comissaoBruta = valorTotal * (comissaoPercentual / 100.0);
-        
-        logger.info("Comissão de agendamentos normais: valor total {}, comissão {}%, bruto {}, desconto {}", 
-                valorTotal, comissaoPercentual, comissaoBruta, descontoTaxaTotal);
+        logger.info("Comissão de agendamentos normais: valor total {}, comissão total {}, desconto {}", 
+                valorTotal, comissaoTotal, descontoTaxaTotal);
                 
-        return new ResultadoComissao(valorTotal, comissaoBruta, descontoTaxaTotal);
+        return new ResultadoComissao(valorTotal, comissaoTotal, descontoTaxaTotal);
     }
     
     /**
@@ -108,6 +109,7 @@ public class ComissaoService {
                 profissionalId, inicio, fim);
         
         double valorTotal = 0.0;
+        double comissaoTotal = 0.0;
         double descontoTaxaTotal = 0.0;
         
         List<AgendamentoFixo> agendamentosFixos = agendamentoFixoRepository
@@ -119,9 +121,15 @@ public class ComissaoService {
             List<Agendamento> agendamentosGerados = agendamentoRepository
                 .findByAgendamentoFixoIdAndDataBetweenAndPagoTrue(agendamentoFixo.getId(), inicio, fim);
             
-            if (!agendamentosGerados.isEmpty()) {
+            if (!agendamentosGerados.isEmpty() && 
+                agendamentoFixo.getServico() != null && 
+                agendamentoFixo.getServico().getValor() != null &&
+                agendamentoFixo.getServico().getComissaoPercentual() != null) {
+                
                 double valorServico = agendamentoFixo.getServico().getValor();
+                double comissaoPercentualServico = agendamentoFixo.getServico().getComissaoPercentual();
                 double valorTotalServico = valorServico * agendamentosGerados.size();
+                double comissaoTotalServico = valorTotalServico * (comissaoPercentualServico / 100.0);
                 double descontoTaxa = 0.0;
                 
                 for (Agendamento agendamento : agendamentosGerados) {
@@ -132,20 +140,19 @@ public class ComissaoService {
                 }
                 
                 valorTotal += valorTotalServico;
+                comissaoTotal += comissaoTotalServico;
                 descontoTaxaTotal += descontoTaxa;
                 
-                logger.debug("Agendamento fixo ID {}: {} ocorrências pagas x {} = {}, desconto {}", 
+                logger.debug("Agendamento fixo ID {}: {} ocorrências pagas x {} = {}, comissão {}%, valor comissão {}, desconto {}", 
                         agendamentoFixo.getId(), agendamentosGerados.size(), valorServico, 
-                        valorTotalServico, descontoTaxa);
+                        valorTotalServico, comissaoPercentualServico, comissaoTotalServico, descontoTaxa);
             }
         }
         
-        double comissaoBruta = valorTotal * (comissaoPercentual / 100.0);
-        
-        logger.info("Comissão de agendamentos fixos: valor total {}, comissão {}%, bruto {}, desconto {}", 
-                valorTotal, comissaoPercentual, comissaoBruta, descontoTaxaTotal);
+        logger.info("Comissão de agendamentos fixos: valor total {}, comissão total {}, desconto {}", 
+                valorTotal, comissaoTotal, descontoTaxaTotal);
                 
-        return new ResultadoComissao(valorTotal, comissaoBruta, descontoTaxaTotal);
+        return new ResultadoComissao(valorTotal, comissaoTotal, descontoTaxaTotal);
     }
     
     /**
