@@ -2,28 +2,28 @@ package com.maestria.agenda.financeiro;
 
 public enum PagamentoTipo {
 
-    CREDITO_1X(2.0),
-    CREDITO_2X(2.5),
-    CREDITO_3X(3.0),
-    CREDITO_4X(3.5),
-    CREDITO_5X(4.0),
-    CREDITO_6X(4.5),
-    CREDITO_7X(5.0),
-    CREDITO_8X(5.0),
-    CREDITO_9X(5.0),
-    CREDITO_10X(5.0),
-    DEBITO(1.5),
-    PIX(0.0),
-    DINHEIRO(0.0);
+    CREDITO_1X("Crédito 1x"),
+    CREDITO_2X("Crédito 2x"),
+    CREDITO_3X("Crédito 3x"),
+    CREDITO_4X("Crédito 4x"),
+    CREDITO_5X("Crédito 5x"),
+    CREDITO_6X("Crédito 6x"),
+    CREDITO_7X("Crédito 7x"),
+    CREDITO_8X("Crédito 8x"),
+    CREDITO_9X("Crédito 9x"),
+    CREDITO_10X("Crédito 10x"),
+    DEBITO("Débito"),
+    PIX("PIX"),
+    DINHEIRO("Dinheiro");
     
-    private final double taxa;
+    private final String descricao;
 
-    PagamentoTipo(double taxa) {
-        this.taxa = taxa;
+    PagamentoTipo(String descricao) {
+        this.descricao = descricao;
     }
 
-    public double getTaxa() {
-        return taxa;
+    public String getDescricao() {
+        return descricao;
     }
     
     public static PagamentoTipo fromString(String formaPagamento) {

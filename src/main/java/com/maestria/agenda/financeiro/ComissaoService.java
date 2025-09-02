@@ -23,6 +23,7 @@ public class ComissaoService {
     private final AgendamentoFixoRepository agendamentoFixoRepository;
     private final ProfissionalRepository profissionalRepository;
     private final ComissaoPagamentoRepository comissaoPagamentoRepository;
+    private final TaxaPagamentoService taxaPagamentoService;
     private final Logger logger = LoggerFactory.getLogger(ComissaoService.class);
     
     // Removida a injeção da comissão global pois agora cada serviço tem sua própria comissão
@@ -30,11 +31,13 @@ public class ComissaoService {
     public ComissaoService(AgendamentoRepository agendamentoRepository,
             AgendamentoFixoRepository agendamentoFixoRepository,
             ProfissionalRepository profissionalRepository,
-            ComissaoPagamentoRepository comissaoPagamentoRepository) {
+            ComissaoPagamentoRepository comissaoPagamentoRepository,
+            TaxaPagamentoService taxaPagamentoService) {
         this.agendamentoRepository = agendamentoRepository;
         this.agendamentoFixoRepository = agendamentoFixoRepository;
         this.profissionalRepository = profissionalRepository;
         this.comissaoPagamentoRepository = comissaoPagamentoRepository;
+        this.taxaPagamentoService = taxaPagamentoService;
     }
     
     /**
@@ -72,15 +75,16 @@ public class ComissaoService {
         
         for (Agendamento agendamento : agendamentosNormais) {
             if (agendamento.getPago() != null && agendamento.getPago() && 
-                agendamento.getServico() != null && agendamento.getServico().getValor() != null &&
-                agendamento.getServico().getComissaoPercentual() != null) {
+                agendamento.getServico() != null && agendamento.getServico().getValor() != null) {
                 
                 double valorServico = agendamento.getServico().getValor();
-                double comissaoPercentualServico = agendamento.getServico().getComissaoPercentual();
+                // Se não há comissão definida, usa 70% como padrão (valor anterior)
+                double comissaoPercentualServico = agendamento.getServico().getComissaoPercentual() != null ? 
+                    agendamento.getServico().getComissaoPercentual() : 70.0;
                 double taxa = 0.0;
                 
                 if (agendamento.getFormaPagamento() != null) {
-                    taxa = agendamento.getFormaPagamento().getTaxa();
+                    taxa = taxaPagamentoService.obterTaxa(agendamento.getFormaPagamento());
                 }
                 
                 double descontoTaxa = valorServico * (taxa / 100.0);
@@ -123,18 +127,19 @@ public class ComissaoService {
             
             if (!agendamentosGerados.isEmpty() && 
                 agendamentoFixo.getServico() != null && 
-                agendamentoFixo.getServico().getValor() != null &&
-                agendamentoFixo.getServico().getComissaoPercentual() != null) {
+                agendamentoFixo.getServico().getValor() != null) {
                 
                 double valorServico = agendamentoFixo.getServico().getValor();
-                double comissaoPercentualServico = agendamentoFixo.getServico().getComissaoPercentual();
+                // Se não há comissão definida, usa 70% como padrão (valor anterior)
+                double comissaoPercentualServico = agendamentoFixo.getServico().getComissaoPercentual() != null ? 
+                    agendamentoFixo.getServico().getComissaoPercentual() : 70.0;
                 double valorTotalServico = valorServico * agendamentosGerados.size();
                 double comissaoTotalServico = valorTotalServico * (comissaoPercentualServico / 100.0);
                 double descontoTaxa = 0.0;
                 
                 for (Agendamento agendamento : agendamentosGerados) {
                     if (agendamento.getFormaPagamento() != null) {
-                        double taxa = agendamento.getFormaPagamento().getTaxa();
+                        double taxa = taxaPagamentoService.obterTaxa(agendamento.getFormaPagamento());
                         descontoTaxa += valorServico * (taxa / 100.0);
                     }
                 }

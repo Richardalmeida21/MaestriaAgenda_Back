@@ -32,9 +32,8 @@ public class Servico {
     @Column(nullable = false)
     private String duracao; // ISO-8601 format (PT1H30M)
 
-    @NotNull(message = "Percentual de comissão não pode ser nulo")
     @Positive(message = "Percentual de comissão deve ser positivo")
-    @Column(nullable = false)
+    @Column(nullable = true) // Temporariamente nullable para migração
     private Double comissaoPercentual; // Percentual de comissão específico deste serviço
 
     // Construtor padrão

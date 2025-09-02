@@ -17,7 +17,6 @@ public record DadosServico(
     @NotBlank(message = "Duração do serviço não pode ser vazia") 
     String duracao,
     
-    @NotNull(message = "Percentual de comissão não pode ser nulo")
     @Positive(message = "Percentual de comissão deve ser positivo")
-    Double comissaoPercentual
+    Double comissaoPercentual // Temporariamente sem @NotNull para migração
 ) {}
