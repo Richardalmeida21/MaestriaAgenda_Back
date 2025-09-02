@@ -1,0 +1,254 @@
+# 📋 ENDPOINTS DISPONÍVEIS NO BACKEND - TAXAS DE PAGAMENTO
+
+## 🎯 BASE URL: `/api/taxas-pagamento`
+
+### **🔐 IMPORTANTE:**
+- **Todos os endpoints requerem autenticação JWT**
+- **Apenas usuários ADMIN podem acessar (exceto GET /{tipoPagamento})**
+
+---
+
+## 📊 ENDPOINTS DISPONÍVEIS
+
+### **1. GET `/api/taxas-pagamento`**
+- **Função:** Lista todas as configurações de taxa do banco
+- **Permissão:** ADMIN
+- **Response:**
+```json
+[
+  {
+    "id": 1,
+    "tipoPagamento": "CREDITO_1X",
+    "taxa": 2.00,
+    "ativo": true,
+    "createdAt": "2025-09-02T10:00:00",
+    "updatedAt": "2025-09-02T10:00:00"
+  },
+  {
+    "id": 2,
+    "tipoPagamento": "DEBITO",
+    "taxa": 1.50,
+    "ativo": true,
+    "createdAt": "2025-09-02T10:00:00",
+    "updatedAt": "2025-09-02T10:00:00"
+  }
+]
+```
+
+### **2. GET `/api/taxas-pagamento/{tipoPagamento}`**
+- **Função:** Obtém a taxa de um tipo específico
+- **Permissão:** Qualquer usuário autenticado
+- **Exemplo:** `/api/taxas-pagamento/CREDITO_1X`
+- **Response:**
+```json
+{
+  "tipoPagamento": "CREDITO_1X",
+  "taxa": 2.00
+}
+```
+
+### **3. POST `/api/taxas-pagamento/configurar`**
+- **Função:** Configura ou atualiza uma taxa
+- **Permissão:** ADMIN
+- **Body:**
+```json
+{
+  "tipoPagamento": "CREDITO_1X",
+  "taxa": 2.30
+}
+```
+- **Response:**
+```json
+{
+  "id": 1,
+  "tipoPagamento": "CREDITO_1X",
+  "taxa": 2.30,
+  "ativo": true,
+  "createdAt": "2025-09-02T10:00:00",
+  "updatedAt": "2025-09-02T10:05:00"
+}
+```
+
+### **4. DELETE `/api/taxas-pagamento/{tipoPagamento}`**
+- **Função:** Desativa uma taxa (volta para valor padrão)
+- **Permissão:** ADMIN
+- **Exemplo:** `/api/taxas-pagamento/CREDITO_1X`
+- **Response:**
+```json
+"Taxa desativada. Voltará para valor padrão."
+```
+
+### **5. POST `/api/taxas-pagamento/inicializar`**
+- **Função:** Inicializa todas as taxas padrão no banco
+- **Permissão:** ADMIN
+- **Response:**
+```json
+"Taxas padrão inicializadas com sucesso."
+```
+
+### **6. GET `/api/taxas-pagamento/tipos-disponiveis`**
+- **Função:** Lista todos os tipos de pagamento disponíveis
+- **Permissão:** ADMIN
+- **Response:**
+```json
+[
+  {
+    "codigo": "CREDITO_1X",
+    "descricao": "Crédito 1x"
+  },
+  {
+    "codigo": "CREDITO_2X",
+    "descricao": "Crédito 2x"
+  },
+  {
+    "codigo": "CREDITO_3X",
+    "descricao": "Crédito 3x"
+  },
+  {
+    "codigo": "CREDITO_4X",
+    "descricao": "Crédito 4x"
+  },
+  {
+    "codigo": "CREDITO_5X",
+    "descricao": "Crédito 5x"
+  },
+  {
+    "codigo": "CREDITO_6X",
+    "descricao": "Crédito 6x"
+  },
+  {
+    "codigo": "CREDITO_7X",
+    "descricao": "Crédito 7x"
+  },
+  {
+    "codigo": "CREDITO_8X",
+    "descricao": "Crédito 8x"
+  },
+  {
+    "codigo": "CREDITO_9X",
+    "descricao": "Crédito 9x"
+  },
+  {
+    "codigo": "CREDITO_10X",
+    "descricao": "Crédito 10x"
+  },
+  {
+    "codigo": "DEBITO",
+    "descricao": "Débito"
+  },
+  {
+    "codigo": "PIX",
+    "descricao": "PIX"
+  },
+  {
+    "codigo": "DINHEIRO",
+    "descricao": "Dinheiro"
+  }
+]
+```
+
+---
+
+## 🎨 COMO O FRONTEND DEVE IMPLEMENTAR
+
+### **Fluxo Recomendado:**
+
+#### **1. Carregamento Inicial da Página:**
+```typescript
+// 1. Carregar tipos disponíveis
+const tipos = await api.get('/api/taxas-pagamento/tipos-disponiveis');
+
+// 2. Carregar taxas configuradas
+const taxas = await api.get('/api/taxas-pagamento');
+
+// 3. Combinar dados para exibir
+```
+
+#### **2. Salvar/Atualizar Taxa:**
+```typescript
+await api.post('/api/taxas-pagamento/configurar', {
+  tipoPagamento: 'CREDITO_1X',
+  taxa: 2.30
+});
+```
+
+#### **3. Resetar Taxa para Padrão:**
+```typescript
+await api.delete('/api/taxas-pagamento/CREDITO_1X');
+```
+
+---
+
+## ⚠️ TIPOS DE PAGAMENTO VÁLIDOS
+
+```
+CREDITO_1X, CREDITO_2X, CREDITO_3X, CREDITO_4X, CREDITO_5X,
+CREDITO_6X, CREDITO_7X, CREDITO_8X, CREDITO_9X, CREDITO_10X,
+DEBITO, PIX, DINHEIRO
+```
+
+---
+
+## 🔧 EXEMPLO DE IMPLEMENTAÇÃO FRONTEND
+
+```typescript
+// Serviço de Taxas
+class TaxasService {
+  
+  // Carregar todos os tipos
+  async obterTiposDisponiveis() {
+    const response = await api.get('/api/taxas-pagamento/tipos-disponiveis');
+    return response.data;
+  }
+  
+  // Carregar taxas configuradas
+  async obterTaxasConfiguradas() {
+    const response = await api.get('/api/taxas-pagamento');
+    return response.data;
+  }
+  
+  // Configurar nova taxa
+  async configurarTaxa(tipoPagamento: string, taxa: number) {
+    const response = await api.post('/api/taxas-pagamento/configurar', {
+      tipoPagamento,
+      taxa
+    });
+    return response.data;
+  }
+  
+  // Resetar taxa
+  async resetarTaxa(tipoPagamento: string) {
+    const response = await api.delete(`/api/taxas-pagamento/${tipoPagamento}`);
+    return response.data;
+  }
+}
+```
+
+---
+
+## 🚨 ERROS COMUNS E SOLUÇÕES
+
+### **400 Bad Request - "Tipo de pagamento inválido"**
+- Verifique se o `tipoPagamento` está correto
+- Use apenas os valores válidos listados acima
+
+### **403 Forbidden**
+- Verifique se o usuário tem role ADMIN
+- Verifique se o token JWT está sendo enviado
+
+### **500 Internal Server Error**
+- Verifique se o banco de dados está funcionando
+- Verifique se a tabela `taxa_pagamento` foi criada
+
+---
+
+## 📞 RESUMO PARA O FRONTEND
+
+**O frontend deve usar EXATAMENTE estes endpoints:**
+
+1. **Listar tipos:** `GET /api/taxas-pagamento/tipos-disponiveis`
+2. **Listar taxas:** `GET /api/taxas-pagamento`
+3. **Salvar taxa:** `POST /api/taxas-pagamento/configurar`
+4. **Resetar taxa:** `DELETE /api/taxas-pagamento/{tipo}`
+
+**Todos com prefixo `/api` e autenticação JWT! 🎯**

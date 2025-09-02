@@ -9,7 +9,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/taxas-pagamento")
@@ -38,6 +40,27 @@ public class TaxaPagamentoController {
         } catch (Exception e) {
             logger.error("❌ Erro ao listar taxas", e);
             return ResponseEntity.status(500).body("Erro ao listar taxas.");
+        }
+    }
+
+    /**
+     * Lista todos os tipos de pagamento disponíveis
+     */
+    @GetMapping("/tipos-disponiveis")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<List<TiposPagamentoResponse>> obterTiposDisponiveis(@AuthenticationPrincipal UserDetails userDetails) {
+        logger.info("🔍 Obtendo tipos de pagamento disponíveis por: {}", userDetails.getUsername());
+        
+        try {
+            List<TiposPagamentoResponse> tipos = Arrays.stream(PagamentoTipo.values())
+                .map(tipo -> new TiposPagamentoResponse(tipo.name(), tipo.getDescricao()))
+                .collect(Collectors.toList());
+            
+            logger.info("✅ Retornando {} tipos de pagamento", tipos.size());
+            return ResponseEntity.ok(tipos);
+        } catch (Exception e) {
+            logger.error("❌ Erro ao obter tipos de pagamento", e);
+            return ResponseEntity.status(500).body(null);
         }
     }
 
@@ -140,4 +163,6 @@ public class TaxaPagamentoController {
     public record TaxaRequest(String tipoPagamento, Double taxa) {}
     
     public record TaxaResponse(PagamentoTipo tipoPagamento, Double taxa) {}
+    
+    public record TiposPagamentoResponse(String codigo, String descricao) {}
 }

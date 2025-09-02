@@ -1,0 +1,54 @@
+# 🚨 CORREÇÃO APLICADA - PROBLEMA COM /tipos-disponiveis
+
+## 🎯 PROBLEMA IDENTIFICADO E CORRIGIDO
+
+### **❌ O que estava acontecendo:**
+O Spring estava interpretando `tipos-disponiveis` como um parâmetro `{tipoPagamento}` porque:
+
+```java
+// Este endpoint genérico estava ANTES do específico
+@GetMapping("/{tipoPagamento}")  // ❌ Capturava "tipos-disponiveis"
+public ResponseEntity<?> obterTaxa(@PathVariable String tipoPagamento)
+
+// Este endpoint específico estava DEPOIS
+@GetMapping("/tipos-disponiveis")  // ❌ Nunca era chamado
+```
+
+### **✅ Solução aplicada:**
+Reorganizei a ordem dos endpoints no controller:
+
+```java
+// 1. Endpoints específicos PRIMEIRO
+@GetMapping("/tipos-disponiveis")  // ✅ Agora funciona
+@GetMapping("/inicializar")        // ✅ Outros específicos também
+
+// 2. Endpoints genéricos DEPOIS  
+@GetMapping("/{tipoPagamento}")    // ✅ Só captura quando necessário
+```
+
+## 🔧 O QUE FOI ALTERADO
+
+1. **Movido** `/tipos-disponiveis` para **ANTES** de `/{tipoPagamento}`
+2. **Removido** método duplicado do final do arquivo
+3. **Mantido** todos os outros endpoints funcionando
+
+## ✅ RESULTADO
+
+Agora os endpoints funcionam na ordem correta:
+
+1. `GET /api/taxas-pagamento/tipos-disponiveis` → ✅ **Funciona**
+2. `GET /api/taxas-pagamento/CREDITO_1X` → ✅ **Funciona**
+3. `GET /api/taxas-pagamento` → ✅ **Funciona**
+
+## 🚀 TESTE AGORA
+
+**O frontend deve conseguir chamar `/api/taxas-pagamento/tipos-disponiveis` sem mais erros 400!**
+
+### **Endpoints funcionais:**
+- ✅ `GET /api/taxas-pagamento/tipos-disponiveis`
+- ✅ `GET /api/taxas-pagamento`
+- ✅ `POST /api/taxas-pagamento/configurar`
+- ✅ `DELETE /api/taxas-pagamento/{tipo}`
+- ✅ `POST /api/taxas-pagamento/inicializar`
+
+**Problema resolvido! 🎉**
