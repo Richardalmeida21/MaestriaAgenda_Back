@@ -1,0 +1,48 @@
+# 🔧 CORREÇÃO CORS - VERCEL
+
+## ❌ PROBLEMA
+Você não conseguia fazer login porque o backend não estava permitindo requisições do domínio da Vercel (`https://agendamaestria.vercel.app`).
+
+## ✅ SOLUÇÃO APLICADA
+
+### **O que foi alterado:**
+Adicionei o domínio da Vercel na configuração de CORS do backend.
+
+**Arquivo:** `SecurityConfig.java`
+
+**Origins permitidos agora:**
+```java
+corsConfig.setAllowedOrigins(List.of(
+    "http://localhost:8080",      // Frontend local
+    "http://localhost:8081",      // Frontend local alternativo
+    "http://localhost:3000",      // Frontend local React
+    "https://agendamaestria.vercel.app" // ← ADICIONADO!
+));
+```
+
+### **Status:**
+- ✅ Build executado com sucesso
+- 🔄 **Agora faça o deploy no Render**
+
+---
+
+## 🚀 PRÓXIMOS PASSOS
+
+1. **Deploy no Render**
+   - Faça o deploy da aplicação atualizada
+   - Aguarde o deploy completar
+
+2. **Teste o Login**
+   - Acesse `https://agendamaestria.vercel.app`
+   - Tente fazer login novamente
+   - Deve funcionar normalmente agora
+
+---
+
+## ⚠️ SE AINDA NÃO FUNCIONAR
+
+- Verifique se o deploy foi concluído no Render
+- Limpe o cache do navegador (Ctrl+Shift+R)
+- Verifique se a URL do backend está correta no frontend
+
+**🎉 Após o deploy, o login deve funcionar perfeitamente!**

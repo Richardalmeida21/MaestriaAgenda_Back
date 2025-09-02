@@ -59,23 +59,27 @@ GET /profissional
 GET /financeiro/comissoes
 ```
 
-**Response (valores já calculados automaticamente):**
+**Response (agora com valores separados para transparência):**
 ```json
 [
   {
     "profissionalId": 1,
     "nomeProfissional": "João Silva",
-    "comissaoTotal": 70.00,      // Valor bruto
-    "comissaoLiquida": 68.00,    // Valor final (COM desconto)
+    "comissaoTotal": 70.00,        // Valor bruto original
+    "comissaoSemTaxa": 70.00,      // Sempre o valor sem taxa (= comissaoTotal)
+    "comissaoComTaxa": 68.00,      // Sempre o valor com taxa aplicada
+    "comissaoLiquida": 68.00,      // Valor final (COM desconto - usa comissaoComTaxa)
     "descontoTaxa": 2.00,
     "valorPendente": 68.00
   },
   {
     "profissionalId": 2,
     "nomeProfissional": "Maria Santos", 
-    "comissaoTotal": 70.00,      // Valor bruto
-    "comissaoLiquida": 70.00,    // Valor final (SEM desconto)
-    "descontoTaxa": 2.00,        // Taxa calculada mas não aplicada
+    "comissaoTotal": 70.00,        // Valor bruto original
+    "comissaoSemTaxa": 70.00,      // Sempre o valor sem taxa (= comissaoTotal)
+    "comissaoComTaxa": 68.00,      // Sempre o valor com taxa aplicada
+    "comissaoLiquida": 70.00,      // Valor final (SEM desconto - usa comissaoSemTaxa)
+    "descontoTaxa": 2.00,          // Taxa calculada mas não aplicada no valor final
     "valorPendente": 70.00
   }
 ]

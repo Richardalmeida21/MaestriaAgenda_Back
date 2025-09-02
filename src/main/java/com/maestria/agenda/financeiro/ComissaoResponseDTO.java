@@ -10,8 +10,10 @@ public class ComissaoResponseDTO {
     private String nomeProfissional;
     private LocalDate dataInicio;
     private LocalDate dataFim;
-    private Double comissaoTotal;
-    private Double comissaoLiquida;
+    private Double comissaoTotal;          // Valor bruto (sem desconto)
+    private Double comissaoComTaxa;        // Valor com desconto de taxa aplicado
+    private Double comissaoSemTaxa;        // Valor sem desconto de taxa (= comissaoTotal)
+    private Double comissaoLiquida;        // Valor final baseado na configuração do profissional
     private Double comissaoAgendamentosNormais;
     private Double comissaoAgendamentosFixos;
     private Double descontoTaxa;
@@ -37,7 +39,9 @@ public class ComissaoResponseDTO {
         this.dataInicio = dataInicio;
         this.dataFim = dataFim;
         this.comissaoTotal = comissaoTotal;
-        this.comissaoLiquida = comissaoLiquida;
+        this.comissaoSemTaxa = comissaoTotal;                    // Sempre o valor bruto
+        this.comissaoComTaxa = comissaoTotal - descontoTaxa;     // Sempre com desconto aplicado
+        this.comissaoLiquida = comissaoLiquida;                  // Valor final baseado na config
         this.comissaoAgendamentosNormais = comissaoAgendamentosNormais;
         this.comissaoAgendamentosFixos = comissaoAgendamentosFixos;
         this.descontoTaxa = descontoTaxa;
@@ -75,6 +79,14 @@ public class ComissaoResponseDTO {
 
     public Double getComissaoTotal() {
         return comissaoTotal;
+    }
+
+    public Double getComissaoSemTaxa() {
+        return comissaoSemTaxa;
+    }
+
+    public Double getComissaoComTaxa() {
+        return comissaoComTaxa;
     }
 
     public Double getComissaoLiquida() {
