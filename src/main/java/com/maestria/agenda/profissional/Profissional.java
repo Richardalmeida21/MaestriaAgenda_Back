@@ -36,6 +36,10 @@ public class Profissional {
     @Column(nullable = false)
     private Role role; // Alterado para o tipo Role
 
+    // Campo para controlar se as taxas de pagamento são descontadas da comissão
+    @Column(name = "descontar_taxas", nullable = false)
+    private Boolean descontarTaxas = true; // Por padrão, desconta as taxas
+
     // Removido o campo comissaoPercentual
 
     // Construtor padrão
@@ -83,6 +87,14 @@ public class Profissional {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public Boolean getDescontarTaxas() {
+        return descontarTaxas;
+    }
+
+    public void setDescontarTaxas(Boolean descontarTaxas) {
+        this.descontarTaxas = descontarTaxas;
     }
 
     @Override

@@ -177,8 +177,21 @@ public class ComissaoService {
             
             // Somar os resultados
             double comissaoTotal = resultadoNormal.valorComissao + resultadoFixo.valorComissao;
-            double comissaoLiquida = resultadoNormal.valorComissaoLiquida + resultadoFixo.valorComissaoLiquida;
             double descontoTaxaTotal = resultadoNormal.valorDescontoTaxa + resultadoFixo.valorDescontoTaxa;
+            
+            // Calcular comissão líquida baseada na configuração do profissional
+            double comissaoLiquida;
+            if (profissional.getDescontarTaxas() != null && profissional.getDescontarTaxas()) {
+                // Profissional tem desconto de taxas
+                comissaoLiquida = comissaoTotal - descontoTaxaTotal;
+                logger.info("Profissional {} TEM desconto de taxas: {} - {} = {}", 
+                    profissional.getNome(), comissaoTotal, descontoTaxaTotal, comissaoLiquida);
+            } else {
+                // Profissional NÃO tem desconto de taxas
+                comissaoLiquida = comissaoTotal;
+                logger.info("Profissional {} NÃO TEM desconto de taxas: {} (taxas ignoradas: {})", 
+                    profissional.getNome(), comissaoLiquida, descontoTaxaTotal);
+            }
             
             // Calcular valor já pago no período
             double valorJaPago = comissaoPagamentoRepository.calcularValorTotalPagoNoPeriodo(profissionalId, inicio, fim);

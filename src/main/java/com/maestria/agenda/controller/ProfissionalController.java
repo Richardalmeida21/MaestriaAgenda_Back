@@ -100,6 +100,35 @@ public class ProfissionalController {
         }
     }
 
+    // ✅ Apenas ADMIN pode alterar configuração de desconto de taxas
+    @PatchMapping("/{id}/desconto-taxas")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<?> alterarDescontoTaxas(@PathVariable Long id, @RequestBody DescontoTaxasRequest request) {
+        Optional<Profissional> profissionalOptional = profissionalRepository.findById(id);
+        
+        if (profissionalOptional.isPresent()) {
+            Profissional profissional = profissionalOptional.get();
+            profissional.setDescontarTaxas(request.descontarTaxas());
+            
+            Profissional updated = profissionalRepository.save(profissional);
+            
+            String status = request.descontarTaxas() ? "COM desconto de taxas" : "SEM desconto de taxas";
+            return ResponseEntity.ok(new DescontoTaxasResponse(
+                updated.getId(), 
+                updated.getNome(), 
+                updated.getDescontarTaxas(),
+                "✅ Configuração alterada: " + profissional.getNome() + " agora está " + status
+            ));
+        } else {
+            return ResponseEntity.status(404).body("❌ Profissional não encontrado!");
+        }
+    }
+
+    // DTOs para desconto de taxas
+    public record DescontoTaxasRequest(Boolean descontarTaxas) {}
+    
+    public record DescontoTaxasResponse(Long id, String nome, Boolean descontarTaxas, String mensagem) {}
+
     // ✅ Apenas ADMIN pode excluir profissionais
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN')")
