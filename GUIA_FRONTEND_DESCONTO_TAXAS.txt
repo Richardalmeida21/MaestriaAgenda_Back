@@ -1,0 +1,408 @@
+# 📋 GUIA FRONTEND - CONTROLE DE DESCONTO DE TAXAS POR PROFISSIONAL
+
+## 🎯 NOVA FUNCIONALIDADE
+O admin agora pode configurar **individualmente** se cada profissional tem desconto das taxas de pagamento ou não.
+
+---
+
+## 🔧 COMO O BACKEND FUNCIONA AGORA
+
+### **Endpoint Novo - Alterar Configuração:**
+```
+PATCH /profissional/{id}/desconto-taxas
+```
+
+**Request Body:**
+```json
+{
+  "descontarTaxas": false
+}
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "nome": "João Silva", 
+  "descontarTaxas": false,
+  "mensagem": "✅ Configuração alterada: João Silva agora está SEM desconto de taxas"
+}
+```
+
+### **Endpoint Existente - Listar Profissionais:**
+```
+GET /profissional
+```
+
+**Response (agora inclui descontarTaxas):**
+```json
+[
+  {
+    "id": 1,
+    "nome": "João Silva",
+    "login": "joao",
+    "role": "PROFISSIONAL",
+    "descontarTaxas": true
+  },
+  {
+    "id": 2,
+    "nome": "Maria Santos",
+    "login": "maria", 
+    "role": "PROFISSIONAL",
+    "descontarTaxas": false
+  }
+]
+```
+
+### **Endpoint Existente - Comissões:**
+```
+GET /financeiro/comissoes
+```
+
+**Response (valores já calculados automaticamente):**
+```json
+[
+  {
+    "profissionalId": 1,
+    "nomeProfissional": "João Silva",
+    "comissaoTotal": 70.00,      // Valor bruto
+    "comissaoLiquida": 68.00,    // Valor final (COM desconto)
+    "descontoTaxa": 2.00,
+    "valorPendente": 68.00
+  },
+  {
+    "profissionalId": 2,
+    "nomeProfissional": "Maria Santos", 
+    "comissaoTotal": 70.00,      // Valor bruto
+    "comissaoLiquida": 70.00,    // Valor final (SEM desconto)
+    "descontoTaxa": 2.00,        // Taxa calculada mas não aplicada
+    "valorPendente": 70.00
+  }
+]
+```
+
+---
+
+## 🎨 IMPLEMENTAÇÃO NO FRONTEND
+
+### **1. Interface de Configuração (Nova Página/Modal)**
+
+#### **Estrutura da Página:**
+```tsx
+// ProfessionalTaxSettings.tsx
+import React, { useState, useEffect } from 'react';
+
+interface Professional {
+  id: number;
+  nome: string;
+  descontarTaxas: boolean;
+}
+
+const ProfessionalTaxSettings = () => {
+  const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Carregar lista de profissionais
+  useEffect(() => {
+    loadProfessionals();
+  }, []);
+
+  const loadProfessionals = async () => {
+    try {
+      const response = await api.get('/profissional');
+      setProfessionals(response.data);
+    } catch (error) {
+      console.error('Erro ao carregar profissionais:', error);
+    }
+  };
+
+  // Alterar configuração de desconto
+  const toggleTaxDiscount = async (professionalId: number, newValue: boolean) => {
+    setLoading(true);
+    try {
+      const response = await api.patch(`/profissional/${professionalId}/desconto-taxas`, {
+        descontarTaxas: newValue
+      });
+      
+      // Atualizar lista local
+      setProfessionals(prev => 
+        prev.map(prof => 
+          prof.id === professionalId 
+            ? { ...prof, descontarTaxas: newValue }
+            : prof
+        )
+      );
+      
+      // Mostrar mensagem de sucesso
+      toast.success(response.data.mensagem);
+      
+    } catch (error) {
+      toast.error('Erro ao alterar configuração');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="tax-settings-container">
+      <h2>⚙️ Configurações de Desconto de Taxas</h2>
+      <p>Configure quem paga as taxas da maquininha de cartão</p>
+      
+      <div className="professionals-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Profissional</th>
+              <th>Desconto de Taxas</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {professionals.map(prof => (
+              <tr key={prof.id}>
+                <td>{prof.nome}</td>
+                <td>
+                  <Switch
+                    checked={prof.descontarTaxas}
+                    onChange={(checked) => toggleTaxDiscount(prof.id, checked)}
+                    disabled={loading}
+                  />
+                </td>
+                <td>
+                  {prof.descontarTaxas ? (
+                    <span className="status-with-discount">
+                      💸 Paga taxas
+                    </span>
+                  ) : (
+                    <span className="status-without-discount">
+                      💰 Não paga taxas
+                    </span>
+                  )}
+                </td>
+                <td>
+                  <button 
+                    onClick={() => toggleTaxDiscount(prof.id, !prof.descontarTaxas)}
+                    disabled={loading}
+                  >
+                    {prof.descontarTaxas ? 'Isentar' : 'Aplicar Desconto'}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+```
+
+### **2. Atualizar Exibição das Comissões**
+
+#### **Modificar Componente Existente:**
+```tsx
+// CommissionCard.tsx (componente existente)
+const CommissionCard = ({ commission, professional }) => {
+  return (
+    <div className="commission-card">
+      <div className="professional-header">
+        <h3>{commission.nomeProfissional}</h3>
+        
+        {/* Indicador visual do tipo de desconto */}
+        {professional?.descontarTaxas ? (
+          <span className="tax-badge with-discount">
+            💸 Com desconto de taxas
+          </span>
+        ) : (
+          <span className="tax-badge without-discount">
+            💰 Sem desconto de taxas
+          </span>
+        )}
+      </div>
+
+      <div className="commission-details">
+        <div className="commission-line">
+          <span>Comissão Bruta:</span>
+          <span>R$ {commission.comissaoTotal.toFixed(2)}</span>
+        </div>
+        
+        {/* Mostrar desconto de forma diferente baseado na configuração */}
+        <div className="commission-line">
+          <span>Desconto Taxas:</span>
+          {professional?.descontarTaxas ? (
+            <span className="discount-applied">
+              -R$ {commission.descontoTaxa.toFixed(2)}
+            </span>
+          ) : (
+            <span className="discount-ignored">
+              R$ 0,00 <small>(taxa: R$ {commission.descontoTaxa.toFixed(2)} - isento)</small>
+            </span>
+          )}
+        </div>
+        
+        <div className="commission-line total">
+          <span><strong>Valor a Pagar:</strong></span>
+          <span><strong>R$ {commission.comissaoLiquida.toFixed(2)}</strong></span>
+        </div>
+      </div>
+    </div>
+  );
+};
+```
+
+### **3. Serviço de API (Novo)**
+
+```tsx
+// services/professionalService.ts
+export const professionalService = {
+  // Listar profissionais com configuração de desconto
+  async list() {
+    const response = await api.get('/profissional');
+    return response.data;
+  },
+
+  // Alterar configuração de desconto de taxas
+  async updateTaxDiscount(professionalId: number, descontarTaxas: boolean) {
+    const response = await api.patch(`/profissional/${professionalId}/desconto-taxas`, {
+      descontarTaxas
+    });
+    return response.data;
+  },
+
+  // Buscar profissional específico
+  async getById(id: number) {
+    const response = await api.get(`/profissional/${id}`);
+    return response.data;
+  }
+};
+```
+
+---
+
+## 🎯 LOCALIZAÇÃO NO SISTEMA
+
+### **Onde Adicionar a Nova Funcionalidade:**
+
+#### **Opção 1: Menu Administrativo**
+```
+📱 Menu Admin
+├── 👥 Profissionais
+│   ├── ➕ Cadastrar Profissional
+│   ├── 📋 Listar Profissionais  
+│   └── ⚙️ Configurar Desconto de Taxas  ← NOVO
+├── 💰 Financeiro
+└── 📊 Relatórios
+```
+
+#### **Opção 2: Dentro da Página de Profissionais**
+```
+👥 Página de Profissionais
+├── 📋 Lista de Profissionais
+├── ➕ Botão Novo Profissional
+└── ⚙️ Aba "Configurações de Taxas"  ← NOVO
+```
+
+#### **Opção 3: Modal/Popup na Lista**
+```
+👥 Lista de Profissionais
+├── João Silva    [Editar] [⚙️ Configurar Taxas]  ← NOVO
+├── Maria Santos  [Editar] [⚙️ Configurar Taxas]  ← NOVO
+└── Pedro Lima    [Editar] [⚙️ Configurar Taxas]  ← NOVO
+```
+
+---
+
+## 📱 DESIGN SUGERIDO
+
+### **Layout da Configuração:**
+```
+┌─────────────────────────────────────────────────────┐
+│ ⚙️ Configurações de Desconto de Taxas              │
+├─────────────────────────────────────────────────────┤
+│ 💡 Configure quem paga as taxas da maquininha      │
+│                                                     │
+│ ┌─────────────────────────────────────────────────┐ │
+│ │ Profissional         │ Desconto │ Status       │ │
+│ ├─────────────────────────────────────────────────┤ │
+│ │ 👤 João Silva       │ [✅ ON ]  │ 💸 Paga taxas│ │
+│ │ 👤 Maria Santos     │ [❌ OFF]  │ 💰 Isenta    │ │
+│ │ 👤 Pedro Lima       │ [✅ ON ]  │ 💸 Paga taxas│ │
+│ └─────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────┘
+```
+
+### **Indicadores nas Comissões:**
+```
+┌─────────────────────────────────────────────────────┐
+│ 💰 João Silva                    💸 Com desconto   │
+├─────────────────────────────────────────────────────┤
+│ Comissão Bruta:     R$ 70,00                       │
+│ Desconto Taxas:     -R$ 2,00                       │
+│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │
+│ A Pagar:            R$ 68,00                       │
+└─────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────┐
+│ 💰 Maria Santos                  💰 Sem desconto   │
+├─────────────────────────────────────────────────────┤
+│ Comissão Bruta:     R$ 70,00                       │
+│ Desconto Taxas:     R$ 0,00 (isenta)               │
+│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │
+│ A Pagar:            R$ 70,00                       │
+└─────────────────────────────────────────────────────┘
+```
+
+---
+
+## ⚠️ PONTOS IMPORTANTES
+
+### **1. Permissões:**
+- ✅ **Apenas ADMIN** pode alterar configurações
+- ✅ **Todos** podem visualizar as configurações
+
+### **2. Estados do Sistema:**
+- 🔄 **Loading** durante alterações
+- ✅ **Feedback** visual ao alterar configuração
+- 🚨 **Tratamento de erros** nas requisições
+
+### **3. Comportamento:**
+- 📊 **Valores recalculados automaticamente** pelo backend
+- 💾 **Configuração salva imediatamente** 
+- 🔄 **Interface atualizada em tempo real**
+
+---
+
+## 🚀 CHECKLIST DE IMPLEMENTAÇÃO
+
+### **Backend (Já Pronto):**
+- ✅ Migração da tabela executada
+- ✅ Endpoint de configuração funcionando
+- ✅ Lógica de cálculo implementada
+
+### **Frontend (A Fazer):**
+- [ ] Criar componente de configuração de taxas
+- [ ] Adicionar indicadores visuais nas comissões
+- [ ] Implementar toggle/switch para alterar configuração
+- [ ] Adicionar feedback de sucesso/erro
+- [ ] Testar permissões (apenas admin)
+- [ ] Validar cálculos nas comissões
+
+---
+
+## 📞 DÚVIDAS FREQUENTES
+
+**Q: Como saber se um profissional tem desconto?**
+**A:** Use o campo `descontarTaxas` na resposta de `/profissional`
+
+**Q: Os valores mudam automaticamente?**
+**A:** Sim! O backend recalcula automaticamente baseado na configuração
+
+**Q: Posso alterar vários profissionais de uma vez?**
+**A:** Não no momento, apenas individualmente
+
+**Q: O que acontece com comissões antigas?**
+**A:** Apenas cálculos futuros são afetados, histórico permanece igual
+
+**🎉 Tudo pronto para implementar no frontend!**

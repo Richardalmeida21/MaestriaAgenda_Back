@@ -69,11 +69,16 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticat
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfig = new CorsConfiguration();
         // Configuração para desenvolvimento e produção
-        corsConfig.setAllowedOrigins(List.of("*"));
-        corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        corsConfig.setAllowedOrigins(List.of(
+            "http://localhost:8080",
+            "http://localhost:8081", 
+            "http://localhost:3000",
+            "https://your-frontend-domain.com" // Substitua pelo domínio do frontend em produção
+        ));
+        corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         corsConfig.setAllowedHeaders(List.of("*"));
         corsConfig.setExposedHeaders(List.of("Authorization"));
-        corsConfig.setAllowCredentials(false);
+        corsConfig.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", corsConfig);
