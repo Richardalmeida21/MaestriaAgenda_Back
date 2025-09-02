@@ -12,7 +12,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 
 @RestController
-@RequestMapping("/taxas")
+@RequestMapping("/api/taxas-pagamento")
 @CrossOrigin(origins = "*")
 public class TaxaPagamentoController {
 

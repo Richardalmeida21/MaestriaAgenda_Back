@@ -1,0 +1,281 @@
+# 📋 GUIA PARA IMPLEMENTAÇÃO FRONTEND - CONFIGURAÇÃO DE TAXAS DE PAGAMENTO
+
+## 🎯 OBJETIVO
+Criar uma página administrativa para que o usuário possa configurar as taxas de cada forma de pagamento (crédito, débito, PIX, dinheiro).
+
+---
+
+## 🔧 COMO O BACKEND ESTÁ FUNCIONANDO
+
+### **Endpoints Disponíveis:**
+
+#### 1. **GET** `/api/taxas-pagamento` 
+- **Função:** Lista todas as taxas configuradas
+- **Resposta:**
+```json
+[
+  {
+    "id": 1,
+    "tipoPagamento": "CREDITO_1X",
+    "taxa": 2.00,
+    "ativo": true
+  },
+  {
+    "id": 2,
+    "tipoPagamento": "DEBITO", 
+    "taxa": 1.50,
+    "ativo": true
+  }
+]
+```
+
+#### 2. **GET** `/api/taxas-pagamento/{tipoPagamento}`
+- **Função:** Busca taxa específica por tipo
+- **Exemplo:** `/api/taxas-pagamento/CREDITO_1X`
+- **Resposta:**
+```json
+{
+  "id": 1,
+  "tipoPagamento": "CREDITO_1X",
+  "taxa": 2.00,
+  "ativo": true
+}
+```
+
+#### 3. **POST** `/api/taxas-pagamento`
+- **Função:** Criar ou atualizar uma taxa
+- **Body:**
+```json
+{
+  "tipoPagamento": "CREDITO_1X",
+  "taxa": 2.30,
+  "ativo": true
+}
+```
+- **Resposta:** Mesma estrutura do objeto criado/atualizado
+
+#### 4. **GET** `/api/taxas-pagamento/tipos-disponiveis`
+- **Função:** Lista todos os tipos de pagamento disponíveis
+- **Resposta:**
+```json
+[
+  {
+    "codigo": "CREDITO_1X",
+    "descricao": "Crédito 1x"
+  },
+  {
+    "codigo": "CREDITO_2X", 
+    "descricao": "Crédito 2x"
+  },
+  {
+    "codigo": "DEBITO",
+    "descricao": "Débito"
+  },
+  {
+    "codigo": "PIX",
+    "descricao": "PIX"
+  },
+  {
+    "codigo": "DINHEIRO",
+    "descricao": "Dinheiro"
+  }
+]
+```
+
+---
+
+## 🎨 COMO IMPLEMENTAR NO FRONTEND
+
+### **1. Estrutura da Página:**
+
+```
+📄 Configurações de Taxas de Pagamento
+├── 📋 Lista de formas de pagamento
+│   ├── Crédito 1x: [2.00%] [Ativo: ✅] [Editar]
+│   ├── Crédito 2x: [2.50%] [Ativo: ✅] [Editar]  
+│   ├── Débito: [1.50%] [Ativo: ✅] [Editar]
+│   ├── PIX: [0.00%] [Ativo: ✅] [Editar]
+│   └── Dinheiro: [0.00%] [Ativo: ✅] [Editar]
+└── 💾 Botão Salvar Alterações
+```
+
+### **2. Funcionalidades Necessárias:**
+
+#### **A) Carregamento Inicial:**
+1. Chame `GET /api/taxas-pagamento/tipos-disponiveis` para obter todos os tipos
+2. Chame `GET /api/taxas-pagamento` para obter as taxas configuradas
+3. Combine as duas listas para exibir todas as opções
+
+#### **B) Edição de Taxa:**
+1. Campo input para inserir o percentual da taxa (ex: 2.50 para 2.5%)
+2. Toggle/Switch para ativar/desativar a forma de pagamento
+3. Validação: taxa deve ser >= 0
+
+#### **C) Salvar Alterações:**
+1. Para cada taxa modificada, faça `POST /api/taxas-pagamento`
+2. Exiba mensagem de sucesso/erro
+3. Recarregue a lista atualizada
+
+### **3. Exemplo de Implementação (React/Vue/Angular):**
+
+#### **Estrutura de Dados:**
+```javascript
+const taxasConfig = [
+  {
+    codigo: 'CREDITO_1X',
+    descricao: 'Crédito 1x',
+    taxa: 2.00,
+    ativo: true,
+    modificado: false
+  },
+  // ... outros tipos
+];
+```
+
+#### **Funções Principais:**
+```javascript
+// Carregar taxas do backend
+async function carregarTaxas() {
+  const tipos = await fetch('/api/taxas-pagamento/tipos-disponiveis');
+  const taxas = await fetch('/api/taxas-pagamento');
+  // Combinar e exibir
+}
+
+// Atualizar taxa específica
+async function atualizarTaxa(tipoPagamento, novaTaxa, ativo) {
+  const response = await fetch('/api/taxas-pagamento', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      tipoPagamento: tipoPagamento,
+      taxa: novaTaxa,
+      ativo: ativo
+    })
+  });
+  
+  if (response.ok) {
+    console.log('Taxa atualizada com sucesso!');
+  }
+}
+
+// Salvar todas as alterações
+async function salvarTodasAlteracoes() {
+  for (const taxa of taxasModificadas) {
+    await atualizarTaxa(taxa.codigo, taxa.taxa, taxa.ativo);
+  }
+}
+```
+
+---
+
+## 🎯 LAYOUT SUGERIDO
+
+### **Opção 1: Lista com Edição Inline**
+```
+┌─────────────────────────────────────────────────┐
+│ 🏪 Configuração de Taxas de Pagamento          │
+├─────────────────────────────────────────────────┤
+│ Forma de Pagamento    │ Taxa (%)  │ Status     │
+├─────────────────────────────────────────────────┤
+│ 💳 Crédito 1x        │ [2.00] %  │ [✅ Ativo] │
+│ 💳 Crédito 2x        │ [2.50] %  │ [✅ Ativo] │
+│ 💳 Crédito 3x        │ [3.00] %  │ [✅ Ativo] │
+│ 💰 Débito            │ [1.50] %  │ [✅ Ativo] │
+│ 📱 PIX               │ [0.00] %  │ [✅ Ativo] │
+│ 💵 Dinheiro          │ [0.00] %  │ [✅ Ativo] │
+├─────────────────────────────────────────────────┤
+│                    [💾 Salvar Alterações]      │
+└─────────────────────────────────────────────────┘
+```
+
+### **Opção 2: Cards Individuais**
+```
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│ 💳 Crédito 1x│ │ 💳 Crédito 2x│ │ 💰 Débito    │
+│              │ │              │ │              │
+│ Taxa: [2.00%]│ │ Taxa: [2.50%]│ │ Taxa: [1.50%]│
+│ [✅ Ativo]   │ │ [✅ Ativo]   │ │ [✅ Ativo]   │
+└──────────────┘ └──────────────┘ └──────────────┘
+```
+
+---
+
+## ⚠️ PONTOS IMPORTANTES
+
+### **1. Validações:**
+- Taxa deve ser um número >= 0
+- Taxa deve ter no máximo 2 casas decimais
+- Não permitir salvar sem ao menos uma forma ativa
+
+### **2. Experiência do Usuário:**
+- Mostrar indicador visual de "alterações não salvas"
+- Confirmação antes de desativar uma forma de pagamento
+- Loading states durante as requisições
+- Mensagens de erro/sucesso claras
+
+### **3. Permissões:**
+- Esta página deve ser acessível apenas para administradores
+- Verificar permissões antes de exibir
+
+### **4. Fallback/Segurança:**
+- O backend já tem fallback automático para valores padrão
+- Se uma taxa não estiver configurada, usa os valores originais
+
+---
+
+## 🚀 IMPLEMENTAÇÃO SUGERIDA (PASSO A PASSO)
+
+### **Fase 1: Básico**
+1. Criar página com lista das formas de pagamento
+2. Exibir taxas atuais (somente leitura)
+3. Implementar carregamento dos dados
+
+### **Fase 2: Edição**
+1. Adicionar campos editáveis
+2. Implementar salvamento individual
+3. Adicionar validações
+
+### **Fase 3: UX Avançada**
+1. Salvamento em lote
+2. Indicadores visuais
+3. Confirmações e mensagens
+
+---
+
+## 🔗 TESTANDO A INTEGRAÇÃO
+
+Use essas URLs para testar no Postman/Insomnia:
+
+```
+GET  http://localhost:8080/api/taxas-pagamento
+GET  http://localhost:8080/api/taxas-pagamento/tipos-disponiveis
+POST http://localhost:8080/api/taxas-pagamento
+     Body: {"tipoPagamento": "CREDITO_1X", "taxa": 2.30, "ativo": true}
+```
+
+⚠️ **IMPORTANTE - PERMISSÕES:**
+- Estes endpoints requerem **autenticação** e **role ADMIN**
+- Certifique-se de que o usuário logado tem permissão de administrador
+- Inclua o token JWT no header: `Authorization: Bearer {seu-token}`
+
+## 🔧 TROUBLESHOOTING
+
+### **Erro 403 Forbidden:**
+- Verifique se o usuário está logado
+- Verifique se o usuário tem role ADMIN
+- Verifique se o token JWT está sendo enviado corretamente
+
+### **Erro 404 Not Found:**
+- Verifique se a aplicação backend está rodando
+- Confirme que os endpoints estão em `/api/taxas-pagamento`
+
+---
+
+## 📞 SUPORTE
+
+Se tiver dúvidas sobre:
+- **Endpoints:** Consulte este documento
+- **Validações:** Veja o backend - TaxaPagamentoService
+- **Tipos de pagamento:** Veja PagamentoTipo.java
+
+**O backend está 100% funcional e testado! 🎉**

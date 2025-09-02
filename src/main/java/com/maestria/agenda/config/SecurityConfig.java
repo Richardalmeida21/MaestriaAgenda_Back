@@ -46,6 +46,7 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticat
                 .requestMatchers("/financeiro/recurring-expenses/**").hasAnyAuthority("ADMIN", "PROFISSIONAL")
                 .requestMatchers("/financeiro/sync-recurring-expenses").hasAnyAuthority("ADMIN", "PROFISSIONAL")
                 .requestMatchers("/financeiro/all-expenses").hasAnyAuthority("ADMIN", "PROFISSIONAL")
+                .requestMatchers("/api/taxas-pagamento/**").hasAuthority("ADMIN")
                 .anyRequest().authenticated()
         )
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
