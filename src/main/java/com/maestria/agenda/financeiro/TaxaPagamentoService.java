@@ -2,6 +2,8 @@ package com.maestria.agenda.financeiro;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,15 +22,17 @@ public class TaxaPagamentoService {
     /**
      * Obtém a taxa configurada para um tipo de pagamento
      * Se não existir configuração, retorna a taxa padrão baseada no tipo
+     * OTIMIZAÇÃO: Resultado é cacheado para evitar queries repetidas
      */
+    @Cacheable(value = "taxasPagamento", key = "#tipoPagamento")
     public double obterTaxa(PagamentoTipo tipoPagamento) {
         Optional<TaxaPagamento> taxaConfig = taxaPagamentoRepository.findByTipoPagamentoAndAtivoTrue(tipoPagamento);
-        
+
         if (taxaConfig.isPresent()) {
             logger.debug("Taxa configurada encontrada para {}: {}%", tipoPagamento, taxaConfig.get().getTaxa());
             return taxaConfig.get().getTaxa();
         }
-        
+
         // Fallback para taxas padrão (valores anteriores)
         double taxaPadrao = obterTaxaPadrao(tipoPagamento);
         logger.debug("Usando taxa padrão para {}: {}%", tipoPagamento, taxaPadrao);
@@ -54,12 +58,14 @@ public class TaxaPagamentoService {
 
     /**
      * Configura ou atualiza a taxa para um tipo de pagamento
+     * OTIMIZAÇÃO: Limpa o cache ao atualizar
      */
+    @CacheEvict(value = "taxasPagamento", allEntries = true)
     public TaxaPagamento configurarTaxa(PagamentoTipo tipoPagamento, Double taxa) {
         logger.info("Configurando taxa para {}: {}%", tipoPagamento, taxa);
-        
+
         Optional<TaxaPagamento> existente = taxaPagamentoRepository.findByTipoPagamento(tipoPagamento);
-        
+
         TaxaPagamento taxaConfig;
         if (existente.isPresent()) {
             // Atualiza existente
@@ -70,7 +76,7 @@ public class TaxaPagamentoService {
             // Cria nova configuração
             taxaConfig = new TaxaPagamento(tipoPagamento, taxa);
         }
-        
+
         return taxaPagamentoRepository.save(taxaConfig);
     }
 
@@ -86,7 +92,7 @@ public class TaxaPagamentoService {
      */
     public void desativarTaxa(PagamentoTipo tipoPagamento) {
         logger.info("Desativando configuração de taxa para {}", tipoPagamento);
-        
+
         Optional<TaxaPagamento> existente = taxaPagamentoRepository.findByTipoPagamento(tipoPagamento);
         if (existente.isPresent()) {
             TaxaPagamento taxaConfig = existente.get();
@@ -100,7 +106,7 @@ public class TaxaPagamentoService {
      */
     public void inicializarTaxasPadrao() {
         logger.info("Verificando e inicializando taxas padrão...");
-        
+
         for (PagamentoTipo tipo : PagamentoTipo.values()) {
             if (!taxaPagamentoRepository.existsByTipoPagamento(tipo)) {
                 double taxaPadrao = obterTaxaPadrao(tipo);

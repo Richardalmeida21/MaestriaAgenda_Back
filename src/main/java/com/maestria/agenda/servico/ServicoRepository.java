@@ -5,6 +5,10 @@ import java.util.List;
 
 public interface ServicoRepository extends JpaRepository<Servico, Long> {
     boolean existsByNome(String nome);
+
     Servico findByNome(String nome);
+
     List<Servico> findByValorLessThanEqual(Double valorMaximo);
+
+    List<Servico> findByAtivoTrue();
 }
