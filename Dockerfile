@@ -13,7 +13,8 @@ RUN mvn clean package -DskipTests
 RUN find /app/target -name "*.jar" -not -name "*sources.jar" -not -name "*javadoc.jar" -not -name "*tests.jar" -exec cp {} /app/app.jar \;
 
 # Stage 2: Runtime stage
-FROM openjdk:17-jdk-slim
+# Using Eclipse Temurin (formerly AdoptOpenJDK) - official recommended Java image
+FROM eclipse-temurin:17-jre-jammy
 
 WORKDIR /app
 
