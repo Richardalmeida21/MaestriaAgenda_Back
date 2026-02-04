@@ -122,5 +122,58 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
         // Adicione este método ao AgendamentoRepository
         List<Agendamento> findByAgendamentoFixoId(Long agendamentoFixoId);
 
-        List<Agendamento> findByAgendamentoFixoIdAndDataBetweenAndPagoTrue(Long agendamentoFixoId, LocalDate inicio, LocalDate fim);
+        List<Agendamento> findByAgendamentoFixoIdAndDataBetweenAndPagoTrue(Long agendamentoFixoId, LocalDate inicio,
+                        LocalDate fim);
+
+        // ============================================
+        // QUERIES OTIMIZADAS COM FETCH JOIN
+        // ============================================
+        // Evita problema N+1 ao carregar cliente e servico em uma única query
+
+        /**
+         * Busca agendamentos com cliente e servico carregados (FETCH JOIN)
+         * Otimizado para cálculo de comissões - evita N+1 queries
+         */
+        @Query("SELECT DISTINCT a FROM Agendamento a " +
+                        "LEFT JOIN FETCH a.cliente " +
+                        "LEFT JOIN FETCH a.servico " +
+                        "WHERE a.profissional.id = :profissionalId " +
+                        "AND a.data BETWEEN :inicio AND :fim " +
+                        "ORDER BY a.data, a.hora")
+        List<Agendamento> findByProfissionalComDetalhes(
+                        @Param("profissionalId") Long profissionalId,
+                        @Param("inicio") LocalDate inicio,
+                        @Param("fim") LocalDate fim);
+
+        /**
+         * Busca agendamentos normais (não fixos) com detalhes carregados
+         * Otimizado para cálculo de comissões
+         */
+        @Query("SELECT DISTINCT a FROM Agendamento a " +
+                        "LEFT JOIN FETCH a.cliente " +
+                        "LEFT JOIN FETCH a.servico " +
+                        "WHERE a.profissional.id = :profissionalId " +
+                        "AND a.data BETWEEN :inicio AND :fim " +
+                        "AND a.agendamentoFixoId IS NULL " +
+                        "ORDER BY a.data, a.hora")
+        List<Agendamento> findAgendamentosNormaisComDetalhes(
+                        @Param("profissionalId") Long profissionalId,
+                        @Param("inicio") LocalDate inicio,
+                        @Param("fim") LocalDate fim);
+
+        /**
+         * Busca agendamentos fixos com detalhes carregados
+         * Otimizado para cálculo de comissões
+         */
+        @Query("SELECT DISTINCT a FROM Agendamento a " +
+                        "LEFT JOIN FETCH a.cliente " +
+                        "LEFT JOIN FETCH a.servico " +
+                        "WHERE a.profissional.id = :profissionalId " +
+                        "AND a.data BETWEEN :inicio AND :fim " +
+                        "AND a.agendamentoFixoId IS NOT NULL " +
+                        "ORDER BY a.data, a.hora")
+        List<Agendamento> findAgendamentosFixosComDetalhes(
+                        @Param("profissionalId") Long profissionalId,
+                        @Param("inicio") LocalDate inicio,
+                        @Param("fim") LocalDate fim);
 }
