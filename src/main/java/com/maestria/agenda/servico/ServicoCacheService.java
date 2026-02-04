@@ -35,18 +35,9 @@ public class ServicoCacheService {
     }
 
     /**
-     * Lista serviços ativos com cache separado
-     * Este é o mais usado, então tem cache próprio
-     */
-    @Cacheable(value = "servicosAtivos", key = "'active'")
-    public List<Servico> findByAtivoTrue() {
-        return servicoRepository.findByAtivoTrue();
-    }
-
-    /**
      * Limpa o cache quando um serviço é atualizado
      */
-    @CacheEvict(value = { "servicos", "servicosAtivos" }, allEntries = true)
+    @CacheEvict(value = "servicos", allEntries = true)
     public Servico save(Servico servico) {
         return servicoRepository.save(servico);
     }
@@ -54,7 +45,7 @@ public class ServicoCacheService {
     /**
      * Limpa o cache quando um serviço é deletado
      */
-    @CacheEvict(value = { "servicos", "servicosAtivos" }, allEntries = true)
+    @CacheEvict(value = "servicos", allEntries = true)
     public void deleteById(Long id) {
         servicoRepository.deleteById(id);
     }

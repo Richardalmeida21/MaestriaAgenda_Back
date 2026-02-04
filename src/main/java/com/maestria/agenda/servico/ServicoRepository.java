@@ -9,6 +9,4 @@ public interface ServicoRepository extends JpaRepository<Servico, Long> {
     Servico findByNome(String nome);
 
     List<Servico> findByValorLessThanEqual(Double valorMaximo);
-
-    List<Servico> findByAtivoTrue();
 }

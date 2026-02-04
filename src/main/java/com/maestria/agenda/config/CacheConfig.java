@@ -20,7 +20,6 @@ public class CacheConfig {
                 "profissionais", // Cache de profissionais
                 "clientes", // Cache de clientes
                 "servicos", // Cache de serviços
-                "servicosAtivos", // Cache de serviços ativos
                 "taxasPagamento" // Cache de taxas de pagamento
         );
         return cacheManager;
