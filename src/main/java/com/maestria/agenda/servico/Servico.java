@@ -32,7 +32,6 @@ public class Servico {
     @Column(nullable = false)
     private String duracao; // ISO-8601 format (PT1H30M)
 
-    @Positive(message = "Percentual de comissão deve ser positivo")
     @ManyToOne
     @JoinColumn(name = "categoria_id") // Pode ser null durante migração ou não, mas idealmente obrigatório
     private CategoriaServico categoria;
