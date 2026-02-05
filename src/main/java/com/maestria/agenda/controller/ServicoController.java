@@ -151,9 +151,13 @@ public class ServicoController {
 
             logger.info("✅ Serviço excluído com sucesso. ID: {}", id);
             return ResponseEntity.ok("Serviço excluído com sucesso.");
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            logger.warn("❌ Não é possível excluir serviço em uso. ID: {}", id);
+            return ResponseEntity.status(409)
+                    .body("Não é possível excluir este serviço pois ele está vinculado a agendamentos ou comissões.");
         } catch (Exception e) {
             logger.error("❌ Erro ao excluir serviço", e);
-            return ResponseEntity.status(500).body("Erro ao excluir serviço.");
+            return ResponseEntity.status(500).body("Erro ao excluir serviço: " + e.getMessage());
         }
     }
 }
