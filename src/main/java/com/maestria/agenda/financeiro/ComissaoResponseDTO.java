@@ -10,40 +10,39 @@ public class ComissaoResponseDTO {
     private String nomeProfissional;
     private LocalDate dataInicio;
     private LocalDate dataFim;
-    private Double comissaoTotal;          // Valor bruto (sem desconto)
-    private Double comissaoComTaxa;        // Valor com desconto de taxa aplicado
-    private Double comissaoSemTaxa;        // Valor sem desconto de taxa (= comissaoTotal)
-    private Double comissaoLiquida;        // Valor final baseado na configuração do profissional
-    private Double comissaoAgendamentosNormais;
-    private Double comissaoAgendamentosFixos;
-    private Double descontoTaxa;
-    private Double valorPago;
-    private Double valorPendente;
-    private List<ComissaoIndividualDTO> comissoesIndividuais;
-    private List<ComissaoPagamento> historicoPagamentos;
-    
-    @JsonIgnore
-    private boolean pendente;
+    private Double comissaoTotal; // Valor bruto (sem desconto)
+    private Double comissaoComTaxa; // Valor com desconto de taxa aplicado
+    private Double comissaoSemTaxa; // Valor sem desconto de taxa (= comissaoTotal)
+    private Double comissaoLiquida; // Valor final baseado na configuração do profissional
+    private Double valorTotalNormais;
+    private Double valorTotalFixos;
+    private Double valorTotalGeral; // Soma de normais + fixos
 
     public ComissaoResponseDTO(Long profissionalId, String nomeProfissional,
-                               LocalDate dataInicio, LocalDate dataFim,
-                               Double comissaoTotal, Double comissaoLiquida,
-                               Double comissaoAgendamentosNormais,
-                               Double comissaoAgendamentosFixos,
-                               Double descontoTaxa,
-                               Double valorPago,
-                               List<ComissaoIndividualDTO> comissoesIndividuais,
-                               List<ComissaoPagamento> historicoPagamentos) {
+            LocalDate dataInicio, LocalDate dataFim,
+            Double comissaoTotal, Double comissaoLiquida,
+            Double comissaoAgendamentosNormais,
+            Double comissaoAgendamentosFixos,
+            Double valorTotalNormais,
+            Double valorTotalFixos,
+            Double descontoTaxa,
+            Double valorPago,
+            List<ComissaoIndividualDTO> comissoesIndividuais,
+            List<ComissaoPagamento> historicoPagamentos) {
         this.profissionalId = profissionalId;
         this.nomeProfissional = nomeProfissional;
         this.dataInicio = dataInicio;
         this.dataFim = dataFim;
         this.comissaoTotal = comissaoTotal;
-        this.comissaoSemTaxa = comissaoTotal;                    // Sempre o valor bruto
-        this.comissaoComTaxa = comissaoTotal - descontoTaxa;     // Sempre com desconto aplicado
-        this.comissaoLiquida = comissaoLiquida;                  // Valor final baseado na config
+        this.comissaoSemTaxa = comissaoTotal;
+        this.comissaoComTaxa = comissaoTotal - descontoTaxa;
+        this.comissaoLiquida = comissaoLiquida;
         this.comissaoAgendamentosNormais = comissaoAgendamentosNormais;
         this.comissaoAgendamentosFixos = comissaoAgendamentosFixos;
+        this.valorTotalNormais = valorTotalNormais;
+        this.valorTotalFixos = valorTotalFixos;
+        this.valorTotalGeral = (valorTotalNormais != null ? valorTotalNormais : 0.0) +
+                (valorTotalFixos != null ? valorTotalFixos : 0.0);
         this.descontoTaxa = descontoTaxa;
         this.valorPago = valorPago;
         this.valorPendente = Math.max(0, comissaoLiquida - valorPago);
@@ -101,22 +100,34 @@ public class ComissaoResponseDTO {
         return comissaoAgendamentosFixos;
     }
 
+    public Double getValorTotalNormais() {
+        return valorTotalNormais;
+    }
+
+    public Double getValorTotalFixos() {
+        return valorTotalFixos;
+    }
+
+    public Double getValorTotalGeral() {
+        return valorTotalGeral;
+    }
+
     public Double getDescontoTaxa() {
         return descontoTaxa;
     }
-    
+
     public Double getValorPago() {
         return valorPago;
     }
-    
+
     public Double getValorPendente() {
         return valorPendente;
     }
-    
+
     public boolean isPendente() {
         return pendente;
     }
-    
+
     @JsonIgnore
     public void setPendente(boolean pendente) {
         this.pendente = pendente;

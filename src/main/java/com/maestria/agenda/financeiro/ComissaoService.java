@@ -276,6 +276,8 @@ public class ComissaoService {
                                         comissaoLiquida,
                                         resultadoNormal.valorComissao,
                                         resultadoFixo.valorComissao,
+                                        resultadoNormal.valorTotalServicos,
+                                        resultadoFixo.valorTotalServicos,
                                         descontoTaxaTotal,
                                         valorJaPago,
                                         comissoesIndividuais,
