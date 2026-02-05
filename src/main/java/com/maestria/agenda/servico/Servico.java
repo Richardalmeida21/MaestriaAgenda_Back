@@ -33,11 +33,13 @@ public class Servico {
     private String duracao; // ISO-8601 format (PT1H30M)
 
     @Positive(message = "Percentual de comissão deve ser positivo")
-    @Column(nullable = true) // Temporariamente nullable para migração
-    private Double comissaoPercentual; // Percentual de comissão específico deste serviço
+    @ManyToOne
+    @JoinColumn(name = "categoria_id") // Pode ser null durante migração ou não, mas idealmente obrigatório
+    private CategoriaServico categoria;
 
     // Construtor padrão
-    public Servico() {}
+    public Servico() {
+    }
 
     // Getters e Setters
     public Long getId() {
@@ -80,31 +82,33 @@ public class Servico {
         this.duracao = duracao;
     }
 
-    public Double getComissaoPercentual() {
-        return comissaoPercentual;
+    public CategoriaServico getCategoria() {
+        return categoria;
     }
 
-    public void setComissaoPercentual(Double comissaoPercentual) {
-        this.comissaoPercentual = comissaoPercentual;
+    public void setCategoria(CategoriaServico categoria) {
+        this.categoria = categoria;
     }
-    
+
     /**
      * Converte a String de duração para um objeto Duration do Java
+     * 
      * @return objeto Duration representando a duração do serviço
      */
     public Duration getDuracaoAsObject() {
         return Duration.parse(duracao);
     }
-    
+
     /**
      * Retorna a duração do serviço formatada como texto amigável
+     * 
      * @return String com duração formatada (ex: "1h 30min")
      */
     public String getDuracaoFormatada() {
         Duration duration = getDuracaoAsObject();
         long horas = duration.toHours();
         long minutos = duration.toMinutesPart();
-        
+
         if (horas > 0) {
             return horas + "h" + (minutos > 0 ? " " + minutos + "min" : "");
         } else {
@@ -114,11 +118,13 @@ public class Servico {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
         Servico servico = (Servico) o;
         return Objects.equals(id, servico.id) &&
-               Objects.equals(nome, servico.nome);
+                Objects.equals(nome, servico.nome);
     }
 
     @Override

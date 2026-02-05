@@ -24,6 +24,7 @@ public class ComissaoService {
         private final ProfissionalRepository profissionalRepository;
         private final ComissaoPagamentoRepository comissaoPagamentoRepository;
         private final TaxaPagamentoService taxaPagamentoService;
+        private final com.maestria.agenda.profissional.ComissaoProfissionalRepository comissaoProfissionalRepository;
         private final Logger logger = LoggerFactory.getLogger(ComissaoService.class);
 
         // Removida a injeção da comissão global pois agora cada serviço tem sua própria
@@ -33,12 +34,14 @@ public class ComissaoService {
                         AgendamentoFixoRepository agendamentoFixoRepository,
                         ProfissionalRepository profissionalRepository,
                         ComissaoPagamentoRepository comissaoPagamentoRepository,
-                        TaxaPagamentoService taxaPagamentoService) {
+                        TaxaPagamentoService taxaPagamentoService,
+                        com.maestria.agenda.profissional.ComissaoProfissionalRepository comissaoProfissionalRepository) {
                 this.agendamentoRepository = agendamentoRepository;
                 this.agendamentoFixoRepository = agendamentoFixoRepository;
                 this.profissionalRepository = profissionalRepository;
                 this.comissaoPagamentoRepository = comissaoPagamentoRepository;
                 this.taxaPagamentoService = taxaPagamentoService;
+                this.comissaoProfissionalRepository = comissaoProfissionalRepository;
         }
 
         /**
@@ -85,11 +88,17 @@ public class ComissaoService {
                                         && agendamento.getServico().getValor() != null) {
 
                                 double valorServico = agendamento.getServico().getValor();
-                                // Se não há comissão definida, usa 70% como padrão (valor anterior)
-                                double comissaoPercentualServico = agendamento.getServico()
-                                                .getComissaoPercentual() != null
-                                                                ? agendamento.getServico().getComissaoPercentual()
-                                                                : 70.0;
+                                double comissaoPercentualServico = 0.0;
+
+                                if (agendamento.getServico().getCategoria() != null) {
+                                        comissaoPercentualServico = comissaoProfissionalRepository
+                                                        .findByProfissionalIdAndCategoriaId(
+                                                                        profissionalId,
+                                                                        agendamento.getServico().getCategoria().getId())
+                                                        .map(com.maestria.agenda.profissional.ComissaoProfissional::getPercentual)
+                                                        .orElse(0.0); // Se não encontrar configuração, comissão é 0
+                                }
+
                                 double taxa = 0.0;
 
                                 if (agendamento.getFormaPagamento() != null) {
@@ -104,8 +113,12 @@ public class ComissaoService {
                                 descontoTaxaTotal += descontoTaxa;
 
                                 logger.debug(
-                                                "Agendamento normal ID {}: valor {}, comissão {}%, valor comissão {}, taxa {}%, desconto {}",
-                                                agendamento.getId(), valorServico, comissaoPercentualServico,
+                                                "Agendamento normal ID {}: valor {}, categoria {}, comissão {}%, valor comissão {}, taxa {}%, desconto {}",
+                                                agendamento.getId(), valorServico,
+                                                agendamento.getServico().getCategoria() != null
+                                                                ? agendamento.getServico().getCategoria().getId()
+                                                                : "N/A",
+                                                comissaoPercentualServico,
                                                 comissaoServico, taxa,
                                                 descontoTaxa);
                         }
@@ -144,11 +157,18 @@ public class ComissaoService {
                                         agendamentoFixo.getServico().getValor() != null) {
 
                                 double valorServico = agendamentoFixo.getServico().getValor();
-                                // Se não há comissão definida, usa 70% como padrão (valor anterior)
-                                double comissaoPercentualServico = agendamentoFixo.getServico()
-                                                .getComissaoPercentual() != null
-                                                                ? agendamentoFixo.getServico().getComissaoPercentual()
-                                                                : 70.0;
+                                double comissaoPercentualServico = 0.0;
+
+                                if (agendamentoFixo.getServico().getCategoria() != null) {
+                                        comissaoPercentualServico = comissaoProfissionalRepository
+                                                        .findByProfissionalIdAndCategoriaId(
+                                                                        profissionalId,
+                                                                        agendamentoFixo.getServico().getCategoria()
+                                                                                        .getId())
+                                                        .map(com.maestria.agenda.profissional.ComissaoProfissional::getPercentual)
+                                                        .orElse(0.0);
+                                }
+
                                 double valorTotalServico = valorServico * agendamentosGerados.size();
                                 double comissaoTotalServico = valorTotalServico * (comissaoPercentualServico / 100.0);
                                 double descontoTaxa = 0.0;
@@ -166,9 +186,13 @@ public class ComissaoService {
                                 descontoTaxaTotal += descontoTaxa;
 
                                 logger.debug(
-                                                "Agendamento fixo ID {}: {} ocorrências pagas x {} = {}, comissão {}%, valor comissão {}, desconto {}",
+                                                "Agendamento fixo ID {}: {} ocorrências pagas x {} = {}, categoria {}, comissão {}%, valor comissão {}, desconto {}",
                                                 agendamentoFixo.getId(), agendamentosGerados.size(), valorServico,
-                                                valorTotalServico, comissaoPercentualServico, comissaoTotalServico,
+                                                valorTotalServico,
+                                                agendamentoFixo.getServico().getCategoria() != null
+                                                                ? agendamentoFixo.getServico().getCategoria().getId()
+                                                                : "N/A",
+                                                comissaoPercentualServico, comissaoTotalServico,
                                                 descontoTaxa);
                         }
                 }

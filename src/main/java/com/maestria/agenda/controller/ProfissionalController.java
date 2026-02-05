@@ -20,9 +20,13 @@ public class ProfissionalController {
     private final PasswordEncoder passwordEncoder;
 
     public ProfissionalController(ProfissionalRepository profissionalRepository,
-                                 PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            com.maestria.agenda.profissional.ComissaoProfissionalRepository comissaoProfissionalRepository,
+            com.maestria.agenda.servico.CategoriaServicoRepository categoriaServicoRepository) {
         this.profissionalRepository = profissionalRepository;
         this.passwordEncoder = passwordEncoder;
+        this.comissaoProfissionalRepository = comissaoProfissionalRepository;
+        this.categoriaServicoRepository = categoriaServicoRepository;
     }
 
     // ✅ Rota pública para testar login de profissional
@@ -30,7 +34,8 @@ public class ProfissionalController {
     public ResponseEntity<String> testarLogin(@PathVariable String login) {
         Profissional profissional = profissionalRepository.findByLogin(login);
         if (profissional != null) {
-            return ResponseEntity.ok("✅ Profissional encontrado: " + profissional.getId() + " - " + profissional.getNome());
+            return ResponseEntity
+                    .ok("✅ Profissional encontrado: " + profissional.getId() + " - " + profissional.getNome());
         } else {
             return ResponseEntity.status(404).body("❌ Profissional não encontrado!");
         }
@@ -63,7 +68,7 @@ public class ProfissionalController {
         if (profissional.getSenha() != null && !profissional.getSenha().isEmpty()) {
             profissional.setSenha(passwordEncoder.encode(profissional.getSenha()));
         }
-        
+
         Profissional novoProfissional = profissionalRepository.save(profissional);
         return ResponseEntity.ok(novoProfissional);
     }
@@ -71,27 +76,28 @@ public class ProfissionalController {
     // ✅ Apenas ADMIN pode atualizar profissionais - Corrigido
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<?> atualizarProfissional(@PathVariable Long id, @Valid @RequestBody Profissional profissionalAtualizado) {
+    public ResponseEntity<?> atualizarProfissional(@PathVariable Long id,
+            @Valid @RequestBody Profissional profissionalAtualizado) {
         Optional<Profissional> profissionalOptional = profissionalRepository.findById(id);
-        
+
         if (profissionalOptional.isPresent()) {
             Profissional profissionalExistente = profissionalOptional.get();
-            
+
             // Atualizar dados do profissional
             profissionalExistente.setNome(profissionalAtualizado.getNome());
             profissionalExistente.setLogin(profissionalAtualizado.getLogin());
-            
+
             // Se houver uma nova senha e ela não estiver vazia, criptografe-a
             if (profissionalAtualizado.getSenha() != null && !profissionalAtualizado.getSenha().isEmpty()) {
                 String senhaCriptografada = passwordEncoder.encode(profissionalAtualizado.getSenha());
                 profissionalExistente.setSenha(senhaCriptografada);
             }
-            
+
             // Atualizar o role se fornecido
             if (profissionalAtualizado.getRole() != null) {
                 profissionalExistente.setRole(profissionalAtualizado.getRole());
             }
-            
+
             // Salvar as alterações
             Profissional updated = profissionalRepository.save(profissionalExistente);
             return ResponseEntity.ok(updated);
@@ -105,29 +111,30 @@ public class ProfissionalController {
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<?> alterarDescontoTaxas(@PathVariable Long id, @RequestBody DescontoTaxasRequest request) {
         Optional<Profissional> profissionalOptional = profissionalRepository.findById(id);
-        
+
         if (profissionalOptional.isPresent()) {
             Profissional profissional = profissionalOptional.get();
             profissional.setDescontarTaxas(request.descontarTaxas());
-            
+
             Profissional updated = profissionalRepository.save(profissional);
-            
+
             String status = request.descontarTaxas() ? "COM desconto de taxas" : "SEM desconto de taxas";
             return ResponseEntity.ok(new DescontoTaxasResponse(
-                updated.getId(), 
-                updated.getNome(), 
-                updated.getDescontarTaxas(),
-                "✅ Configuração alterada: " + profissional.getNome() + " agora está " + status
-            ));
+                    updated.getId(),
+                    updated.getNome(),
+                    updated.getDescontarTaxas(),
+                    "✅ Configuração alterada: " + profissional.getNome() + " agora está " + status));
         } else {
             return ResponseEntity.status(404).body("❌ Profissional não encontrado!");
         }
     }
 
     // DTOs para desconto de taxas
-    public record DescontoTaxasRequest(Boolean descontarTaxas) {}
-    
-    public record DescontoTaxasResponse(Long id, String nome, Boolean descontarTaxas, String mensagem) {}
+    public record DescontoTaxasRequest(Boolean descontarTaxas) {
+    }
+
+    public record DescontoTaxasResponse(Long id, String nome, Boolean descontarTaxas, String mensagem) {
+    }
 
     // ✅ Apenas ADMIN pode excluir profissionais
     @DeleteMapping("/{id}")
@@ -138,5 +145,45 @@ public class ProfissionalController {
             return ResponseEntity.ok("✅ Profissional deletado!");
         }
         return ResponseEntity.status(404).body("❌ Profissional não encontrado!");
+    }
+
+    // --- Gestão de Comissões por Categoria ---
+
+    private final com.maestria.agenda.profissional.ComissaoProfissionalRepository comissaoProfissionalRepository;
+    private final com.maestria.agenda.servico.CategoriaServicoRepository categoriaServicoRepository;
+
+    @GetMapping("/{id}/comissoes-config")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'PROFISSIONAL')")
+    public ResponseEntity<?> listarComissoesConfig(@PathVariable Long id) {
+        return ResponseEntity.ok(comissaoProfissionalRepository.findByProfissionalId(id));
+    }
+
+    @PostMapping("/{id}/comissoes-config")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<?> atualizarComissaoConfig(@PathVariable Long id,
+            @RequestBody List<ComissaoConfigDTO> configs) {
+        Optional<Profissional> profissionalOpt = profissionalRepository.findById(id);
+        if (profissionalOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        Profissional profissional = profissionalOpt.get();
+
+        for (ComissaoConfigDTO config : configs) {
+            com.maestria.agenda.servico.CategoriaServico categoria = categoriaServicoRepository
+                    .findById(config.categoriaId())
+                    .orElseThrow(() -> new RuntimeException("Categoria não encontrada: " + config.categoriaId()));
+
+            com.maestria.agenda.profissional.ComissaoProfissional comissao = comissaoProfissionalRepository
+                    .findByProfissionalAndCategoria(profissional, categoria)
+                    .orElse(new com.maestria.agenda.profissional.ComissaoProfissional(profissional, categoria, 0.0));
+
+            comissao.setPercentual(config.percentual());
+            comissaoProfissionalRepository.save(comissao);
+        }
+
+        return ResponseEntity.ok(comissaoProfissionalRepository.findByProfissionalId(id));
+    }
+
+    public record ComissaoConfigDTO(Long categoriaId, Double percentual) {
     }
 }

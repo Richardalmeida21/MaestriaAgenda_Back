@@ -3,6 +3,8 @@ package com.maestria.agenda.controller;
 import com.maestria.agenda.servico.DadosServico;
 import com.maestria.agenda.servico.Servico;
 import com.maestria.agenda.servico.ServicoRepository;
+import com.maestria.agenda.servico.CategoriaServico;
+import com.maestria.agenda.servico.CategoriaServicoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -20,11 +22,13 @@ import java.util.List;
 public class ServicoController {
 
     private static final Logger logger = LoggerFactory.getLogger(ServicoController.class);
-    
-    private final ServicoRepository servicoRepository;
 
-    public ServicoController(ServicoRepository servicoRepository) {
+    private final ServicoRepository servicoRepository;
+    private final CategoriaServicoRepository categoriaRepository;
+
+    public ServicoController(ServicoRepository servicoRepository, CategoriaServicoRepository categoriaRepository) {
         this.servicoRepository = servicoRepository;
+        this.categoriaRepository = categoriaRepository;
     }
 
     @GetMapping
@@ -37,7 +41,7 @@ public class ServicoController {
     public ResponseEntity<?> buscarServicoPorId(@PathVariable Long id) {
         logger.info("🔍 Buscando serviço com ID: {}", id);
         return servicoRepository.findById(id)
-                .map(ResponseEntity::ok)
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
                 .orElseGet(() -> {
                     logger.warn("❌ Serviço não encontrado. ID: {}", id);
                     return ResponseEntity.status(404).build();
@@ -49,29 +53,32 @@ public class ServicoController {
     public ResponseEntity<?> cadastrarServico(
             @RequestBody @Valid DadosServico dados,
             @AuthenticationPrincipal UserDetails userDetails) {
-        
+
         logger.info("🔍 Solicitação para cadastrar serviço por: {}", userDetails.getUsername());
-        
+
         try {
             if (servicoRepository.existsByNome(dados.nome())) {
                 logger.warn("❌ Já existe um serviço com o nome: {}", dados.nome());
                 return ResponseEntity.badRequest().body("Já existe um serviço com este nome.");
             }
-            
+
+            CategoriaServico categoria = categoriaRepository.findById(dados.categoriaId())
+                    .orElseThrow(() -> new RuntimeException("Categoria não encontrada"));
+
             Servico servico = new Servico();
             servico.setNome(dados.nome());
             servico.setValor(dados.valor());
             servico.setDescricao(dados.descricao());
             servico.setDuracao(dados.duracao());
-            servico.setComissaoPercentual(dados.comissaoPercentual());
-            
+            servico.setCategoria(categoria);
+
             servicoRepository.save(servico);
-            
+
             logger.info("✅ Serviço cadastrado com sucesso: {}", servico);
             return ResponseEntity.ok(servico);
         } catch (Exception e) {
             logger.error("❌ Erro ao cadastrar serviço", e);
-            return ResponseEntity.status(500).body("Erro ao cadastrar serviço.");
+            return ResponseEntity.status(500).body("Erro ao cadastrar serviço: " + e.getMessage());
         }
     }
 
@@ -81,37 +88,43 @@ public class ServicoController {
             @PathVariable Long id,
             @RequestBody @Valid DadosServico dados,
             @AuthenticationPrincipal UserDetails userDetails) {
-        
+
         logger.info("🔍 Solicitação para atualizar serviço {} por: {}", id, userDetails.getUsername());
-        
+
         try {
-            return servicoRepository.findById(id)
-                    .map(servico -> {
-                        // Verifica se já existe outro serviço com este nome
-                        Servico existente = servicoRepository.findByNome(dados.nome());
-                        if (existente != null && !existente.getId().equals(id)) {
-                            logger.warn("❌ Já existe outro serviço com o nome: {}", dados.nome());
-                            return ResponseEntity.badRequest().body("Já existe outro serviço com este nome.");
-                        }
-                        
-                        servico.setNome(dados.nome());
-                        servico.setValor(dados.valor());
-                        servico.setDescricao(dados.descricao());
-                        servico.setDuracao(dados.duracao());
-                        servico.setComissaoPercentual(dados.comissaoPercentual());
-                        
-                        servicoRepository.save(servico);
-                        
-                        logger.info("✅ Serviço atualizado com sucesso: {}", servico);
-                        return ResponseEntity.ok(servico);
-                    })
-                    .orElseGet(() -> {
-                        logger.warn("❌ Serviço não encontrado. ID: {}", id);
-                        return ResponseEntity.status(404).body("Serviço não encontrado.");
-                    });
+            java.util.Optional<Servico> servicoOpt = servicoRepository.findById(id);
+
+            if (servicoOpt.isEmpty()) {
+                logger.warn("❌ Serviço não encontrado. ID: {}", id);
+                return ResponseEntity.status(404).body("Serviço não encontrado.");
+            }
+
+            Servico servico = servicoOpt.get();
+
+            // Verifica se já existe outro serviço com este nome
+            Servico existente = servicoRepository.findByNome(dados.nome());
+            if (existente != null && !existente.getId().equals(id)) {
+                logger.warn("❌ Já existe outro serviço com o nome: {}", dados.nome());
+                return ResponseEntity.badRequest().body("Já existe outro serviço com este nome.");
+            }
+
+            CategoriaServico categoria = categoriaRepository.findById(dados.categoriaId())
+                    .orElseThrow(() -> new RuntimeException("Categoria não encontrada"));
+
+            servico.setNome(dados.nome());
+            servico.setValor(dados.valor());
+            servico.setDescricao(dados.descricao());
+            servico.setDuracao(dados.duracao());
+            servico.setCategoria(categoria);
+
+            servicoRepository.save(servico);
+
+            logger.info("✅ Serviço atualizado com sucesso: {}", servico);
+            return ResponseEntity.ok(servico);
+
         } catch (Exception e) {
             logger.error("❌ Erro ao atualizar serviço", e);
-            return ResponseEntity.status(500).body("Erro ao atualizar serviço.");
+            return ResponseEntity.status(500).body("Erro ao atualizar serviço: " + e.getMessage());
         }
     }
 
@@ -120,22 +133,22 @@ public class ServicoController {
     public ResponseEntity<?> excluirServico(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
-        
+
         logger.info("🔍 Solicitação para excluir serviço {} por: {}", id, userDetails.getUsername());
-        
+
         if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
             logger.warn("❌ Tentativa de exclusão de serviço sem permissão por {}", userDetails.getUsername());
             return ResponseEntity.status(403).body("Acesso negado. Apenas ADMIN pode excluir serviços.");
         }
-        
+
         try {
             if (!servicoRepository.existsById(id)) {
                 logger.warn("❌ Serviço não encontrado. ID: {}", id);
                 return ResponseEntity.status(404).body("Serviço não encontrado.");
             }
-            
+
             servicoRepository.deleteById(id);
-            
+
             logger.info("✅ Serviço excluído com sucesso. ID: {}", id);
             return ResponseEntity.ok("Serviço excluído com sucesso.");
         } catch (Exception e) {
