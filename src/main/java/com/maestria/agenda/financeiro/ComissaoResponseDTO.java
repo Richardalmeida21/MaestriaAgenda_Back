@@ -18,6 +18,17 @@ public class ComissaoResponseDTO {
     private Double valorTotalFixos;
     private Double valorTotalGeral; // Soma de normais + fixos
 
+    private Double comissaoAgendamentosNormais;
+    private Double comissaoAgendamentosFixos;
+    private Double descontoTaxa;
+    private Double valorPago;
+    private Double valorPendente;
+    private List<ComissaoIndividualDTO> comissoesIndividuais;
+    private List<ComissaoPagamento> historicoPagamentos;
+
+    @JsonIgnore
+    private boolean pendente;
+
     public ComissaoResponseDTO(Long profissionalId, String nomeProfissional,
             LocalDate dataInicio, LocalDate dataFim,
             Double comissaoTotal, Double comissaoLiquida,
