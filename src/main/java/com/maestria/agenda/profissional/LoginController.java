@@ -3,6 +3,8 @@ package com.maestria.agenda.profissional;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +21,8 @@ import java.util.Map;
 @CrossOrigin(origins = "*") // ✅ Permite requisições de qualquer origem (temporário para testes)
 public class LoginController {
 
+    private static final Logger logger = LoggerFactory.getLogger(LoginController.class);
+
     @Autowired
     private ProfissionalRepository profissionalRepository;
 
@@ -30,15 +34,27 @@ public class LoginController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
+        logger.info("🔐 Tentativa de login - Username: {}", loginRequest.getUsername());
+        
         Profissional profissional = profissionalRepository.findByLogin(loginRequest.getUsername());
 
         if (profissional == null) {
+            logger.warn("❌ Login falhou - Usuário não encontrado: {}", loginRequest.getUsername());
             return ResponseEntity.status(401).body("Usuário não encontrado.");
         }
 
-        if (!passwordEncoder.matches(loginRequest.getSenha(), profissional.getSenha())) {
+        logger.info("✅ Usuário encontrado: {} (ID: {})", profissional.getLogin(), profissional.getId());
+        logger.debug("Senha recebida: {} | Hash no banco: {}", loginRequest.getSenha(), profissional.getSenha());
+        
+        boolean senhaCorreta = passwordEncoder.matches(loginRequest.getSenha(), profissional.getSenha());
+        logger.info("Resultado da validação de senha: {}", senhaCorreta);
+
+        if (!senhaCorreta) {
+            logger.warn("❌ Login falhou - Senha incorreta para usuário: {}", loginRequest.getUsername());
             return ResponseEntity.status(401).body("Senha incorreta.");
         }
+
+        logger.info("✅ Login bem-sucedido - Usuário: {}", loginRequest.getUsername());
 
         // 🔥 Gera token JWT usando uma chave segura
         String token = Jwts.builder()
