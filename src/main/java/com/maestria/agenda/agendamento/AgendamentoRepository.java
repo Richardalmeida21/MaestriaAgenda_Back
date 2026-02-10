@@ -35,13 +35,13 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
 
         List<Agendamento> findByDataBetween(LocalDate dataInicio, LocalDate dataFim);
 
-        @Query("SELECT MONTH(a.data) AS month, SUM(a.servico.valor) FROM Agendamento a WHERE a.data BETWEEN :dataInicio AND :dataFim GROUP BY MONTH(a.data) ORDER BY MONTH(a.data)")
+        @Query("SELECT MONTH(a.data) AS month, SUM(a.servico.valor) FROM Agendamento a WHERE a.data BETWEEN :dataInicio AND :dataFim AND a.pago = true GROUP BY MONTH(a.data) ORDER BY MONTH(a.data)")
         List<Object[]> groupRevenueByMonth(@Param("dataInicio") LocalDate dataInicio,
                         @Param("dataFim") LocalDate dataFim);
 
         @Query("SELECT s.nome, COUNT(a) AS totalAgendamentos " +
                         "FROM Agendamento a JOIN a.servico s " +
-                        "WHERE a.data BETWEEN :dataInicio AND :dataFim " +
+                        "WHERE a.data BETWEEN :dataInicio AND :dataFim AND a.pago = true " +
                         "GROUP BY s.nome " +
                         "ORDER BY totalAgendamentos DESC")
         List<Object[]> findServicosMaisAgendados(@Param("dataInicio") LocalDate dataInicio,
@@ -96,23 +96,23 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
                         @Param("dataFim") LocalDate dataFim,
                         @Param("comissaoPercentual") double comissaoPercentual);
 
-        // Calcular faturamento total por período
-        @Query("SELECT SUM(a.servico.valor) FROM Agendamento a WHERE a.data BETWEEN :dataInicio AND :dataFim")
+        // Calcular faturamento total por período (apenas agendamentos pagos)
+        @Query("SELECT SUM(a.servico.valor) FROM Agendamento a WHERE a.data BETWEEN :dataInicio AND :dataFim AND a.pago = true")
         Double calcularFaturamentoTotalPorPeriodo(@Param("dataInicio") LocalDate dataInicio,
                         @Param("dataFim") LocalDate dataFim);
 
-        // Contar serviços realizados por período
-        @Query("SELECT COUNT(a) FROM Agendamento a WHERE a.data BETWEEN :dataInicio AND :dataFim")
+        // Contar serviços realizados por período (apenas agendamentos pagos)
+        @Query("SELECT COUNT(a) FROM Agendamento a WHERE a.data BETWEEN :dataInicio AND :dataFim AND a.pago = true")
         Integer contarServicosRealizadosPorPeriodo(@Param("dataInicio") LocalDate dataInicio,
                         @Param("dataFim") LocalDate dataFim);
 
-        // Contar novos clientes por período (sem referência a dataCadastro)
-        @Query("SELECT COUNT(DISTINCT a.cliente) FROM Agendamento a WHERE a.data BETWEEN :dataInicio AND :dataFim")
+        // Contar novos clientes por período (apenas agendamentos pagos)
+        @Query("SELECT COUNT(DISTINCT a.cliente) FROM Agendamento a WHERE a.data BETWEEN :dataInicio AND :dataFim AND a.pago = true")
         Integer contarNovosClientesPorPeriodo(@Param("dataInicio") LocalDate dataInicio,
                         @Param("dataFim") LocalDate dataFim);
 
-        // Contar total de clientes por período
-        @Query("SELECT COUNT(DISTINCT a.cliente) FROM Agendamento a WHERE a.data BETWEEN :dataInicio AND :dataFim")
+        // Contar total de clientes por período (apenas agendamentos pagos)
+        @Query("SELECT COUNT(DISTINCT a.cliente) FROM Agendamento a WHERE a.data BETWEEN :dataInicio AND :dataFim AND a.pago = true")
         Integer contarTotalDeClientesPorPeriodo(@Param("dataInicio") LocalDate dataInicio,
                         @Param("dataFim") LocalDate dataFim);
 
