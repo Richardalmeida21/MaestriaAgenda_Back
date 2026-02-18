@@ -3,10 +3,14 @@ package com.maestria.agenda.agendamento;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import com.maestria.agenda.cliente.Cliente;
 import com.maestria.agenda.profissional.Profissional;
 import com.maestria.agenda.servico.Servico;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import com.maestria.agenda.financeiro.PagamentoTipo;
 
@@ -27,8 +31,12 @@ public class Agendamento {
     private Profissional profissional;
 
     @ManyToOne
-    @JoinColumn(name = "servico_id", nullable = false)
+    @JoinColumn(name = "servico_id", nullable = true) // Agora opcional, mantido para compatibilidade
     private Servico servico;
+
+    @OneToMany(mappedBy = "agendamento", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @JsonManagedReference
+    private List<AgendamentoServico> servicos = new ArrayList<>();
 
     private LocalDate data;
     private LocalTime hora;
@@ -113,6 +121,35 @@ public void setAgendamentoFixoId(Long agendamentoFixoId) {
         this.servico = servico;
     }
 
+    public List<AgendamentoServico> getServicos() {
+        return servicos;
+    }
+
+    public void setServicos(List<AgendamentoServico> servicos) {
+        this.servicos = servicos;
+    }
+
+    public void addServico(Servico servico, Integer ordem) {
+        AgendamentoServico agendamentoServico = new AgendamentoServico(this, servico, ordem);
+        this.servicos.add(agendamentoServico);
+    }
+
+    // Método para obter todos os serviços como lista de Servico
+    public List<Servico> getListaServicos() {
+        if (servicos != null && !servicos.isEmpty()) {
+            return servicos.stream()
+                .map(AgendamentoServico::getServico)
+                .collect(Collectors.toList());
+        }
+        // Compatibilidade: se não houver servicos mas houver servico, retorna lista com um elemento
+        if (servico != null) {
+            List<Servico> lista = new ArrayList<>();
+            lista.add(servico);
+            return lista;
+        }
+        return new ArrayList<>();
+    }
+
     public LocalDate getData() {
         return data;
     }
@@ -129,9 +166,22 @@ public void setAgendamentoFixoId(Long agendamentoFixoId) {
         this.hora = hora;
     }
 
-    // Método para obter a duração diretamente do serviço
+    // Método para obter a duração total de todos os serviços
     public Duration getDuracao() {
-        return servico != null ? servico.getDuracaoAsObject() : null;
+        Duration duracaoTotal = Duration.ZERO;
+        
+        // Se houver múltiplos serviços, soma todas as durações
+        if (servicos != null && !servicos.isEmpty()) {
+            for (AgendamentoServico as : servicos) {
+                if (as.getServico() != null && as.getServico().getDuracaoAsObject() != null) {
+                    duracaoTotal = duracaoTotal.plus(as.getServico().getDuracaoAsObject());
+                }
+            }
+            return duracaoTotal;
+        }
+        
+        // Compatibilidade: se não houver servicos mas houver servico único
+        return servico != null ? servico.getDuracaoAsObject() : Duration.ZERO;
     }
 
     public String getObservacao() {
@@ -142,9 +192,22 @@ public void setAgendamentoFixoId(Long agendamentoFixoId) {
         this.observacao = observacao;
     }
 
-    // Método para obter o valor diretamente do serviço
+    // Método para obter o valor total de todos os serviços
     public Double getValor() {
-        return servico != null ? servico.getValor() : null;
+        Double valorTotal = 0.0;
+        
+        // Se houver múltiplos serviços, soma todos os valores
+        if (servicos != null && !servicos.isEmpty()) {
+            for (AgendamentoServico as : servicos) {
+                if (as.getServico() != null && as.getServico().getValor() != null) {
+                    valorTotal += as.getServico().getValor();
+                }
+            }
+            return valorTotal;
+        }
+        
+        // Compatibilidade: se não houver servicos mas houver servico único
+        return servico != null ? servico.getValor() : 0.0;
     }
 
     // Método para formatar a duração

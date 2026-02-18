@@ -7,7 +7,6 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.Duration;
-import com.maestria.agenda.financeiro.PagamentoTipo;
 
 
 @Entity
@@ -18,15 +17,15 @@ public class AgendamentoFixo {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "cliente_id", nullable = false)
     private Cliente cliente;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "profissional_id", nullable = false)
     private Profissional profissional;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "servico_id", nullable = false)
     private Servico servico;
 
@@ -193,6 +192,10 @@ public class AgendamentoFixo {
 
     public Double getValor() {
         return servico != null ? servico.getValor() : null;
+    }
+
+    public String getDuracao() {
+        return servico != null ? servico.getDuracao() : null;
     }
 
     public Duration getDuracaoAsObject() {

@@ -210,13 +210,22 @@ public class AgendamentoController {
                 logger.info("✅ PROFISSIONAL {} listando seus {} agendamentos fixos",
                         profissional.getNome(), agendamentosFixos.size());
             }
-            List<Map<String, Object>> resultado = agendamentosFixos.stream().map(fixo -> {
-                Map<String, Object> map = new HashMap<>();
-                map.put("isFixo", true);
-                map.put("agendamento", fixo);
-                return map;
-            }).collect(Collectors.toList());
-            return ResponseEntity.ok(resultado);
+            
+            // Garantir que os relacionamentos estejam carregados
+            agendamentosFixos.forEach(fixo -> {
+                if (fixo.getCliente() != null) {
+                    fixo.getCliente().getNome(); // Force load
+                }
+                if (fixo.getProfissional() != null) {
+                    fixo.getProfissional().getNome(); // Force load
+                }
+                if (fixo.getServico() != null) {
+                    fixo.getServico().getNome(); // Force load
+                }
+            });
+            
+            logger.info("✅ Retornando {} agendamentos fixos com relacionamentos carregados", agendamentosFixos.size());
+            return ResponseEntity.ok(agendamentosFixos);
         } catch (Exception e) {
             logger.error("❌ Erro ao listar agendamentos fixos", e);
             return ResponseEntity.status(500).body("Erro ao listar agendamentos fixos: " + e.getMessage());
@@ -577,8 +586,20 @@ public class AgendamentoController {
 
             Cliente cliente = clienteRepository.findById(dados.clienteId())
                     .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
-            Servico servico = servicoRepository.findById(dados.servicoId())
-                    .orElseThrow(() -> new RuntimeException("Serviço não encontrado"));
+
+            // Obter lista de IDs de serviços (pode ser um ou múltiplos)
+            List<Long> servicoIds = dados.getServiceIds();
+            if (servicoIds.isEmpty()) {
+                return ResponseEntity.badRequest().body("É necessário informar pelo menos um serviço.");
+            }
+
+            // Buscar todos os serviços
+            List<Servico> servicos = new ArrayList<>();
+            for (Long servicoId : servicoIds) {
+                Servico servico = servicoRepository.findById(servicoId)
+                        .orElseThrow(() -> new RuntimeException("Serviço com ID " + servicoId + " não encontrado"));
+                servicos.add(servico);
+            }
 
             Profissional profissional;
             if (isAdmin) {
@@ -608,7 +629,6 @@ public class AgendamentoController {
             Agendamento agendamento = new Agendamento();
             agendamento.setCliente(cliente);
             agendamento.setProfissional(profissional);
-            agendamento.setServico(servico);
             agendamento.setData(dados.data());
             agendamento.setHora(dados.hora());
             agendamento.setObservacao(dados.observacao());
@@ -616,8 +636,18 @@ public class AgendamentoController {
             agendamento.setFormaPagamento(null);
             agendamento.setDataPagamento(null);
 
+            // Adicionar serviços ao agendamento
+            for (int i = 0; i < servicos.size(); i++) {
+                agendamento.addServico(servicos.get(i), i);
+            }
+
+            // Para compatibilidade com código existente, define o primeiro serviço como o serviço principal
+            if (!servicos.isEmpty()) {
+                agendamento.setServico(servicos.get(0));
+            }
+
             agendamentoRepository.save(agendamento);
-            logger.info("✅ Agendamento criado com sucesso: {}", agendamento);
+            logger.info("✅ Agendamento criado com sucesso com {} serviço(s): {}", servicos.size(), agendamento);
             return ResponseEntity.ok("Agendamento criado com sucesso.");
         } catch (Exception e) {
             logger.error("❌ Erro ao criar agendamento", e);
@@ -669,19 +699,40 @@ public class AgendamentoController {
             Profissional profissional = profissionalRepository.findById(dados.profissionalId())
                     .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
 
-            Servico servico = servicoRepository.findById(dados.servicoId())
-                    .orElseThrow(() -> new RuntimeException("Serviço não encontrado"));
+            // Obter lista de IDs de serviços (pode ser um ou múltiplos)
+            List<Long> servicoIds = dados.getServiceIds();
+            if (servicoIds.isEmpty()) {
+                return ResponseEntity.badRequest().body("É necessário informar pelo menos um serviço.");
+            }
+
+            // Buscar todos os serviços
+            List<Servico> servicos = new ArrayList<>();
+            for (Long servicoId : servicoIds) {
+                Servico servico = servicoRepository.findById(servicoId)
+                        .orElseThrow(() -> new RuntimeException("Serviço com ID " + servicoId + " não encontrado"));
+                servicos.add(servico);
+            }
 
             agendamento.setCliente(cliente);
             agendamento.setProfissional(profissional);
-            agendamento.setServico(servico);
             agendamento.setData(dados.data());
             agendamento.setHora(dados.hora());
             agendamento.setObservacao(dados.observacao());
 
+            // Limpar serviços antigos e adicionar novos
+            agendamento.getServicos().clear();
+            for (int i = 0; i < servicos.size(); i++) {
+                agendamento.addServico(servicos.get(i), i);
+            }
+
+            // Para compatibilidade com código existente, define o primeiro serviço como o serviço principal
+            if (!servicos.isEmpty()) {
+                agendamento.setServico(servicos.get(0));
+            }
+
             agendamentoRepository.save(agendamento);
             String usuarioTipo = isAdmin ? "ADMIN" : "PROFISSIONAL";
-            logger.info("✅ Agendamento atualizado com sucesso por {}: {}", usuarioTipo, agendamento);
+            logger.info("✅ Agendamento atualizado com sucesso por {} com {} serviço(s): {}", usuarioTipo, servicos.size(), agendamento);
             return ResponseEntity.ok("Agendamento atualizado com sucesso.");
         } catch (Exception e) {
             logger.error("❌ Erro ao atualizar agendamento", e);
