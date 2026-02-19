@@ -819,6 +819,40 @@ public class AgendamentoController {
         }
     }
 
+    // Endpoint para marcar agendamento como concluído
+    @PutMapping("/{id}/concluir")
+    public ResponseEntity<?> marcarComoConcluido(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        logger.info("🔄 Solicitação para marcar agendamento ID {} como concluído por {}", id, userDetails.getUsername());
+        try {
+            Agendamento agendamento = agendamentoRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Agendamento não encontrado"));
+
+            // Permitir apenas ADMIN ou o próprio profissional
+            boolean isAdmin = userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"));
+            if (!isAdmin) {
+                Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
+                if (profissional == null || agendamento.getProfissional() == null || !Objects.equals(profissional.getId(), agendamento.getProfissional().getId())) {
+                    return ResponseEntity.status(403).body("Acesso negado. Você só pode marcar seus próprios agendamentos como concluídos.");
+                }
+            }
+
+            if (agendamento.getStatus() == Agendamento.StatusAgendamento.CONCLUIDO) {
+                return ResponseEntity.badRequest().body("Agendamento já está marcado como concluído.");
+            }
+
+            agendamento.setStatus(Agendamento.StatusAgendamento.CONCLUIDO);
+            agendamentoRepository.save(agendamento);
+
+            logger.info("✅ Agendamento ID {} marcado como concluído com sucesso", id);
+            return ResponseEntity.ok("Agendamento marcado como concluído com sucesso.");
+        } catch (Exception e) {
+            logger.error("Erro ao marcar agendamento como concluído: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao marcar agendamento como concluído: " + e.getMessage());
+        }
+    }
+
     // Endpoint para listar agendamentos do dia seguinte com autenticação por API Key (variável de ambiente)
     @GetMapping("/amanha")
     public ResponseEntity<?> listarAgendamentosAmanha(@RequestHeader(value = "X-API-KEY", required = false) String apiKey) {
