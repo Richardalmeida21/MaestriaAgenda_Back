@@ -819,12 +819,12 @@ public class AgendamentoController {
         }
     }
 
-    // Endpoint para marcar agendamento como concluído
+    // Endpoint para marcar agendamento como concluído (sem pagamento)
     @PutMapping("/{id}/concluir")
     public ResponseEntity<?> marcarComoConcluido(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
-        logger.info("🔄 Solicitação para marcar agendamento ID {} como concluído por {}", id, userDetails.getUsername());
+        logger.info("🔄 Solicitação para marcar agendamento ID {} como concluído (pronto para pagamento) por {}", id, userDetails.getUsername());
         try {
             Agendamento agendamento = agendamentoRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Agendamento não encontrado"));
@@ -838,18 +838,14 @@ public class AgendamentoController {
                 }
             }
 
-            if (agendamento.getStatus() == Agendamento.StatusAgendamento.CONCLUIDO) {
-                return ResponseEntity.badRequest().body("Agendamento já está marcado como concluído.");
-            }
-
-            agendamento.setStatus(Agendamento.StatusAgendamento.CONCLUIDO);
-            agendamentoRepository.save(agendamento);
-
-            logger.info("✅ Agendamento ID {} marcado como concluído com sucesso", id);
-            return ResponseEntity.ok("Agendamento marcado como concluído com sucesso.");
+            // Não fazemos nada aqui - apenas confirmamos que está pronto para receber pagamento
+            // O frontend usará isso como confirmação antes de mostrar as opções de pagamento
+            
+            logger.info("✅ Agendamento ID {} confirmado como concluído (aguardando pagamento)", id);
+            return ResponseEntity.ok("Agendamento confirmado como concluído. Pronto para receber pagamento.");
         } catch (Exception e) {
-            logger.error("Erro ao marcar agendamento como concluído: {}", e.getMessage(), e);
-            return ResponseEntity.status(500).body("Erro ao marcar agendamento como concluído: " + e.getMessage());
+            logger.error("Erro ao confirmar conclusão do agendamento: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body("Erro ao confirmar conclusão do agendamento: " + e.getMessage());
         }
     }
 
