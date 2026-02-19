@@ -488,7 +488,7 @@ public class AgendamentoController {
             }
             List<Map<String, Object>> normais = agendamentosNormais.stream().map(a -> {
                 Map<String, Object> map = new HashMap<>();
-                map.put("isFixo", a.getAgendamentoFixoId() != null);
+                map.put("isFixo", false); // Agendamentos normais nunca são fixos, mesmo se derivados de um fixo
                 map.put("agendamento", a);
                 return map;
             }).collect(Collectors.toList());
