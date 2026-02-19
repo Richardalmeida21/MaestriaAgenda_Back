@@ -44,6 +44,32 @@ public class TaxaPagamentoController {
     }
 
     /**
+     * Lista apenas as formas de pagamento ATIVAS (para uso em dropdowns)
+     * Endpoint público para Admin e Profissionais
+     */
+    @GetMapping("/ativas")
+    public ResponseEntity<?> listarTaxasAtivas() {
+        logger.info("🔍 Solicitando formas de pagamento ativas");
+        
+        try {
+            List<TaxaPagamento> taxas = taxaPagamentoService.listarTodasTaxas();
+            List<TiposPagamentoResponse> ativas = taxas.stream()
+                .filter(TaxaPagamento::getAtivo)
+                .map(taxa -> new TiposPagamentoResponse(
+                    taxa.getTipoPagamento().name(),
+                    taxa.getTipoPagamento().getDescricao()
+                ))
+                .collect(Collectors.toList());
+            
+            logger.info("✅ Retornando {} formas de pagamento ativas", ativas.size());
+            return ResponseEntity.ok(ativas);
+        } catch (Exception e) {
+            logger.error("❌ Erro ao listar formas de pagamento ativas", e);
+            return ResponseEntity.status(500).body("Erro ao listar formas de pagamento.");
+        }
+    }
+
+    /**
      * Lista todos os tipos de pagamento disponíveis
      */
     @GetMapping("/tipos-disponiveis")
