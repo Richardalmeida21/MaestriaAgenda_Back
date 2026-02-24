@@ -566,6 +566,115 @@ public class AgendamentoController {
         }
     }
 
+    @GetMapping("/intervalo")
+    public ResponseEntity<?> listarPorIntervalo(
+            @RequestParam String dataInicio,
+            @RequestParam String dataFim,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        logger.info("🔍 Solicitando agendamentos de {} a {} por {}", dataInicio, dataFim, userDetails.getUsername());
+        try {
+            LocalDate inicio = LocalDate.parse(dataInicio);
+            LocalDate fim = LocalDate.parse(dataFim);
+            
+            // Buscar agendamentos normais no intervalo
+            List<Agendamento> agendamentosNormais;
+            if (userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+                agendamentosNormais = agendamentoRepository.findByDataBetween(inicio, fim);
+            } else {
+                Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
+                if (profissional == null) {
+                    logger.warn("❌ Profissional não encontrado: {}", userDetails.getUsername());
+                    return ResponseEntity.status(403).body("Profissional não encontrado.");
+                }
+                agendamentosNormais = agendamentoRepository.findByProfissionalAndDataBetween(profissional, inicio, fim);
+            }
+
+            // Processar agendamentos normais
+            List<Map<String, Object>> normais = agendamentosNormais.stream().map(a -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("data", a.getData().toString());
+                map.put("hora", a.getHora().toString());
+                map.put("isFixo", false);
+                map.put("agendamento", a);
+                return map;
+            }).collect(Collectors.toList());
+
+            // Buscar agendamentos fixos ativos - usar a data de início como referência
+            List<AgendamentoFixo> fixedActive = agendamentoFixoRepository.findActiveSchedulesForDate(inicio);
+            if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+                Profissional profissional = profissionalRepository.findByLogin(userDetails.getUsername());
+                fixedActive = fixedActive.stream()
+                        .filter(f -> f.getProfissional().getId() == profissional.getId())
+                        .collect(Collectors.toList());
+            }
+
+            // Gerar ocorrências dos agendamentos fixos para cada dia do intervalo
+            List<Map<String, Object>> fixos = new ArrayList<>();
+            for (LocalDate data = inicio; !data.isAfter(fim); data = data.plusDays(1)) {
+                final LocalDate dataFinal = data;
+                int currentDay = data.getDayOfMonth();
+                int dayOfWeek = data.getDayOfWeek().getValue() % 7 + 1;
+                boolean isLastDayOfMonth = (currentDay == data.lengthOfMonth());
+
+                fixedActive.stream().filter(fix -> {
+                    // Verificar se está dentro do período ativo
+                    if (fix.getDataInicio() != null && dataFinal.isBefore(fix.getDataInicio())) {
+                        return false;
+                    }
+                    if (fix.getDataFim() != null && dataFinal.isAfter(fix.getDataFim())) {
+                        return false;
+                    }
+
+                    // Verificar padrão de repetição
+                    switch (fix.getTipoRepeticao()) {
+                        case DIARIA:
+                            return true;
+                        case SEMANAL:
+                            return (fix.getValorRepeticao() & (1 << (dayOfWeek - 1))) != 0;
+                        case MENSAL:
+                            if (fix.getValorRepeticao() == -1) {
+                                return isLastDayOfMonth;
+                            }
+                            return fix.getDiaDoMes() == currentDay;
+                        case QUINZENAL:
+                            return (fix.getValorRepeticao() & (1 << (dayOfWeek - 1))) != 0;
+                        default:
+                            return false;
+                    }
+                }).forEach(f -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("data", dataFinal.toString());
+                    map.put("hora", f.getHora().toString());
+                    map.put("isFixo", true);
+                    
+                    // Criar uma cópia do agendamento fixo com a data específica
+                    Map<String, Object> fixoComData = new HashMap<>();
+                    fixoComData.put("id", f.getId());
+                    fixoComData.put("cliente", f.getCliente());
+                    fixoComData.put("profissional", f.getProfissional());
+                    fixoComData.put("servico", f.getServico());
+                    fixoComData.put("hora", f.getHora());
+                    fixoComData.put("duracao", f.getDuracao());
+                    fixoComData.put("valor", f.getValor());
+                    fixoComData.put("observacao", f.getObservacao());
+                    fixoComData.put("data", dataFinal.toString());
+                    
+                    map.put("agendamento", fixoComData);
+                    fixos.add(map);
+                });
+            }
+
+            Map<String, Object> resposta = new HashMap<>();
+            resposta.put("agendamentosNormais", normais);
+            resposta.put("agendamentosFixos", fixos);
+            logger.info("✅ Retornando {} agendamentos normais e {} fixos para o intervalo", normais.size(), fixos.size());
+            return ResponseEntity.ok(resposta);
+        } catch (Exception e) {
+            logger.error("❌ Erro ao listar agendamentos para o intervalo {} a {}", dataInicio, dataFim, e);
+            return ResponseEntity.status(500).body("Erro ao listar agendamentos.");
+        }
+    }
+
     @GetMapping("/metricas")
     public ResponseEntity<?> obterMetricas(
             @RequestParam(required = false) String dataInicio,
