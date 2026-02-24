@@ -1,12 +1,13 @@
 package com.maestria.agenda.agendamento;
 
-import com.maestria.agenda.profissional.Profissional;
+import java.time.LocalDate;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDate;
-import java.util.List;
+import com.maestria.agenda.profissional.Profissional;
 
 public interface AgendamentoFixoRepository extends JpaRepository<AgendamentoFixo, Long> {
 
@@ -63,4 +64,7 @@ List<AgendamentoFixo> findActiveQuinzenalSchedules(@Param("hoje") LocalDate hoje
     List<AgendamentoFixo> findByProfissional(Profissional profissional);
 
     List<AgendamentoFixo> findByProfissionalIdAndAtivoTrue(Long profissionalId);
+
+    // Busca todos os agendamentos fixos ativos (para o scheduler)
+    List<AgendamentoFixo> findByAtivoTrue();
 }

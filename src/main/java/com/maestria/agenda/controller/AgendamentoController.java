@@ -15,6 +15,7 @@ import com.maestria.agenda.profissional.Profissional;
 import com.maestria.agenda.profissional.ProfissionalRepository;
 import com.maestria.agenda.servico.Servico;
 import com.maestria.agenda.servico.ServicoRepository;
+import com.maestria.agenda.service.AgendamentoFixoSchedulerService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +46,7 @@ public class AgendamentoController {
     private final ProfissionalRepository profissionalRepository;
     private final ServicoRepository servicoRepository;
     private final BloqueioAgendaRepository bloqueioRepository;
+    private final AgendamentoFixoSchedulerService schedulerService;
 
     // Removida a injeção da comissão global pois agora cada serviço tem sua própria comissão
 
@@ -53,13 +55,15 @@ public class AgendamentoController {
             ClienteRepository clienteRepository,
             ProfissionalRepository profissionalRepository,
             ServicoRepository servicoRepository,
-            BloqueioAgendaRepository bloqueioRepository) {
+            BloqueioAgendaRepository bloqueioRepository,
+            AgendamentoFixoSchedulerService schedulerService) {
         this.agendamentoRepository = agendamentoRepository;
         this.agendamentoFixoRepository = agendamentoFixoRepository;
         this.clienteRepository = clienteRepository;
         this.profissionalRepository = profissionalRepository;
         this.servicoRepository = servicoRepository;
         this.bloqueioRepository = bloqueioRepository;
+        this.schedulerService = schedulerService;
     }
 
     @PostMapping("/fixo")
@@ -369,6 +373,34 @@ public class AgendamentoController {
         } catch (Exception e) {
             logger.error("❌ Erro ao excluir agendamentos gerados pelo agendamento fixo ID {}", agendamentoFixoId, e);
             throw e;
+        }
+    }
+
+    /**
+     * Endpoint para forçar a geração manual de ocorrências futuras de agendamentos fixos.
+     * Útil para testes e para a primeira execução do sistema.
+     * Apenas ADMIN pode executar.
+     */
+    @PostMapping("/fixo/gerar-ocorrencias")
+    public ResponseEntity<?> gerarOcorrenciasFuturas(@AuthenticationPrincipal UserDetails userDetails) {
+        logger.info("🔧 Solicitação manual para gerar ocorrências futuras por: {}", userDetails.getUsername());
+
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN"))) {
+            logger.warn("❌ Tentativa de geração manual sem permissão por {}", userDetails.getUsername());
+            return ResponseEntity.status(403)
+                .body("Acesso negado. Apenas ADMIN pode forçar a geração de ocorrências.");
+        }
+
+        try {
+            schedulerService.forcarGeracaoManual();
+            return ResponseEntity.ok(Map.of(
+                "mensagem", "Geração de ocorrências futuras executada com sucesso!",
+                "info", "Ocorrências foram criadas para os próximos 60 dias"
+            ));
+        } catch (Exception e) {
+            logger.error("❌ Erro ao forçar geração manual de ocorrências", e);
+            return ResponseEntity.status(500)
+                .body("Erro ao gerar ocorrências: " + e.getMessage());
         }
     }
 
