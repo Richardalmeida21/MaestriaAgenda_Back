@@ -85,10 +85,10 @@ BEGIN
           )
     ),
     despesas_stats AS (
-        SELECT COALESCE(SUM(valor), 0) as total
+        SELECT COALESCE(SUM(amount), 0) as total
         FROM expenses
-        WHERE data_vencimento BETWEEN data_inicio AND data_fim
-          AND paga = true
+        WHERE date BETWEEN data_inicio AND data_fim
+          AND paid = true
     ),
     comissoes_stats AS (
         SELECT COALESCE(SUM(valor_pago), 0) as total
@@ -462,11 +462,11 @@ BEGIN
     
     -- Calcular despesas
     SELECT 
-        COALESCE(SUM(CASE WHEN paga = false THEN valor ELSE 0 END), 0),
-        COALESCE(SUM(CASE WHEN paga = true THEN valor ELSE 0 END), 0)
+        COALESCE(SUM(CASE WHEN paid = false THEN amount ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN paid = true THEN amount ELSE 0 END), 0)
     INTO v_despesas_pendentes, v_despesas_pagas
     FROM expenses
-    WHERE data_vencimento BETWEEN p_data_inicio AND p_data_fim;
+    WHERE date BETWEEN p_data_inicio AND p_data_fim;
     
     -- Calcular faturamento total (via JOIN correto)
     SELECT COALESCE(SUM(s.valor), 0)

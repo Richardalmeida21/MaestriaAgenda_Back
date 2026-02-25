@@ -58,8 +58,8 @@ CREATE INDEX IF NOT EXISTS idx_servico_categoria
 -- =====================================================
 
 -- 10. Índice para despesas por período e status
-CREATE INDEX IF NOT EXISTS idx_expenses_data_paga 
-    ON expenses(data_vencimento, paga);
+CREATE INDEX IF NOT EXISTS idx_expenses_date_paid 
+    ON expenses(date, paid);
 
 -- 11. Índice para comissões por data e status
 CREATE INDEX IF NOT EXISTS idx_comissoes_pagamentos_data_status 
