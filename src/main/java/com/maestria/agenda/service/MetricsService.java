@@ -1,19 +1,8 @@
 package com.maestria.agenda.service;
 
-import com.maestria.agenda.agendamento.Agendamento;
-import com.maestria.agenda.agendamento.AgendamentoRepository;
-import com.maestria.agenda.financeiro.ClientData;
-import com.maestria.agenda.financeiro.MetricasGeraisDTO;
-import com.maestria.agenda.financeiro.RevenueData;
-import com.maestria.agenda.financeiro.ServiceData;
-import com.maestria.agenda.financeiro.HorarioData;
-import com.maestria.agenda.financeiro.ExpenseRepository;
-import com.maestria.agenda.financeiro.ComissaoPagamentoRepository;
-import org.springframework.stereotype.Service;
-
 import java.time.LocalDate;
-import java.time.format.TextStyle;
 import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -23,6 +12,19 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+
+import com.maestria.agenda.agendamento.Agendamento;
+import com.maestria.agenda.agendamento.AgendamentoRepository;
+import com.maestria.agenda.financeiro.ClientData;
+import com.maestria.agenda.financeiro.ComissaoPagamentoRepository;
+import com.maestria.agenda.financeiro.ExpenseRepository;
+import com.maestria.agenda.financeiro.HorarioData;
+import com.maestria.agenda.financeiro.MetricasGeraisDTO;
+import com.maestria.agenda.financeiro.RevenueData;
+import com.maestria.agenda.financeiro.ServiceData;
 
 @Service
 public class MetricsService {
@@ -37,6 +39,7 @@ public class MetricsService {
         this.comissaoPagamentoRepository = comissaoPagamentoRepository;
     }
 
+    @Cacheable(value = "metricas", key = "#dataInicio + '-' + #dataFim")
     public MetricasGeraisDTO obterMetricasGerais(LocalDate dataInicio, LocalDate dataFim) {
         Double totalRevenue = agendamentoRepository.calcularFaturamentoTotalPorPeriodo(dataInicio, dataFim);
         totalRevenue = (totalRevenue != null) ? totalRevenue : 0.0;
@@ -70,6 +73,7 @@ public class MetricsService {
     }
     
     // Método para obter faturamento mensal
+    @Cacheable(value = "faturamento", key = "#dataInicio + '-' + #dataFim")
     public List<RevenueData> obterFaturamentoMensal(LocalDate dataInicio, LocalDate dataFim) {
         List<RevenueData> revenueDataList = new ArrayList<>();
         
@@ -95,6 +99,7 @@ public class MetricsService {
     }
     
     // Método para obter dados de serviços realizados - agrupando por serviço a partir dos agendamentos
+    @Cacheable(value = "servicos", key = "#dataInicio + '-' + #dataFim")
     public List<ServiceData> obterDadosDeServicos(LocalDate dataInicio, LocalDate dataFim) {
         List<ServiceData> list = new ArrayList<>();
         List<Object[]> resultados = agendamentoRepository.findServicosMaisAgendados(dataInicio, dataFim);
@@ -136,6 +141,7 @@ public class MetricsService {
     }
     
     // Método para obter os horários mais procurados a partir dos agendamentos
+    @Cacheable(value = "horarios", key = "#dataInicio + '-' + #dataFim")
     public List<HorarioData> obterHorariosMaisProcurados(LocalDate dataInicio, LocalDate dataFim) {
         List<HorarioData> horarios = new ArrayList<>();
         List<Object[]> queryResult = agendamentoRepository.findHorariosMaisProcurados(dataInicio, dataFim);
@@ -152,6 +158,7 @@ public class MetricsService {
     
     // MÉTODO PARA OBTER "CLIENTES NOVOS VS. RECORRENTES"
     // Para cada mês, definimos clientes novos como aqueles cuja primeira data de agendamento é naquele mês; os demais são recorrentes.
+    @Cacheable(value = "clientesData", key = "#dataInicio + '-' + #dataFim")
     public List<ClientData> obterDadosDeClientes(LocalDate dataInicio, LocalDate dataFim) {
         // Recupera todos os agendamentos do período
         List<Agendamento> agendamentos = agendamentoRepository.findByDataBetween(dataInicio, dataFim);
