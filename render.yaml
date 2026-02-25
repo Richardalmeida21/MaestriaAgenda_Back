@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: maestria-agenda-api
+    env: docker
+    plan: free
+    region: oregon
+    buildCommand: ./mvnw clean package -DskipTests
+    startCommand: java -Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Dspring.profiles.active=render -jar target/*.jar
+    envVars:
+      - key: JAVA_TOOL_OPTIONS
+        value: "-Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+      - key: SPRING_PROFILES_ACTIVE
+        value: render
+    healthCheckPath: /actuator/health
+    autoDeploy: true
