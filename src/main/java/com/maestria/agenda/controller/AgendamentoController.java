@@ -602,7 +602,6 @@ public class AgendamentoController {
                         
                         map.put("data", row[4].toString());
                         map.put("hora", row[5].toString());
-                        map.put("duracaoFormatada", row[6].toString());
                         
                         return map;
                     })

@@ -54,7 +54,8 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
         long countByData(@Param("data") LocalDate data);
 
         // Buscar próximos agendamentos com dados mínimos (apenas para exibição)
-        @Query("SELECT a.id, a.cliente.nome, a.profissional.nome, a.servico.nome, a.data, a.hora, a.duracao " +
+        // Nota: duracao não é um campo da entidade, é calculado dinamicamente
+        @Query("SELECT a.id, a.cliente.nome, a.profissional.nome, a.servico.nome, a.data, a.hora " +
                "FROM Agendamento a " +
                "WHERE a.data >= :dataInicio " +
                "ORDER BY a.data ASC, a.hora ASC")
