@@ -49,6 +49,17 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
         List<Object[]> findServicosMaisAgendados(@Param("dataInicio") LocalDate dataInicio,
                         @Param("dataFim") LocalDate dataFim);
 
+        // Queries otimizadas para Dashboard - apenas contagens
+        @Query("SELECT COUNT(a) FROM Agendamento a WHERE a.data = :data")
+        long countByData(@Param("data") LocalDate data);
+
+        // Buscar próximos agendamentos com dados mínimos (apenas para exibição)
+        @Query("SELECT a.id, a.cliente.nome, a.profissional.nome, a.servico.nome, a.data, a.hora, a.duracao " +
+               "FROM Agendamento a " +
+               "WHERE a.data >= :dataInicio " +
+               "ORDER BY a.data ASC, a.hora ASC")
+        List<Object[]> findNextAppointmentsMinimal(@Param("dataInicio") LocalDate dataInicio);
+
         // Contar agendamentos por profissional
         @Query("SELECT p.nome, COUNT(a) FROM Agendamento a JOIN a.profissional p GROUP BY p.nome")
         List<Object[]> countAgendamentosPorProfissional();

@@ -566,6 +566,76 @@ public class AgendamentoController {
         }
     }
 
+    @GetMapping("/dashboard/resumo")
+    public ResponseEntity<?> obterResumo(@AuthenticationPrincipal UserDetails userDetails) {
+        logger.info("🔍 Solicitando resumo do dashboard por {}", userDetails.getUsername());
+        try {
+            LocalDate hoje = LocalDate.now();
+            
+            // Contar agendamentos de hoje (query otimizada - apenas COUNT)
+            long agendamentosHoje = agendamentoRepository.countByData(hoje);
+            
+            // Contar total de clientes e profissionais (queries rápidas)
+            long totalClientes = clienteRepository.count();
+            long totalProfissionais = profissionalRepository.count();
+            
+            // Buscar próximos 5 agendamentos com dados mínimos
+            List<Object[]> proximosRaw = agendamentoRepository.findNextAppointmentsMinimal(hoje);
+            
+            List<Map<String, Object>> proximosAgendamentos = proximosRaw.stream()
+                    .limit(5)
+                    .map(row -> {
+                        Map<String, Object> map = new HashMap<>();
+                        map.put("id", row[0]);
+                        
+                        Map<String, Object> cliente = new HashMap<>();
+                        cliente.put("nome", row[1]);
+                        map.put("cliente", cliente);
+                        
+                        Map<String, Object> profissional = new HashMap<>();
+                        profissional.put("nome", row[2]);
+                        map.put("profissional", profissional);
+                        
+                        Map<String, Object> servico = new HashMap<>();
+                        servico.put("nome", row[3]);
+                        map.put("servico", servico);
+                        
+                        map.put("data", row[4].toString());
+                        map.put("hora", row[5].toString());
+                        map.put("duracaoFormatada", row[6].toString());
+                        
+                        return map;
+                    })
+                    .collect(Collectors.toList());
+            
+            // Próximo agendamento formatado
+            String proximoAgendamento = "Nenhum";
+            if (!proximosAgendamentos.isEmpty()) {
+                Map<String, Object> primeiro = proximosAgendamentos.get(0);
+                String data = (String) primeiro.get("data");
+                String hora = (String) primeiro.get("hora");
+                proximoAgendamento = LocalDate.parse(data).format(
+                    java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")
+                ) + " " + hora.substring(0, 5);
+            }
+            
+            Map<String, Object> resumo = new HashMap<>();
+            resumo.put("todayAppointments", agendamentosHoje);
+            resumo.put("totalClients", totalClientes);
+            resumo.put("totalProfessionals", totalProfissionais);
+            resumo.put("nextAppointment", proximoAgendamento);
+            resumo.put("nextAppointments", proximosAgendamentos);
+            
+            logger.info("✅ Resumo do dashboard: {} agendamentos hoje, {} clientes, {} profissionais", 
+                    agendamentosHoje, totalClientes, totalProfissionais);
+            return ResponseEntity.ok(resumo);
+            
+        } catch (Exception e) {
+            logger.error("❌ Erro ao gerar resumo do dashboard", e);
+            return ResponseEntity.status(500).body("Erro ao gerar resumo do dashboard.");
+        }
+    }
+
     @GetMapping("/intervalo")
     public ResponseEntity<?> listarPorIntervalo(
             @RequestParam String dataInicio,
