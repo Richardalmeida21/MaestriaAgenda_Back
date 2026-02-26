@@ -140,6 +140,14 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
                         LocalDate fim);
 
         // ============================================
+        // QUERIES OTIMIZADAS PARA MÉTRICAS (EVITAR MEMÓRIA DO JAVA)
+        // ============================================
+        
+        @Query("SELECT a.cliente.id, a.data FROM Agendamento a WHERE a.data BETWEEN :dataInicio AND :dataFim ORDER BY a.data ASC")
+        List<Object[]> findClientIdsAndDatesBetween(@Param("dataInicio") LocalDate dataInicio, @Param("dataFim") LocalDate dataFim);
+
+
+        // ============================================
         // QUERIES OTIMIZADAS COM FETCH JOIN
         // ============================================
         // Evita problema N+1 ao carregar cliente e servico em uma única query

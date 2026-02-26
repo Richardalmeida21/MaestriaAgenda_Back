@@ -113,12 +113,14 @@ public class MetricsService {
     
     // Método para calcular a porcentagem de clientes que retornam dentro de 30 dias
     public double calcularTaxaRetorno(LocalDate dataInicio, LocalDate dataFim) {
-        List<Agendamento> agendamentos = agendamentoRepository.findByDataBetween(dataInicio, dataFim);
+        List<Object[]> agendamentos = agendamentoRepository.findClientIdsAndDatesBetween(dataInicio, dataFim);
         Map<Long, List<LocalDate>> agendamentosPorCliente = new HashMap<>();
-        agendamentos.forEach(a -> {
-            Long clienteId = a.getCliente().getId();
-            agendamentosPorCliente.computeIfAbsent(clienteId, k -> new ArrayList<>()).add(a.getData());
-        });
+        
+        for (Object[] row : agendamentos) {
+            Long clienteId = (Long) row[0];
+            LocalDate data = (LocalDate) row[1];
+            agendamentosPorCliente.computeIfAbsent(clienteId, k -> new ArrayList<>()).add(data);
+        }
 
         int totalClientes = agendamentosPorCliente.size();
         int clientesRetornaram = 0;
@@ -160,13 +162,13 @@ public class MetricsService {
     // Para cada mês, definimos clientes novos como aqueles cuja primeira data de agendamento é naquele mês; os demais são recorrentes.
     @Cacheable(value = "clientesData", key = "#dataInicio + '-' + #dataFim")
     public List<ClientData> obterDadosDeClientes(LocalDate dataInicio, LocalDate dataFim) {
-        // Recupera todos os agendamentos do período
-        List<Agendamento> agendamentos = agendamentoRepository.findByDataBetween(dataInicio, dataFim);
+        // Recupera dados primitivos de agendamento (muito mais rápido)
+        List<Object[]> agendamentos = agendamentoRepository.findClientIdsAndDatesBetween(dataInicio, dataFim);
         // Mapear a primeira data de agendamento para cada cliente
         Map<Long, LocalDate> primeiraData = new HashMap<>();
-        for (Agendamento a : agendamentos) {
-            Long clientId = a.getCliente().getId();
-            LocalDate data = a.getData();
+        for (Object[] row : agendamentos) {
+            Long clientId = (Long) row[0];
+            LocalDate data = (LocalDate) row[1];
             if (!primeiraData.containsKey(clientId) || data.isBefore(primeiraData.get(clientId))) {
                 primeiraData.put(clientId, data);
             }
@@ -175,9 +177,11 @@ public class MetricsService {
         // Agrupar os clientes por mês (usaremos o padrão "yyyy-MM" para distinguir ano e mês)
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM");
         Map<String, Set<Long>> clientesPorMes = new HashMap<>();
-        for (Agendamento a : agendamentos) {
-            String mesKey = a.getData().format(formatter);
-            clientesPorMes.computeIfAbsent(mesKey, k -> new HashSet<>()).add(a.getCliente().getId());
+        for (Object[] row : agendamentos) {
+            Long clientId = (Long) row[0];
+            LocalDate data = (LocalDate) row[1];
+            String mesKey = data.format(formatter);
+            clientesPorMes.computeIfAbsent(mesKey, k -> new HashSet<>()).add(clientId);
         }
         
         // Itera sobre cada mês do período para calcular os clientes novos vs. recorrentes

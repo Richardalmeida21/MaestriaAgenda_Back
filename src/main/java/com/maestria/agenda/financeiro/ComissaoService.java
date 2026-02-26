@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 
@@ -82,6 +83,12 @@ public class ComissaoService {
 
                 logger.info("Encontrados {} agendamentos normais (não fixos)", agendamentosNormais.size());
 
+                // OTIMIZAÇÃO EXTREMA: Carregar todas as comissões do profissional de uma vez só (Evita N+1 query dentro do loop)
+                Map<Long, Double> mapaComissoes = comissaoProfissionalRepository.findByProfissionalId(profissionalId)
+                    .stream()
+                    .filter(c -> c.getCategoria() != null)
+                    .collect(Collectors.toMap(c -> c.getCategoria().getId(), com.maestria.agenda.profissional.ComissaoProfissional::getPercentual, (v1, v2) -> v1));
+
                 for (Agendamento agendamento : agendamentosNormais) {
                         if (agendamento.getPago() != null && agendamento.getPago() &&
                                         agendamento.getServico() != null
@@ -91,12 +98,9 @@ public class ComissaoService {
                                 double comissaoPercentualServico = 0.0;
 
                                 if (agendamento.getServico().getCategoria() != null) {
-                                        comissaoPercentualServico = comissaoProfissionalRepository
-                                                        .findByProfissionalIdAndCategoriaId(
-                                                                        profissionalId,
-                                                                        agendamento.getServico().getCategoria().getId())
-                                                        .map(com.maestria.agenda.profissional.ComissaoProfissional::getPercentual)
-                                                        .orElse(0.0); // Se não encontrar configuração, comissão é 0
+                                        // Pega do mapa em memória e não do BD
+                                        comissaoPercentualServico = mapaComissoes.getOrDefault(
+                                                            agendamento.getServico().getCategoria().getId(), 0.0);
                                 }
 
                                 double taxa = 0.0;
@@ -147,6 +151,12 @@ public class ComissaoService {
 
                 logger.info("Encontrados {} agendamentos fixos ativos", agendamentosFixos.size());
 
+                // OTIMIZAÇÃO EXTREMA: Carregar todas as comissões do profissional de uma vez só
+                Map<Long, Double> mapaComissoes = comissaoProfissionalRepository.findByProfissionalId(profissionalId)
+                    .stream()
+                    .filter(c -> c.getCategoria() != null)
+                    .collect(Collectors.toMap(c -> c.getCategoria().getId(), com.maestria.agenda.profissional.ComissaoProfissional::getPercentual, (v1, v2) -> v1));
+
                 for (AgendamentoFixo agendamentoFixo : agendamentosFixos) {
                         List<Agendamento> agendamentosGerados = agendamentoRepository
                                         .findByAgendamentoFixoIdAndDataBetweenAndPagoTrue(agendamentoFixo.getId(),
@@ -160,13 +170,8 @@ public class ComissaoService {
                                 double comissaoPercentualServico = 0.0;
 
                                 if (agendamentoFixo.getServico().getCategoria() != null) {
-                                        comissaoPercentualServico = comissaoProfissionalRepository
-                                                        .findByProfissionalIdAndCategoriaId(
-                                                                        profissionalId,
-                                                                        agendamentoFixo.getServico().getCategoria()
-                                                                                        .getId())
-                                                        .map(com.maestria.agenda.profissional.ComissaoProfissional::getPercentual)
-                                                        .orElse(0.0);
+                                        comissaoPercentualServico = mapaComissoes.getOrDefault(
+                                                            agendamentoFixo.getServico().getCategoria().getId(), 0.0);
                                 }
 
                                 double valorTotalServico = valorServico * agendamentosGerados.size();
